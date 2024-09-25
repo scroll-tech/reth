@@ -1,4 +1,4 @@
-title: "scroll-reth - reth fork diff overview"
+title: "scroll-reth"
 footer: |
   Fork-diff overview of [`scroll-reth`](https://github.com/scroll-tech/reth), a fork of [`reth`](https://github.com/paradigmxyz/reth).
 base:
