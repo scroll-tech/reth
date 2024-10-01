@@ -27,6 +27,8 @@ jobs:
         network: ["ethereum", "optimism"]
     timeout-minutes: 60
     steps:
+      - name: Free up space
+        run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install Geth
