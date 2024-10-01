@@ -89,7 +89,7 @@ jobs:
     name: unit success
     runs-on: ubuntu-latest
     if: always()
-    needs: [test, state, doc]
+    needs: [test, doc]
     timeout-minutes: 30
     steps:
       - name: Decide whether the needed jobs succeeded or failed
