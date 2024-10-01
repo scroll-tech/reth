@@ -45,29 +45,31 @@ jobs:
             --partition hash:${{ matrix.partition }}/2 \
             -E "!kind(test)"
 
-  # state:
-  #   name: Ethereum state tests
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     RUST_LOG: info,sync=error
-  #     RUST_BACKTRACE: 1
-  #   timeout-minutes: 30
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Checkout ethereum/tests
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ethereum/tests
-  #         ref: 1c23e3c27ac53b794de0844d2d5e19cd2495b9d8
-  #         path: testing/ef-tests/ethereum-tests
-  #         submodules: recursive
-  #         fetch-depth: 1
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - uses: taiki-e/install-action@nextest
-  #     - uses: Swatinem/rust-cache@v2
-  #       with:
-  #         cache-on-failure: true
-  #     - run: cargo nextest run --release -p ef-tests --features "asm-keccak ef-tests"
+  state:
+    name: Ethereum state tests
+    runs-on: ubuntu-latest
+    env:
+      RUST_LOG: info,sync=error
+      RUST_BACKTRACE: 1
+    timeout-minutes: 30
+    steps:
+      - name: Free up space
+        run: rm -rf /opt/hostedtoolcache
+      - uses: actions/checkout@v4
+      - name: Checkout ethereum/tests
+        uses: actions/checkout@v4
+        with:
+          repository: ethereum/tests
+          ref: 1c23e3c27ac53b794de0844d2d5e19cd2495b9d8
+          path: testing/ef-tests/ethereum-tests
+          submodules: recursive
+          fetch-depth: 1
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - run: cargo nextest run --release -p ef-tests --features "asm-keccak ef-tests"
 
   doc:
     name: doc tests (${{ matrix.network }})
@@ -91,7 +93,7 @@ jobs:
     name: unit success
     runs-on: ubuntu-latest
     if: always()
-    needs: [test, doc]
+    needs: [test, state, doc]
     timeout-minutes: 30
     steps:
       - name: Decide whether the needed jobs succeeded or failed
