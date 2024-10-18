@@ -213,7 +213,7 @@ pub trait DbTxMut: Send + Sync {
 
 Let's take a look at the `DbTx` and `DbTxMut` traits in action.
 
-Revisiting the `DatabaseProvider<Tx>` struct as an exampl, the `DatabaseProvider<Tx>::header_by_number()` function uses the `DbTx::get()` function to get a header from the `Headers` table.
+Revisiting the `DatabaseProvider<Tx>` struct as an example, the `DatabaseProvider<Tx>::header_by_number()` function uses the `DbTx::get()` function to get a header from the `Headers` table.
 
 [File: crates/storage/provider/src/providers/database/provider.rs](https://github.com/paradigmxyz/reth/blob/bf9cac7571f018fec581fe3647862dab527aeafb/crates/storage/provider/src/providers/database/provider.rs#L1319-L1336)
 
