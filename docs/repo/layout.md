@@ -92,7 +92,7 @@ Crates related to transaction execution.
 - [`revm`](../../crates/revm): Revm utils and implementations specific to reth.
 - [`evm`](../../crates/evm): Traits for configuring an EVM specifics.
 - [`execution-types`](../../crates/evm/execution-types): Commonly used types for (EVM) block execution.
-- [`execution-errors`](../../crates/evm/execution-errors): Commonly used error types used when doing block execution.
+- [`execution-errors`](../../crates/evm/execution-errors): Commonly used error types when doing block execution.
 
 ### Sync
 
@@ -138,7 +138,7 @@ The IPC transport lives in [`rpc/ipc`](../../crates/rpc/ipc).
 
 #### Utilities Crates
 
-- [`rpc/rpc-types-compat`](../../crates/rpc/rpc-types-compat): This crate various helper functions to convert between reth primitive types and rpc types.
+- [`rpc/rpc-types-compat`](../../crates/rpc/rpc-types-compat): This crate provides various helper functions to convert between reth primitive types and rpc types.
 - [`rpc/layer`](../../crates/rpc/rpc-layer/): Some RPC middleware layers (e.g. `AuthValidator`, `JwtAuthValidator`)
 - [`rpc/rpc-testing-util`](../../crates/rpc/rpc-testing-util/): Reth RPC testing helpers
 
