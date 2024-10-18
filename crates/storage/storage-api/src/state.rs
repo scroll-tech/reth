@@ -5,9 +5,10 @@ use super::{
 use alloy_eips::{BlockId, BlockNumHash, BlockNumberOrTag};
 use alloy_primitives::{Address, BlockHash, BlockNumber, StorageKey, StorageValue, B256, U256};
 use auto_impl::auto_impl;
-use reth_execution_types::ExecutionOutcome;
+use reth_execution_types::{BundleState, ExecutionOutcome};
 use reth_primitives::{Bytecode, KECCAK_EMPTY};
 use reth_storage_errors::provider::{ProviderError, ProviderResult};
+use reth_trie::HashedPostState;
 
 /// Type alias of boxed [`StateProvider`].
 pub type StateProviderBox = Box<dyn StateProvider>;
@@ -20,6 +21,7 @@ pub trait StateProvider:
     + StateRootProvider
     + StorageRootProvider
     + StateProofProvider
+    + HashedPostStateProvider
     + Send
     + Sync
 {
@@ -172,6 +174,19 @@ pub trait StateProviderFactory: BlockIdReader + Send + Sync {
     ///
     /// If the block couldn't be found, returns `None`.
     fn pending_state_by_hash(&self, block_hash: B256) -> ProviderResult<Option<StateProviderBox>>;
+}
+
+/// Trait that provides the hashed state from various sources.
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait HashedPostStateProvider {
+    /// Returns the `HashedPostState` of the provided `BundleState`.
+    fn hashed_post_state_from_bundle_state(&self, bundle_state: &BundleState) -> HashedPostState;
+
+    /// Returns the `HashedPostState` for the given block number.
+    fn hashed_post_state_from_reverts(
+        &self,
+        block_number: BlockNumber,
+    ) -> ProviderResult<HashedPostState>;
 }
 
 /// Blockchain trait provider that gives access to the blockchain state that is not yet committed
