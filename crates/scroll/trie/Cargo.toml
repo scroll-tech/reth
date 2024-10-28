@@ -1,0 +1,22 @@
+[package]
+name = "scroll-trie"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+alloy-trie = { workspace = true, features = ["serde"] }
+alloy-primitives.workspace = true
+tracing = { version = "0.1", default-features = false }
+poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master" }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json"] }
+hex-literal = "0.4"
+
+[lints]
+workspace = true

@@ -1311,6 +1311,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bn254"
+version = "0.1.0"
+source = "git+https://github.com/scroll-tech/bn254.git?branch=master#db67681f5e9ae1736565a48ec294a6d0dacb4e0d"
+dependencies = [
+ "ff 0.13.0 (git+https://github.com/scroll-tech/ff?branch=feat/sp1)",
+ "getrandom 0.2.15",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "sp1-intrinsics",
+ "subtle",
+]
+
+[[package]]
 name = "boa_ast"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2590,7 +2603,7 @@ dependencies = [
  "base16ct",
  "crypto-bigint",
  "digest 0.10.7",
- "ff",
+ "ff 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "generic-array",
  "group",
  "pkcs8",
@@ -3038,6 +3051,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ff"
+version = "0.13.0"
+source = "git+https://github.com/scroll-tech/ff?branch=feat/sp1#244b1098f6be1d19c5fd3f0ec60117ac2940e6ca"
+dependencies = [
+ "bitvec",
+ "rand_core 0.6.4",
+ "subtle",
+]
+
+[[package]]
 name = "fiat-crypto"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3373,7 +3396,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
 dependencies = [
- "ff",
+ "ff 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.6.4",
  "subtle",
 ]
@@ -5598,6 +5621,16 @@ name = "portable-atomic"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc9c68a3f6da06753e9335d63e27f6b9754dd1920d941135b7ea8224f141adb2"
+
+[[package]]
+name = "poseidon-bn254"
+version = "0.1.0"
+source = "git+https://github.com/scroll-tech/poseidon-bn254?branch=master#a96ba028dd00987551451d8f4bd65b7ea5469a44"
+dependencies = [
+ "bn254",
+ "itertools 0.13.0",
+ "sp1-intrinsics",
+]
 
 [[package]]
 name = "powerfmt"
@@ -9685,6 +9718,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "scroll-trie"
+version = "1.1.0"
+dependencies = [
+ "alloy-primitives",
+ "alloy-trie",
+ "hex-literal",
+ "poseidon-bn254",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "sdd"
 version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10134,6 +10179,14 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "sha1",
+]
+
+[[package]]
+name = "sp1-intrinsics"
+version = "0.0.0"
+source = "git+https://github.com/scroll-tech/sp1-intrinsics.git?branch=master#7e038e60db0b2e847f6d8f49e148ccac8c6fc394"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
