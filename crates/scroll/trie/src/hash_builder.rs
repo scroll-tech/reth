@@ -1,4 +1,4 @@
-use crate::branch::BranchNodeRef;
+use crate::{branch::BranchNodeRef, key::UnpackBits, sub_tree::SubTreeRef};
 use alloy_primitives::{keccak256, map::HashMap, B256};
 use alloy_trie::{
     hash_builder::{HashBuilderValue, HashBuilderValueRef},
@@ -68,7 +68,6 @@ impl HashBuilder {
     }
 
     /// Print the current stack of the Hash Builder.
-    #[cfg(feature = "std")]
     pub fn print_stack(&self) {
         println!("============ STACK ===============");
         for item in &self.stack {
@@ -242,28 +241,17 @@ impl HashBuilder {
 
             if build_extensions && !short_node_key.is_empty() {
                 self.update_masks(&current, len_from);
-                let mut extension_hash =
-                    self.stack.pop().expect("there should be at least one stack item");
-                // let extension_node = ExtensionNodeRef::new(&short_node_key, &stack_last);
-
-                for &bit in short_node_key.as_slice().iter().rev() {
-                    let mut bytes = [0u8; 64];
-                    if bit == 0 {
-                        bytes[..32].copy_from_slice(extension_hash.as_slice());
-                    } else {
-                        bytes[32..].copy_from_slice(extension_hash.as_slice());
-                    }
-                    extension_hash = keccak256(&bytes);
-                    println!("branch hash: {:?}", extension_hash);
-                }
+                let stack_last = self.stack.pop().expect("there should be at least one stack item");
+                let sub_tree = SubTreeRef::new(&short_node_key, &stack_last);
+                let sub_tree_root = sub_tree.root();
 
                 trace!(
                     target: "trie::hash_builder",
                     ?short_node_key,
-                    ?extension_hash,
-                    "pushing extension node",
+                    ?sub_tree_root,
+                    "pushing subtree root",
                 );
-                self.stack.push(extension_hash);
+                self.stack.push(sub_tree_root);
                 // self.retain_proof_from_stack(&current.slice(..len_from));
                 self.resize_masks(len_from);
             }
@@ -310,7 +298,7 @@ impl HashBuilder {
     ///
     /// Returns the hashes of the children of the branch node, only if `updated_branch_nodes` is
     /// enabled.
-    fn push_branch_node(&mut self, current: &Nibbles, len: usize) -> Vec<B256> {
+    fn push_branch_node(&mut self, _current: &Nibbles, len: usize) -> Vec<B256> {
         let state_mask = self.groups[len];
         let hash_mask = self.hash_masks[len];
         let branch_node = BranchNodeRef::new(&self.stack, state_mask);
@@ -412,34 +400,6 @@ impl HashBuilder {
     }
 }
 
-trait UnpackBits {
-    /// This takes the `Nibbles` representation and converts it to a bit representation in which
-    /// there is a byte for each bit in the nibble.
-    ///
-    /// We truncate the Nibbles such that we only have 248 bits.
-    fn unpack_bits(&self) -> Self;
-
-    // TODO: introduce unpack_bits_truncated method
-}
-
-impl UnpackBits for Nibbles {
-    fn unpack_bits(&self) -> Self {
-        const MAX_BITS: usize = 248;
-        const MAX_NIBBLES: usize = MAX_BITS / 4;
-
-        let capacity = core::cmp::min(self.len() * 4, MAX_BITS);
-        let mut bits = Vec::with_capacity(capacity);
-
-        for byte in self.as_slice().iter().take(MAX_NIBBLES) {
-            for i in (0..4).rev() {
-                let bit = (byte >> i) & 1;
-                bits.push(bit);
-            }
-        }
-        Nibbles::from_vec_unchecked(bits)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -460,7 +420,6 @@ mod test {
         assert_eq!(hex.len(), 64);
         let nibbles = Nibbles::from_nibbles_unchecked(hex).unpack_bits();
         assert_eq!(nibbles.len(), 248);
-        println!("{:?}", &nibbles[..]);
     }
 
     #[test]
@@ -473,12 +432,12 @@ mod test {
 
         let mut hb = HashBuilder::default().with_updates(true);
         let data = BTreeMap::from([
-            // binary key: (1,1,1,1)
-            (hex!("0F").to_vec(), Vec::from([15u8])),
             // binary key: (0,0,0,0)
             (hex!("00").to_vec(), Vec::from([0u8])),
             // binary key: (0,0,0,1)
             (hex!("01").to_vec(), Vec::from([1u8])),
+            // binary key: (1,1,1,1)
+            (hex!("0F").to_vec(), Vec::from([15u8])),
         ]);
         data.iter().for_each(|(key, val)| {
             let nibbles = Nibbles::from_nibbles_unchecked(key);
@@ -504,14 +463,14 @@ mod test {
     fn test_generates_branch_node() {
         let mut hb = HashBuilder::default().with_updates(true);
         let data = BTreeMap::from([
-            // binary key: (1,1,1,1)
-            (hex!("0F").to_vec(), Vec::from([15u8])),
             // binary key: (0,0,0,0)
             (hex!("00").to_vec(), Vec::from([0u8])),
             // binary key: (0,0,0,1)
             (hex!("01").to_vec(), Vec::from([1u8])),
             // binary key: (0,0,1,0)
             (hex!("02").to_vec(), Vec::from([2u8])),
+            // binary key: (1,1,1,1)
+            (hex!("0F").to_vec(), Vec::from([15u8])),
         ]);
         data.iter().for_each(|(key, val)| {
             let nibbles = Nibbles::from_nibbles_unchecked(key);
@@ -535,6 +494,7 @@ mod test {
 
         let (_, updates) = hb.split();
         for (key, update) in updates {
+            // TODO add additional assertions
             println!("key: {:?}", key);
             println!("update: {:?}", update);
         }

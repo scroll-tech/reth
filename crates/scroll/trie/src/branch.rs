@@ -6,7 +6,7 @@ use core::{fmt, ops::Range, slice::Iter};
 // use alloc::vec::Vec;
 
 /// The range of valid child indexes.
-pub const CHILD_INDEX_RANGE: Range<u8> = 0..16;
+pub(crate) const CHILD_INDEX_RANGE: Range<u8> = 0..2;
 
 /// A reference to [BranchNode] and its state mask.
 /// NOTE: The stack may contain more items that specified in the state mask.
@@ -67,19 +67,14 @@ impl<'a> BranchNodeRef<'a> {
 
     pub(crate) fn hash(&self) -> B256 {
         let mut children_iter = self.children();
-        // TODO: use an array
-        let mut bytes: Vec<u8> = Vec::with_capacity(32 * 2);
+        let mut bytes: [u8; 64] = [0u8; 64];
 
         if let Some((_, Some(child))) = children_iter.next() {
-            bytes.extend_from_slice(child.as_slice());
-        } else {
-            bytes.extend_from_slice(&[0u8; 32]);
+            bytes[..32].copy_from_slice(child.as_slice());
         }
 
         if let Some((_, Some(child))) = children_iter.next() {
-            bytes.extend_from_slice(child.as_slice());
-        } else {
-            bytes.extend_from_slice(&[0u8; 32]);
+            bytes[32..].copy_from_slice(child.as_slice());
         }
 
         keccak256(bytes.as_slice())

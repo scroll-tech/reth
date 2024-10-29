@@ -7,4 +7,5 @@ extern crate alloc;
 mod branch;
 mod hash_builder;
 pub use hash_builder::HashBuilder;
-mod extension;
+mod key;
+mod sub_tree;
