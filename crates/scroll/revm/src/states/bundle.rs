@@ -36,7 +36,7 @@ impl From<(BundleState, ScrollPostExecutionContext)> for ScrollBundleState {
             .iter()
             .map(|reverts| {
                 reverts
-                    .into_iter()
+                    .iter()
                     .map(|(add, revert)| (*add, (revert.clone(), &context).into()))
                     .collect()
             })
@@ -67,7 +67,7 @@ impl ScrollBundleState {
     }
 
     /// Return reference to the state.
-    pub fn state(&self) -> &HashMap<Address, ScrollBundleAccount> {
+    pub const fn state(&self) -> &HashMap<Address, ScrollBundleAccount> {
         &self.state
     }
 
@@ -157,7 +157,7 @@ impl ScrollBundleState {
         (plain_state, reverts.into_plain_state_reverts())
     }
 
-    /// Return and clear all reverts from [ScrollBundleState]
+    /// Return and clear all reverts from [`ScrollBundleState`]
     pub fn take_all_reverts(&mut self) -> ScrollReverts {
         self.reverts_size = 0;
         core::mem::take(&mut self.reverts)

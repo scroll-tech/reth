@@ -17,7 +17,7 @@ pub struct ScrollReverts(Vec<Vec<(Address, ScrollAccountRevert)>>);
 
 impl ScrollReverts {
     /// Create new reverts
-    pub fn new(reverts: Vec<Vec<(Address, ScrollAccountRevert)>>) -> Self {
+    pub const fn new(reverts: Vec<Vec<(Address, ScrollAccountRevert)>>) -> Self {
         Self(reverts)
     }
 
@@ -30,7 +30,7 @@ impl ScrollReverts {
             // pessimistically pre-allocate assuming _all_ accounts changed.
             let mut accounts = Vec::with_capacity(reverts.len());
             let mut storage = Vec::with_capacity(reverts.len());
-            for (address, revert_account) in reverts.into_iter() {
+            for (address, revert_account) in reverts {
                 match revert_account.account {
                     ScrollAccountInfoRevert::RevertTo(acc) => accounts.push((address, Some(acc))),
                     ScrollAccountInfoRevert::DeleteIt => accounts.push((address, None)),

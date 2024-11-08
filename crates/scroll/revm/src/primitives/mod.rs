@@ -122,7 +122,7 @@ impl ScrollAccountInfo {
 
     /// Return bytecode hash associated with this account.
     /// If account does not have code, it returns `KECCAK_EMPTY` hash.
-    pub fn code_hash(&self) -> B256 {
+    pub const fn code_hash(&self) -> B256 {
         self.code_hash
     }
 

@@ -22,14 +22,14 @@ pub struct ScrollStateChangeset {
 pub struct ScrollPlainStateReverts {
     /// Vector of account with removed contracts bytecode
     ///
-    /// Note: If AccountInfo is None means that account needs to be removed.
+    /// Note: If [`ScrollAccountInfo`] is None means that account needs to be removed.
     pub accounts: Vec<Vec<(Address, Option<ScrollAccountInfo>)>>,
     /// Vector of storage with its address.
     pub storage: Vec<Vec<PlainStorageRevert>>,
 }
 
 impl ScrollPlainStateReverts {
-    /// Constructs new [ScrollPlainStateReverts] with pre-allocated capacity.
+    /// Constructs new [`ScrollPlainStateReverts`] with pre-allocated capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self { accounts: Vec::with_capacity(capacity), storage: Vec::with_capacity(capacity) }
     }

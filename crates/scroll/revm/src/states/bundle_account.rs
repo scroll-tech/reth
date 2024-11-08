@@ -17,7 +17,7 @@ pub struct ScrollBundleAccount {
     /// If it is different we add it to changeset.
     ///
     /// If Account was destroyed we ignore original value and compare present state with
-    /// U256::ZERO.
+    /// [`U256::ZERO`].
     pub storage: StorageWithOriginalValues,
     /// Account status.
     pub status: AccountStatus,
@@ -33,7 +33,7 @@ impl From<(BundleAccount, &ScrollPostExecutionContext)> for ScrollBundleAccount 
 
 impl ScrollBundleAccount {
     /// Creates a [`ScrollBundleAccount`].
-    pub fn new(
+    pub const fn new(
         original_info: Option<ScrollAccountInfo>,
         present_info: Option<ScrollAccountInfo>,
         storage: StorageWithOriginalValues,
