@@ -16,9 +16,16 @@ workspace = true
 alloy-primitives.workspace = true
 
 # reth
-reth-primitives-traits.workspace = true
-reth-revm.workspace = true
+reth-primitives-traits = { workspace = true, features = ["scroll"] }
+reth-revm = { workspace = true, features = ["scroll"] }
 reth-storage-errors.workspace = true
 
 # scroll
+reth-scroll-primitives.workspace = true
 reth-scroll-revm.workspace = true
+
+[dev-dependencies]
+eyre.workspace = true
+reth-primitives-traits.workspace = true
+reth-revm = { workspace = true, features = ["test-utils"] }
+reth-scroll-primitives.workspace = true

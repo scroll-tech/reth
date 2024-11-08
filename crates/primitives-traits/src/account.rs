@@ -5,7 +5,9 @@ use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Buf;
 use derive_more::Deref;
 use reth_codecs::{add_arbitrary_tests, Compact};
-use revm_primitives::{AccountInfo, Bytecode as RevmBytecode, BytecodeDecodeError, JumpTable};
+use revm_primitives::{
+    AccountInfo, Bytecode as RevmBytecode, BytecodeDecodeError, JumpTable, ScrollAccountInfo,
+};
 use serde::{Deserialize, Serialize};
 
 /// Identifier for [`LegacyRaw`](RevmBytecode::LegacyRaw).
@@ -34,6 +36,12 @@ pub struct Account {
     pub balance: U256,
     /// Hash of the account's bytecode.
     pub bytecode_hash: Option<B256>,
+    #[cfg(feature = "scroll")]
+    /// Size of the account's code in bytes.
+    pub code_size: u64,
+    #[cfg(feature = "scroll")]
+    /// Poseidon hash of the account's bytecode.
+    pub poseidon_code_hash: B256,
 }
 
 impl Account {
@@ -158,6 +166,29 @@ impl From<&GenesisAccount> for Account {
             nonce: value.nonce.unwrap_or_default(),
             balance: value.balance,
             bytecode_hash: value.code.as_ref().map(keccak256),
+            #[cfg(feature = "scroll")]
+            code_size: value.code.as_ref().map(|c| c.len()).unwrap_or_default() as u64,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: value
+                .code
+                .as_ref()
+                .map(|c| reth_scroll_primitives::poseidon(c))
+                .unwrap_or_default(),
+        }
+    }
+}
+
+impl From<ScrollAccountInfo> for Account {
+    fn from(revm_acc: ScrollAccountInfo) -> Self {
+        let code_hash = revm_acc.code_hash;
+        Self {
+            balance: revm_acc.balance,
+            nonce: revm_acc.nonce,
+            bytecode_hash: (code_hash != KECCAK_EMPTY).then_some(code_hash),
+            #[cfg(feature = "scroll")]
+            code_size: revm_acc.code_size,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: revm_acc.poseidon_code_hash,
         }
     }
 }
@@ -169,6 +200,25 @@ impl From<AccountInfo> for Account {
             balance: revm_acc.balance,
             nonce: revm_acc.nonce,
             bytecode_hash: (code_hash != KECCAK_EMPTY).then_some(code_hash),
+            #[cfg(feature = "scroll")]
+            code_size: 0,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: B256::ZERO,
+        }
+    }
+}
+
+impl From<Account> for ScrollAccountInfo {
+    fn from(reth_acc: Account) -> Self {
+        Self {
+            balance: reth_acc.balance,
+            nonce: reth_acc.nonce,
+            code_hash: reth_acc.bytecode_hash.unwrap_or(KECCAK_EMPTY),
+            code: None,
+            #[cfg(feature = "scroll")]
+            code_size: reth_acc.code_size,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: reth_acc.poseidon_code_hash,
         }
     }
 }
@@ -208,7 +258,8 @@ mod tests {
 
     #[test]
     fn test_empty_account() {
-        let mut acc = Account { nonce: 0, balance: U256::ZERO, bytecode_hash: None };
+        let mut acc =
+            Account { nonce: 0, balance: U256::ZERO, bytecode_hash: None, ..Default::default() };
         // Nonce 0, balance 0, and bytecode hash set to None is considered empty.
         assert!(acc.is_empty());
 
@@ -260,12 +311,21 @@ mod tests {
     #[test]
     fn test_account_has_bytecode() {
         // Account with no bytecode (None)
-        let acc_no_bytecode = Account { nonce: 1, balance: U256::from(1000), bytecode_hash: None };
+        let acc_no_bytecode = Account {
+            nonce: 1,
+            balance: U256::from(1000),
+            bytecode_hash: None,
+            ..Default::default()
+        };
         assert!(!acc_no_bytecode.has_bytecode(), "Account should not have bytecode");
 
         // Account with bytecode hash set to KECCAK_EMPTY (should have bytecode)
-        let acc_empty_bytecode =
-            Account { nonce: 1, balance: U256::from(1000), bytecode_hash: Some(KECCAK_EMPTY) };
+        let acc_empty_bytecode = Account {
+            nonce: 1,
+            balance: U256::from(1000),
+            bytecode_hash: Some(KECCAK_EMPTY),
+            ..Default::default()
+        };
         assert!(acc_empty_bytecode.has_bytecode(), "Account should have bytecode");
 
         // Account with a non-empty bytecode hash
@@ -273,6 +333,7 @@ mod tests {
             nonce: 1,
             balance: U256::from(1000),
             bytecode_hash: Some(B256::from_slice(&[0x11u8; 32])),
+            ..Default::default()
         };
         assert!(acc_with_bytecode.has_bytecode(), "Account should have bytecode");
     }
@@ -280,12 +341,17 @@ mod tests {
     #[test]
     fn test_account_get_bytecode_hash() {
         // Account with no bytecode (should return KECCAK_EMPTY)
-        let acc_no_bytecode = Account { nonce: 0, balance: U256::ZERO, bytecode_hash: None };
+        let acc_no_bytecode =
+            Account { nonce: 0, balance: U256::ZERO, bytecode_hash: None, ..Default::default() };
         assert_eq!(acc_no_bytecode.get_bytecode_hash(), KECCAK_EMPTY, "Should return KECCAK_EMPTY");
 
         // Account with bytecode hash set to KECCAK_EMPTY
-        let acc_empty_bytecode =
-            Account { nonce: 1, balance: U256::from(1000), bytecode_hash: Some(KECCAK_EMPTY) };
+        let acc_empty_bytecode = Account {
+            nonce: 1,
+            balance: U256::from(1000),
+            bytecode_hash: Some(KECCAK_EMPTY),
+            ..Default::default()
+        };
         assert_eq!(
             acc_empty_bytecode.get_bytecode_hash(),
             KECCAK_EMPTY,
@@ -294,8 +360,12 @@ mod tests {
 
         // Account with a valid bytecode hash
         let bytecode_hash = B256::from_slice(&[0x11u8; 32]);
-        let acc_with_bytecode =
-            Account { nonce: 1, balance: U256::from(1000), bytecode_hash: Some(bytecode_hash) };
+        let acc_with_bytecode = Account {
+            nonce: 1,
+            balance: U256::from(1000),
+            bytecode_hash: Some(bytecode_hash),
+            ..Default::default()
+        };
         assert_eq!(
             acc_with_bytecode.get_bytecode_hash(),
             bytecode_hash,

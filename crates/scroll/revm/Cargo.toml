@@ -15,5 +15,16 @@ workspace = true
 # revm
 revm.workspace = true
 
-#scroll
+# scroll
 reth-scroll-primitives.workspace = true
+
+[features]
+default = ["std"]
+
+arbitrary = ["revm/arbitrary"]
+
+scroll = []
+
+serde = ["revm/serde"]
+
+std = ["revm/std"]

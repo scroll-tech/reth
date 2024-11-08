@@ -4,3 +4,7 @@
 pub mod states;
 
 pub mod primitives;
+
+#[cfg(feature = "scroll")]
+pub use primitives::ScrollAccountInfo;
+pub use revm::primitives::*;
