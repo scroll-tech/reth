@@ -1,6 +1,6 @@
 //! Scroll storage implementation.
 
-use alloy_primitives::{map::Entry, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256};
 use reth_revm::{
     database::EvmStateProvider,
     primitives::{AccountInfo, Bytecode},
@@ -44,11 +44,9 @@ impl<DB: EvmStateProvider> Database for ScrollStateProviderDatabase<DB> {
         let Some(account) = self.db.basic_account(address)? else { return Ok(None) };
         let Some(code_hash) = account.bytecode_hash else { return Ok(Some(account.into())) };
 
-        let bytecode_context = (account.code_size, account.poseidon_code_hash);
-        if let Entry::Vacant(entry) = self.post_execution_context.entry(code_hash) {
-            entry.insert(bytecode_context);
-        }
-
+        self.post_execution_context
+            .entry(code_hash)
+            .or_insert_with(|| (account.code_size, account.poseidon_code_hash));
         Ok(Some(account.into()))
     }
 

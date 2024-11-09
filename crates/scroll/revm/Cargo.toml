@@ -23,8 +23,6 @@ default = ["std"]
 
 arbitrary = ["revm/arbitrary"]
 
-scroll = []
-
 serde = ["revm/serde"]
 
 std = ["revm/std"]

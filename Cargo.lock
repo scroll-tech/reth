@@ -8504,8 +8504,9 @@ dependencies = [
  "proptest-arbitrary-interop",
  "rand 0.8.5",
  "reth-codecs",
+ "reth-scroll-primitives",
+ "reth-scroll-revm",
  "reth-testing-utils",
- "revm-primitives",
  "roaring",
  "serde",
  "serde_json",
@@ -8986,6 +8987,7 @@ dependencies = [
  "eyre",
  "reth-primitives-traits",
  "reth-revm",
+ "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-storage-errors",
 ]
