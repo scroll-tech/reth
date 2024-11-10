@@ -1,5 +1,5 @@
 [package]
-name = "reth-scroll-revm"
+name = "reth-scroll-primitives"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,5 +15,5 @@ workspace = true
 # revm
 revm.workspace = true
 
-#scroll
-reth-scroll-primitives.workspace = true
+# scroll
+poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master", features = ["bn254"] }

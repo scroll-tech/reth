@@ -1,4 +1,5 @@
-use crate::primitives::{ScrollAccountInfo, ScrollPostExecutionContext};
+use crate::primitives::ScrollAccountInfo;
+use reth_scroll_primitives::ScrollPostExecutionContext;
 use revm::{
     db::{AccountStatus, BundleAccount, StorageWithOriginalValues},
     interpreter::primitives::U256,

@@ -1,29 +1,7 @@
 //! Scroll `revm` primitives types redefinitions.
 
-use revm::{
-    precompile::HashMap,
-    primitives::{b256, AccountInfo, Bytecode, B256, KECCAK_EMPTY, U256},
-};
-
-/// A Keccak code hash.
-type KeccakHash = B256;
-/// A Poseidon code hash.
-type PoseidonHash = B256;
-/// Size of a contract's code in bytes.
-type CodeSize = usize;
-
-/// Scroll post execution context maps a Keccak code hash of a contract's bytecode to its code size
-/// and Poseidon code hash.
-pub type ScrollPostExecutionContext = HashMap<KeccakHash, (CodeSize, PoseidonHash)>;
-
-/// The Poseidon hash of the empty string `""`.
-pub const POSEIDON_EMPTY: B256 =
-    b256!("2098f5fb9e239eab3ceac3f27b81e481dc3124d55ffed523a839ee8446b64864");
-
-/// Poseidon code hash
-pub fn poseidon(code: &[u8]) -> B256 {
-    poseidon_bn254::hash_code(code).into()
-}
+use reth_scroll_primitives::{poseidon, ScrollPostExecutionContext, POSEIDON_EMPTY};
+use revm::primitives::{AccountInfo, Bytecode, B256, KECCAK_EMPTY, U256};
 
 /// The Scroll account information. Code copy of [`AccountInfo`]. Provides additional `code_size`
 /// and `poseidon_code_hash` fields needed in the state root computation.
@@ -39,7 +17,7 @@ pub struct ScrollAccountInfo {
     /// inside `revm`.
     pub code: Option<Bytecode>,
     /// Account code size.
-    pub code_size: usize,
+    pub code_size: u64,
     /// Account code Poseidon hash. [`POSEIDON_EMPTY`] if code is None or empty.
     pub poseidon_code_hash: B256,
 }
@@ -89,7 +67,7 @@ impl ScrollAccountInfo {
         code: Bytecode,
         poseidon_code_hash: B256,
     ) -> Self {
-        let code_size = code.len();
+        let code_size = code.len() as u64;
         Self { balance, nonce, code: Some(code), code_hash, code_size, poseidon_code_hash }
     }
 
@@ -146,7 +124,7 @@ impl ScrollAccountInfo {
     /// Computes the Keccak and Poseidon hash of the provided bytecode.
     pub fn from_bytecode(bytecode: Bytecode) -> Self {
         let hash = bytecode.hash_slow();
-        let code_size = bytecode.len();
+        let code_size = bytecode.len() as u64;
         let poseidon_code_hash = poseidon(bytecode.bytecode());
 
         Self {

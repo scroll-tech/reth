@@ -1,7 +1,5 @@
-use crate::{
-    primitives::{ScrollAccountInfo, ScrollPostExecutionContext},
-    states::changes::ScrollPlainStateReverts,
-};
+use crate::{primitives::ScrollAccountInfo, states::changes::ScrollPlainStateReverts};
+use reth_scroll_primitives::ScrollPostExecutionContext;
 use revm::{
     db::{
         states::{reverts::AccountInfoRevert, PlainStorageRevert},

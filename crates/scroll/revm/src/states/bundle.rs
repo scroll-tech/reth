@@ -1,11 +1,12 @@
 use super::bundle_account::ScrollBundleAccount;
 use crate::{
-    primitives::{ScrollAccountInfo, ScrollPostExecutionContext},
+    primitives::ScrollAccountInfo,
     states::{
         changes::{ScrollPlainStateReverts, ScrollStateChangeset},
         reverts::ScrollReverts,
     },
 };
+use reth_scroll_primitives::{poseidon, ScrollPostExecutionContext};
 use revm::{
     db::{states::PlainStorageChangeset, BundleState, OriginalValuesKnown},
     primitives::{map::HashMap, Address, Bytecode, B256, KECCAK_EMPTY},
@@ -30,7 +31,12 @@ pub struct ScrollBundleState {
 }
 
 impl From<(BundleState, ScrollPostExecutionContext)> for ScrollBundleState {
-    fn from((bundle, context): (BundleState, ScrollPostExecutionContext)) -> Self {
+    fn from((bundle, mut context): (BundleState, ScrollPostExecutionContext)) -> Self {
+        // Iterate the newly deployed contracts from the bundle and insert them in the context.
+        for (hash, code) in &bundle.contracts {
+            context.entry(*hash).or_insert_with(|| (code.len() as u64, poseidon(code.bytecode())));
+        }
+
         let reverts = bundle
             .reverts
             .iter()
