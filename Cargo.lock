@@ -8974,6 +8974,7 @@ dependencies = [
 name = "reth-scroll-revm"
 version = "1.1.0"
 dependencies = [
+ "reth-revm",
  "reth-scroll-primitives",
  "revm",
 ]

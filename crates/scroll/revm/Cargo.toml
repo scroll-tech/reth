@@ -17,3 +17,6 @@ revm.workspace = true
 
 #scroll
 reth-scroll-primitives.workspace = true
+
+[dev-dependencies]
+reth-revm = { workspace = true, features = ["test-utils"] }

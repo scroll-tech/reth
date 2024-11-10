@@ -169,3 +169,72 @@ impl ScrollBundleState {
         core::mem::take(&mut self.reverts)
     }
 }
+#[cfg(test)]
+mod tests {
+    use crate::states::ScrollBundleState;
+    use reth_revm::primitives::{keccak256, AccountInfo, Address, Bytecode, Bytes, B256, U256};
+    use reth_scroll_primitives::{poseidon, ScrollPostExecutionContext};
+    use revm::db::BundleState;
+
+    #[test]
+    fn test_context_with_predeployed_account() {
+        let code_hash = B256::random();
+        let code_size = 10;
+        let poseidon_hash = B256::random();
+
+        // prepare account to be added to the bundle
+        let account = AccountInfo { code_hash, ..Default::default() };
+        let account_address = Address::random();
+
+        // add the account's code size and poseidon hash to the context
+        let context =
+            ScrollPostExecutionContext::from_iter([(code_hash, (code_size, poseidon_hash))]);
+
+        // prepare the bundle state
+        let bundle = BundleState::new(
+            [(account_address, None, Some(account), Default::default())],
+            Vec::<Vec<(Address, Option<Option<AccountInfo>>, Vec<(U256, U256)>)>>::default(),
+            [],
+        );
+
+        // check the Scroll bundle contains the correct code size and poseidon hash
+        let scroll_bundle = ScrollBundleState::from((bundle, context));
+        let scroll_account = scroll_bundle.account(&account_address).unwrap();
+
+        assert_eq!(scroll_account.info.as_ref().map(|info| info.code_size).unwrap(), code_size);
+        assert_eq!(
+            scroll_account.info.as_ref().map(|info| info.poseidon_code_hash).unwrap(),
+            poseidon_hash
+        );
+    }
+
+    #[test]
+    fn test_empty_context() {
+        let bytecode = Bytes::from([0x1, 0x2, 0x3, 0x4, 0x5]);
+        let code_hash = keccak256(&bytecode);
+        let code_size = bytecode.len() as u64;
+        let poseidon_hash = poseidon(&bytecode);
+
+        // prepare account to be added to the bundle
+        let account = AccountInfo { code_hash, ..Default::default() };
+        let account_address = Address::random();
+
+        // prepare the bundle state
+        let bundle = BundleState::new(
+            [(account_address, None, Some(account), Default::default())],
+            Vec::<Vec<(Address, Option<Option<AccountInfo>>, Vec<(U256, U256)>)>>::default(),
+            [(code_hash, Bytecode::LegacyRaw(bytecode))],
+        );
+
+        // check the Scroll bundle contains the correct code size and poseidon hash
+        let scroll_bundle =
+            ScrollBundleState::from((bundle, ScrollPostExecutionContext::default()));
+        let scroll_account = scroll_bundle.account(&account_address).unwrap();
+
+        assert_eq!(scroll_account.info.as_ref().map(|info| info.code_size).unwrap(), code_size);
+        assert_eq!(
+            scroll_account.info.as_ref().map(|info| info.poseidon_code_hash).unwrap(),
+            poseidon_hash
+        );
+    }
+}
