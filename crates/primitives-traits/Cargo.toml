@@ -20,7 +20,9 @@ alloy-genesis.workspace = true
 alloy-primitives.workspace = true
 alloy-rlp.workspace = true
 
-revm-primitives = { workspace = true, features = ["serde"] }
+# revm-primitives scroll re-export
+revm-primitives = { package = "reth-scroll-revm", path = "../scroll/revm", features = ["serde"] }
+reth-scroll-primitives = { workspace = true, optional = true }
 
 # misc
 byteorder = "1"
@@ -73,10 +75,14 @@ arbitrary = [
 	"dep:proptest-arbitrary-interop",
 	"alloy-eips/arbitrary",
 	"revm-primitives/arbitrary",
-	"reth-codecs/arbitrary"
+	"reth-codecs/arbitrary",
+	"reth-scroll-primitives?/arbitrary"
 ]
 serde-bincode-compat = [
 	"serde_with",
 	"alloy-consensus/serde-bincode-compat",
 	"alloy-eips/serde-bincode-compat"
+]
+scroll = [
+	"reth-scroll-primitives",
 ]
