@@ -153,6 +153,10 @@ members = [
     "examples/custom-beacon-withdrawals",
     "testing/ef-tests/",
     "testing/testing-utils",
+	"crates/scroll/execution",
+	"crates/scroll/primitives",
+	"crates/scroll/revm",
+	"crates/scroll/storage",
 ]
 default-members = ["bin/reth"]
 exclude = ["book/sources"]
