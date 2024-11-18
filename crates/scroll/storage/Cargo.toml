@@ -31,7 +31,6 @@ reth-revm = { workspace = true, features = ["test-utils"] }
 
 [features]
 scroll = [
-	"reth-revm/scroll",
 	"reth-primitives-traits/scroll",
 	"reth-scroll-revm/scroll",
 ]

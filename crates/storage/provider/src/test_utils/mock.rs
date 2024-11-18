@@ -83,7 +83,8 @@ impl ExtendedAccount {
     /// Create new instance of extended account
     pub fn new(nonce: u64, balance: U256) -> Self {
         Self {
-            account: Account { nonce, balance, bytecode_hash: None },
+            // TODO (scroll): remove at last Scroll `Account` related PR.
+            account: Account { nonce, balance, bytecode_hash: None, ..Default::default() },
             bytecode: None,
             storage: Default::default(),
         }

@@ -219,6 +219,19 @@ impl From<Account> for revm_primitives::shared::AccountInfo {
     }
 }
 
+// TODO (scroll): remove at last Scroll `Account` related PR.
+#[cfg(feature = "scroll")]
+impl From<revm_primitives::shared::AccountInfo> for Account {
+    fn from(revm_acc: revm_primitives::shared::AccountInfo) -> Self {
+        Self {
+            balance: revm_acc.balance,
+            nonce: revm_acc.nonce,
+            bytecode_hash: (revm_acc.code_hash != KECCAK_EMPTY).then_some(revm_acc.code_hash),
+            account_extension: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

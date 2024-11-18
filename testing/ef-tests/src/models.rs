@@ -162,6 +162,8 @@ impl State {
                 balance: account.balance,
                 nonce: account.nonce.to::<u64>(),
                 bytecode_hash: code_hash,
+                // TODO (scroll): remove at last Scroll `Account` related PR.
+                ..Default::default()
             };
             tx.put::<tables::PlainAccountState>(address, reth_account)?;
             tx.put::<tables::HashedAccounts>(hashed_address, reth_account)?;

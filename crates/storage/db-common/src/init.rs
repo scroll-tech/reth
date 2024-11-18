@@ -214,6 +214,8 @@ where
                     nonce: account.nonce.unwrap_or_default(),
                     balance: account.balance,
                     bytecode_hash,
+                    // TODO (scroll): remove at last Scroll `Account` related PR.
+                    ..Default::default()
                 }),
                 storage,
             ),
