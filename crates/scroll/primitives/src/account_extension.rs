@@ -5,16 +5,15 @@ use serde::{Deserialize, Serialize};
 
 /// The extension for a Scroll account's representation in storage.
 ///
-/// The extension is used in order to maintain backwards compatibility
-/// if more fields ever need to be added to the account (see [reth codecs](reth_codecs::test_utils)
-/// for details).
+/// The extension is used in order to maintain backwards compatibility if more fields need to be
+/// added to the account (see [reth codecs](reth_codecs::test_utils) for details).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Compact)]
 #[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
 pub struct AccountExtension {
     /// Size in bytes of the account's bytecode.
     pub code_size: u64,
     /// Poseidon hash of the account's bytecode. `None` means there is no
-    /// bytecode for the account
+    /// bytecode for the account.
     pub poseidon_code_hash: Option<B256>,
 }
 

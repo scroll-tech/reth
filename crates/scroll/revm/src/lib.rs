@@ -8,7 +8,9 @@ pub mod states;
 pub use revm::{
     db::*,
     inspector_handle_register,
-    primitives::{keccak256, Bytecode, BytecodeDecodeError, JumpTable, LegacyAnalyzedBytecode},
+    primitives::{
+        keccak256, Bytecode, BytecodeDecodeError, JumpTable, LegacyAnalyzedBytecode, TxEnv,
+    },
     Evm, EvmBuilder, GetInspector,
 };
 
