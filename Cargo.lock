@@ -1346,6 +1346,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bn254"
+version = "0.1.0"
+source = "git+https://github.com/scroll-tech/bn254.git?branch=master#81e1dcc92ee9a2798b13b84b24de182e9c42256e"
+dependencies = [
+ "ff",
+ "getrandom 0.2.15",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "sp1-intrinsics",
+ "subtle",
+]
+
+[[package]]
 name = "boa_ast"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5738,6 +5751,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc9c68a3f6da06753e9335d63e27f6b9754dd1920d941135b7ea8224f141adb2"
 
 [[package]]
+name = "poseidon-bn254"
+version = "0.1.0"
+source = "git+https://github.com/scroll-tech/poseidon-bn254?branch=master#254baa0e3e85c0975c16fe6f33042b1fa9ae0a44"
+dependencies = [
+ "bn254",
+ "itertools 0.13.0",
+ "sp1-intrinsics",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9056,6 +9079,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-execution"
+version = "1.1.0"
+dependencies = [
+ "auto_impl",
+ "reth-revm",
+ "reth-scroll-primitives",
+ "reth-scroll-revm",
+ "reth-scroll-storage",
+]
+
+[[package]]
+name = "reth-scroll-primitives"
+version = "1.1.0"
+dependencies = [
+ "alloy-primitives",
+ "arbitrary",
+ "bytes",
+ "modular-bitfield",
+ "poseidon-bn254",
+ "reth-codecs",
+ "serde",
+ "test-fuzz",
+]
+
+[[package]]
+name = "reth-scroll-revm"
+version = "1.1.0"
+dependencies = [
+ "reth-scroll-primitives",
+ "revm",
+ "serde",
+]
+
+[[package]]
+name = "reth-scroll-storage"
+version = "1.1.0"
+dependencies = [
+ "alloy-primitives",
+ "eyre",
+ "reth-codecs",
+ "reth-primitives-traits",
+ "reth-revm",
+ "reth-scroll-primitives",
+ "reth-scroll-revm",
+ "reth-storage-errors",
+]
+
+[[package]]
 name = "reth-stages"
 version = "1.1.1"
 dependencies = [
@@ -10386,6 +10457,14 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "sha1",
+]
+
+[[package]]
+name = "sp1-intrinsics"
+version = "0.0.0"
+source = "git+https://github.com/scroll-tech/sp1-intrinsics.git?branch=master#7e038e60db0b2e847f6d8f49e148ccac8c6fc394"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
