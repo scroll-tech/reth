@@ -323,8 +323,9 @@ mod tests {
     fn create_op_state_provider() -> StateProviderTest {
         let mut db = StateProviderTest::default();
 
+        // TODO (scroll): remove at last Scroll `Account` related PR.
         let l1_block_contract_account =
-            Account { balance: U256::ZERO, bytecode_hash: None, nonce: 1 };
+            Account { balance: U256::ZERO, bytecode_hash: None, nonce: 1, ..Default::default() };
 
         let mut l1_block_storage = HashMap::default();
         // base fee
