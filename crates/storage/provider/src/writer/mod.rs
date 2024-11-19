@@ -1417,8 +1417,8 @@ mod tests {
                     nonce: 1,
                     balance: U256::from(key),
                     bytecode_hash: None,
-                    // TODO (scroll): remove at last Scroll `Account` related PR.
-                    ..Default::default()
+                    #[cfg(feature = "scroll")]
+                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
                 };
                 let storage =
                     (1..11).map(|key| (B256::with_last_byte(key), U256::from(key))).collect();
@@ -1554,7 +1554,8 @@ mod tests {
             nonce: 56,
             balance: U256::from(123),
             bytecode_hash: Some(B256::random()),
-            ..Default::default()
+            #[cfg(feature = "scroll")]
+            account_extension: Some((10, B256::random()).into()),
         };
         prestate.insert(address1, (account1_new, BTreeMap::default()));
         state.commit(HashMap::from_iter([(

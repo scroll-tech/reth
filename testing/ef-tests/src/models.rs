@@ -162,8 +162,10 @@ impl State {
                 balance: account.balance,
                 nonce: account.nonce.to::<u64>(),
                 bytecode_hash: code_hash,
-                // TODO (scroll): remove at last Scroll `Account` related PR.
-                ..Default::default()
+                #[cfg(feature = "scroll")]
+                account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
+                    &account.code,
+                )),
             };
             tx.put::<tables::PlainAccountState>(address, reth_account)?;
             tx.put::<tables::HashedAccounts>(hashed_address, reth_account)?;

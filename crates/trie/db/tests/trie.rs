@@ -150,8 +150,8 @@ fn test_empty_account() {
                     nonce: 0,
                     balance: U256::from(0),
                     bytecode_hash: None,
-                    // TODO (scroll): remove at last Scroll `Account` related PR.
-                    ..Default::default()
+                    #[cfg(feature = "scroll")]
+                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
                 },
                 BTreeMap::from([(B256::with_last_byte(0x4), U256::from(12))]),
             ),
@@ -163,8 +163,8 @@ fn test_empty_account() {
                     nonce: 0,
                     balance: U256::from(0),
                     bytecode_hash: None,
-                    // TODO (scroll): remove at last Scroll `Account` related PR.
-                    ..Default::default()
+                    #[cfg(feature = "scroll")]
+                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
                 },
                 BTreeMap::default(),
             ),
@@ -176,8 +176,10 @@ fn test_empty_account() {
                     nonce: 155,
                     balance: U256::from(414241124u32),
                     bytecode_hash: Some(keccak256("test")),
-                    // TODO (scroll): remove at last Scroll `Account` related PR.
-                    ..Default::default()
+                    #[cfg(feature = "scroll")]
+                    account_extension: Some(
+                        reth_scroll_primitives::AccountExtension::from_bytecode(b"test"),
+                    ),
                 },
                 BTreeMap::from([
                     (B256::ZERO, U256::from(3)),
@@ -201,8 +203,8 @@ fn test_empty_storage_root() {
         nonce: 155,
         balance: U256::from(414241124u32),
         bytecode_hash: Some(keccak256(code)),
-        // TODO (scroll): remove at last Scroll `Account` related PR.
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(&code)),
     };
     insert_account(tx.tx_ref(), address, account, &Default::default());
     tx.commit().unwrap();
@@ -227,7 +229,8 @@ fn test_storage_root() {
         nonce: 155,
         balance: U256::from(414241124u32),
         bytecode_hash: Some(keccak256(code)),
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(&code)),
     };
 
     insert_account(tx.tx_ref(), address, account, &storage);
@@ -378,8 +381,8 @@ fn account_and_storage_trie() {
         nonce: 0,
         balance: U256::from(3).mul(ether),
         bytecode_hash: None,
-        // TODO (scroll): remove at last Scroll `Account` related PR.
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
     };
     hashed_account_cursor.upsert(key1, account1).unwrap();
     hash_builder.add_leaf(Nibbles::unpack(key1), &encode_account(account1, None));
@@ -404,8 +407,8 @@ fn account_and_storage_trie() {
         nonce: 0,
         balance: U256::from(2).mul(ether),
         bytecode_hash: Some(code_hash),
-        // TODO (scroll): remove at last Scroll `Account` related PR.
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some((10, B256::random()).into()),
     };
     hashed_account_cursor.upsert(key3, account3).unwrap();
     for (hashed_slot, value) in storage {
@@ -492,8 +495,8 @@ fn account_and_storage_trie() {
         nonce: 0,
         balance: U256::from(5).mul(ether),
         bytecode_hash: None,
-        // TODO (scroll): remove at last Scroll `Account` related PR.
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
     };
     hashed_account_cursor.upsert(key4b, account4b).unwrap();
 
@@ -763,8 +766,8 @@ fn extension_node_trie<N: ProviderNodeTypes>(
         nonce: 0,
         balance: U256::from(1u64),
         bytecode_hash: Some(B256::random()),
-        // TODO (scroll): remove at last Scroll `Account` related PR.
-        ..Default::default()
+        #[cfg(feature = "scroll")]
+        account_extension: Some((10, B256::random()).into()),
     };
     let val = encode_account(a, None);
 

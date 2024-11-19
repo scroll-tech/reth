@@ -5,11 +5,15 @@
 
 pub mod states;
 
+#[cfg(feature = "optimism")]
+pub use revm::primitives::OptimismFields;
+
 pub use revm::{
     db::*,
     inspector_handle_register,
     primitives::{
-        keccak256, Bytecode, BytecodeDecodeError, JumpTable, LegacyAnalyzedBytecode, TxEnv,
+        keccak256, AuthorizationList, Bytecode, BytecodeDecodeError, JumpTable,
+        LegacyAnalyzedBytecode, TxEnv, TxKind,
     },
     Evm, EvmBuilder, GetInspector,
 };

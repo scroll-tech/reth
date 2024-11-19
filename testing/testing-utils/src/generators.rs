@@ -386,8 +386,16 @@ pub fn random_eoa_account<R: Rng>(rng: &mut R) -> (Address, Account) {
     let balance = U256::from(rng.gen::<u32>());
     let addr = rng.gen();
 
-    // TODO (scroll): remove at last Scroll `Account` related PR.
-    (addr, Account { nonce, balance, bytecode_hash: None, ..Default::default() })
+    (
+        addr,
+        Account {
+            nonce,
+            balance,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(Default::default()),
+        },
+    )
 }
 
 /// Generate random Externally Owned Accounts

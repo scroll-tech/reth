@@ -23,7 +23,12 @@ serde = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
-arbitrary = ["revm/arbitrary"]
+arbitrary = [
+	"revm/arbitrary",
+	"reth-scroll-primitives/arbitrary"
+]
+asm-keccak = ["revm/asm-keccak"]
+c-kzg = ["revm/c-kzg"]
 optimism = ["revm/optimism"]
 serde = [
 	"revm/serde",
@@ -31,4 +36,7 @@ serde = [
 ]
 scroll = []
 test-utils = ["revm/test-utils"]
-std = ["revm/std"]
+std = [
+	"revm/std",
+	"serde/std"
+]

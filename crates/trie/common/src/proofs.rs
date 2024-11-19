@@ -55,8 +55,11 @@ impl MultiProof {
                             nonce: account.nonce,
                             bytecode_hash: (account.code_hash != KECCAK_EMPTY)
                                 .then_some(account.code_hash),
-                            // TODO (scroll): remove at last Scroll `Account` related PR.
-                            ..Default::default()
+                            // TODO (scroll): set the extension to the correct value.
+                            #[cfg(feature = "scroll")]
+                            account_extension: Some(
+                                reth_scroll_primitives::AccountExtension::empty(),
+                            ),
                         })
                     }
                 }

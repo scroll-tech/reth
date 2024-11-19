@@ -64,7 +64,8 @@ std = [
 ]
 test-utils = [
 	"arbitrary",
-	"reth-codecs/test-utils"
+	"reth-codecs/test-utils",
+	"revm-primitives/test-utils"
 ]
 arbitrary = [
 	"std",

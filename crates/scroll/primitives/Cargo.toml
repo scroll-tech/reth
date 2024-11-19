@@ -37,9 +37,11 @@ test-fuzz.workspace = true
 [features]
 default = ["std"]
 std = [
-	"serde/std"
+	"serde/std",
+	"alloy-primitives/std"
 ]
 arbitrary = [
 	"dep:arbitrary",
-	"alloy-primitives/arbitrary"
+	"alloy-primitives/arbitrary",
+	"reth-codecs/arbitrary"
 ]
