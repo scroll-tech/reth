@@ -33,6 +33,9 @@ rayon.workspace = true
 derive_more.workspace = true
 auto_impl.workspace = true
 itertools.workspace = true
+smallvec = { version = "1.0", default-features = false, features = [
+    "const_new",
+] }
 
 # `metrics` feature
 reth-metrics = { workspace = true, optional = true }

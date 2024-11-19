@@ -1,0 +1,17 @@
+[package]
+name = "scroll-primitives"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+alloy-primitives.workspace = true
+reth-trie.workspace = true
+poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master" }
+
+[lints]
+workspace = true

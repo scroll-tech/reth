@@ -1,8 +1,11 @@
-use alloy_primitives::{hex, keccak256, B256};
+use super::{BRANCH_NODE_LBRT_DOMAIN, BRANCH_NODE_LTRB_DOMAIN};
+use alloy_primitives::{hex, B256};
 use alloy_trie::Nibbles;
 use core::fmt;
+use scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
 
-/// Reference to a subtree containing a single child.
+/// [SubTreeRef] is a structure that allows for calculation of the root of a sparse binary Merkle
+/// tree consisting of a single leaf node.
 pub(crate) struct SubTreeRef<'a> {
     /// The key to the child node.
     pub key: &'a Nibbles,
@@ -18,17 +21,16 @@ impl<'a> SubTreeRef<'a> {
     }
 
     pub(crate) fn root(&self) -> B256 {
-        let mut tree_root = *self.child;
-        for &bit in self.key.as_slice().iter().rev() {
-            let mut bytes = [0u8; 64];
-            if bit == 0 {
-                bytes[..32].copy_from_slice(tree_root.as_slice());
+        let mut tree_root =
+            Fr::from_repr_vartime(self.child.0).expect("child is a valid field element");
+        for bit in self.key.as_slice().iter().rev() {
+            tree_root = if *bit == 0 {
+                hash_with_domain(&[tree_root, Fr::zero()], Fr::from(BRANCH_NODE_LBRT_DOMAIN))
             } else {
-                bytes[32..].copy_from_slice(tree_root.as_slice());
-            }
-            tree_root = keccak256(&bytes);
+                hash_with_domain(&[Fr::zero(), tree_root], Fr::from(BRANCH_NODE_LTRB_DOMAIN))
+            };
         }
-        tree_root
+        tree_root.to_repr().into()
     }
 }
 

@@ -1,0 +1,46 @@
+[package]
+name = "scroll-state-commitment"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+alloy-primitives.workspace = true
+alloy-rlp.workspace = true
+reth-execution-errors.workspace = true
+reth-trie.workspace = true
+reth-primitives.workspace = true
+tracing.workspace = true
+scroll-trie.workspace = true
+scroll-primitives.workspace = true
+poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master" }
+reth-trie-db.workspace = true
+reth-db = { workspace = true, features = ["test-utils"] }
+
+# `metrics` feature
+reth-metrics = { workspace = true, optional = true }
+metrics = { workspace = true, optional = true }
+
+[dev-dependencies]
+alloy-consensus.workspace = true
+reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
+reth-trie = { workspace = true, features = ["test-utils"] }
+reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
+reth-provider = { workspace = true, features = ["test-utils"] }
+proptest.workspace = true
+proptest-arbitrary-interop.workspace = true
+zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie" }
+zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json"] }
+
+[lints]
+workspace = true
+
+[features]
+metrics = ["reth-metrics", "dep:metrics"]
+
+

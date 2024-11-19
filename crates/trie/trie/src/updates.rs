@@ -6,10 +6,12 @@ use std::collections::{HashMap, HashSet};
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrieUpdates {
+    /// Collection of updated account trie nodes.
     #[cfg_attr(feature = "serde", serde(with = "serde_nibbles_map"))]
-    pub(crate) account_nodes: HashMap<Nibbles, BranchNodeCompact>,
+    pub account_nodes: HashMap<Nibbles, BranchNodeCompact>,
+    /// Collection of removed account trie nodes.
     #[cfg_attr(feature = "serde", serde(with = "serde_nibbles_set"))]
-    pub(crate) removed_nodes: HashSet<Nibbles>,
+    pub removed_nodes: HashSet<Nibbles>,
     pub(crate) storage_tries: HashMap<B256, StorageTrieUpdates>,
 }
 
@@ -226,6 +228,7 @@ impl StorageTrieUpdates {
 /// This also sorts the set before serializing.
 #[cfg(feature = "serde")]
 mod serde_nibbles_set {
+    use crate::key::BitsCompatibility;
     use std::collections::HashSet;
 
     use reth_trie_common::Nibbles;
@@ -235,8 +238,10 @@ mod serde_nibbles_set {
     where
         S: Serializer,
     {
-        let mut storage_nodes =
-            map.iter().map(|elem| alloy_primitives::hex::encode(elem.pack())).collect::<Vec<_>>();
+        let mut storage_nodes = map
+            .iter()
+            .map(|elem| alloy_primitives::hex::encode(elem.pack_bits()))
+            .collect::<Vec<_>>();
         storage_nodes.sort_unstable();
         storage_nodes.serialize(serializer)
     }
@@ -248,7 +253,8 @@ mod serde_nibbles_set {
         Vec::<String>::deserialize(deserializer)?
             .into_iter()
             .map(|node| {
-                Ok(Nibbles::unpack(
+                // TODO(frisitano): replace this with key abstraction.
+                Ok(Nibbles::unpack_and_truncate_bits(
                     alloy_primitives::hex::decode(node)
                         .map_err(|err| D::Error::custom(err.to_string()))?,
                 ))
@@ -273,6 +279,8 @@ mod serde_nibbles_map {
         Deserialize, Deserializer, Serialize, Serializer,
     };
 
+    use crate::key::BitsCompatibility;
+
     pub(super) fn serialize<S, T>(
         map: &HashMap<Nibbles, T>,
         serializer: S,
@@ -286,7 +294,8 @@ mod serde_nibbles_map {
         storage_nodes.sort_unstable_by_key(|node| node.0);
         for (k, v) in storage_nodes {
             // pack, then hex encode the Nibbles
-            let packed = alloy_primitives::hex::encode(k.pack());
+            // TODO(frisitano): replace this with key abstraction.
+            let packed = alloy_primitives::hex::encode(k.pack_bits());
             map_serializer.serialize_entry(&packed, &v)?;
         }
         map_serializer.end()
@@ -321,7 +330,8 @@ mod serde_nibbles_map {
                     let decoded_key =
                         hex::decode(&key).map_err(|err| Error::custom(err.to_string()))?;
 
-                    let nibbles = Nibbles::unpack(&decoded_key);
+                    // TODO(frisitano): replace this with key abstraction.
+                    let nibbles = Nibbles::unpack_and_truncate_bits(&decoded_key);
 
                     result.insert(nibbles, value);
                 }

@@ -1,18 +1,26 @@
-use alloy_primitives::{hex, keccak256, B256};
+use super::{
+    BRANCH_NODE_LBRB_DOMAIN, BRANCH_NODE_LBRT_DOMAIN, BRANCH_NODE_LTRB_DOMAIN,
+    BRANCH_NODE_LTRT_DOMAIN,
+};
+use alloy_primitives::{hex, B256};
 use alloy_trie::TrieMask;
 use core::{fmt, ops::Range, slice::Iter};
+use scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
 
-// #[allow(unused_imports)]
-// use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::vec::Vec;
 
 /// The range of valid child indexes.
 pub(crate) const CHILD_INDEX_RANGE: Range<u8> = 0..2;
+
+/// A trie mask to extract the two child indexes from a branch node.
+pub(crate) const CHILD_INDEX_MASK: TrieMask = TrieMask::new(0b11);
 
 /// A reference to [BranchNode] and its state mask.
 /// NOTE: The stack may contain more items that specified in the state mask.
 #[derive(Clone)]
 pub(crate) struct BranchNodeRef<'a> {
-    /// Reference to the collection of RLP encoded nodes.
+    /// Reference to the collection of hash nodes.
     /// NOTE: The referenced stack might have more items than the number of children
     /// for this node. We should only ever access items starting from
     /// [BranchNodeRef::first_child_index].
@@ -47,7 +55,10 @@ impl<'a> BranchNodeRef<'a> {
     /// Means that the node is in inconsistent state.
     #[inline]
     pub(crate) fn first_child_index(&self) -> usize {
-        self.stack.len().checked_sub(self.state_mask.count_ones() as usize).unwrap()
+        self.stack
+            .len()
+            .checked_sub((self.state_mask & CHILD_INDEX_MASK).count_ones() as usize)
+            .unwrap()
     }
 
     #[inline]
@@ -67,17 +78,31 @@ impl<'a> BranchNodeRef<'a> {
 
     pub(crate) fn hash(&self) -> B256 {
         let mut children_iter = self.children();
-        let mut bytes: [u8; 64] = [0u8; 64];
 
-        if let Some((_, Some(child))) = children_iter.next() {
-            bytes[..32].copy_from_slice(child.as_slice());
+        let left_child = children_iter
+            .next()
+            .map(|(_, c)| *c.unwrap_or_default())
+            .expect("branch node has two children");
+        let left_child =
+            Fr::from_repr_vartime(left_child.0).expect("left child is a valid field element");
+        let right_child = children_iter
+            .next()
+            .map(|(_, c)| *c.unwrap_or_default())
+            .expect("branch node has two children");
+        let right_child =
+            Fr::from_repr_vartime(right_child.0).expect("right child is a valid field element");
+
+        hash_with_domain(&[left_child, right_child], self.hashing_domain()).to_repr().into()
+    }
+
+    fn hashing_domain(&self) -> Fr {
+        match *self.state_mask {
+            0b1011 => Fr::from(BRANCH_NODE_LBRT_DOMAIN),
+            0b1111 => Fr::from(BRANCH_NODE_LTRT_DOMAIN),
+            0b0111 => Fr::from(BRANCH_NODE_LTRB_DOMAIN),
+            0b0011 => Fr::from(BRANCH_NODE_LBRB_DOMAIN),
+            _ => unreachable!("invalid branch node state mask"),
         }
-
-        if let Some((_, Some(child))) = children_iter.next() {
-            bytes[32..].copy_from_slice(child.as_slice());
-        }
-
-        keccak256(bytes.as_slice())
     }
 }
 

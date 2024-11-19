@@ -1,5 +1,6 @@
 use crate::{
     hashed_cursor::{HashedCursorFactory, HashedStorageCursor},
+    key::BitsCompatibility,
     node_iter::{TrieElement, TrieNodeIter},
     prefix_set::{PrefixSetMut, TriePrefixSetsMut},
     trie_cursor::TrieCursorFactory,
@@ -96,11 +97,13 @@ where
 
         // Create the walker.
         let mut prefix_set = self.prefix_sets.account_prefix_set.clone();
-        prefix_set.extend_keys(targets.keys().map(Nibbles::unpack));
+        // TODO(frisitano): replace this with key abstraction.
+        prefix_set.extend_keys(targets.keys().map(|x| Nibbles::unpack_and_truncate_bits(x)));
         let walker = TrieWalker::new(trie_cursor, prefix_set.freeze());
 
         // Create a hash builder to rebuild the root node since it is not available in the database.
-        let retainer = targets.keys().map(Nibbles::unpack).collect();
+        // TODO(frisitano): replace this with key abstraction.
+        let retainer = targets.keys().map(|x| Nibbles::unpack_and_truncate_bits(x)).collect();
         let mut hash_builder = HashBuilder::default().with_proof_retainer(retainer);
 
         let mut storages = HashMap::default();
@@ -131,7 +134,11 @@ where
                     let account = TrieAccount::from((account, storage_multiproof.root));
                     account.encode(&mut account_rlp as &mut dyn BufMut);
 
-                    hash_builder.add_leaf(Nibbles::unpack(hashed_address), &account_rlp);
+                    hash_builder.add_leaf(
+                        // TODO(frisitano): replace this with key abstraction.
+                        Nibbles::unpack_and_truncate_bits(hashed_address),
+                        &account_rlp,
+                    );
                     storages.insert(hashed_address, storage_multiproof);
                 }
             }
@@ -224,7 +231,11 @@ where
             return Ok(StorageMultiProof::empty())
         }
 
-        let target_nibbles = targets.into_iter().map(Nibbles::unpack).collect::<Vec<_>>();
+        let target_nibbles = targets
+            .into_iter()
+            // TODO(frisitano): replace this with key abstraction.
+            .map(|x| Nibbles::unpack_and_truncate_bits(x))
+            .collect::<Vec<_>>();
         self.prefix_set.extend_keys(target_nibbles.clone());
 
         let trie_cursor = self.trie_cursor_factory.storage_trie_cursor(self.hashed_address)?;
@@ -240,7 +251,8 @@ where
                 }
                 TrieElement::Leaf(hashed_slot, value) => {
                     hash_builder.add_leaf(
-                        Nibbles::unpack(hashed_slot),
+                        // TODO(frisitano): replace this with key abstraction.
+                        Nibbles::unpack_and_truncate_bits(hashed_slot),
                         alloy_rlp::encode_fixed_size(&value).as_ref(),
                     );
                 }

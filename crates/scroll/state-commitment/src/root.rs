@@ -1,23 +1,28 @@
-use crate::{
-    hashed_cursor::{HashedCursorFactory, HashedStorageCursor},
+use super::{PoseidonKeyHasher, PosiedonValueHasher};
+use alloy_primitives::{Address, BlockNumber, B256};
+use reth_db::transaction::DbTx;
+use reth_execution_errors::{StateRootError, StorageRootError};
+use reth_primitives::constants::EMPTY_ROOT_HASH;
+use reth_trie::{
+    hashed_cursor::{HashedCursorFactory, HashedPostStateCursorFactory, HashedStorageCursor},
     key::BitsCompatibility,
     node_iter::{TrieElement, TrieNodeIter},
     prefix_set::{PrefixSet, TriePrefixSets},
-    progress::{IntermediateStateRootState, StateRootProgress},
     stats::TrieTracker,
-    trie_cursor::TrieCursorFactory,
+    trie_cursor::{InMemoryTrieCursorFactory, TrieCursorFactory},
     updates::{StorageTrieUpdates, TrieUpdates},
     walker::TrieWalker,
-    HashBuilder, Nibbles, TrieAccount,
+    HashedPostState, IntermediateStateRootState, Nibbles, StateRootProgress, TrieAccount,
+    TrieInput,
 };
-use alloy_primitives::{keccak256, Address, B256};
-use alloy_rlp::{BufMut, Encodable};
-use reth_execution_errors::{StateRootError, StorageRootError};
-use reth_primitives::constants::EMPTY_ROOT_HASH;
-use tracing::trace;
+use scroll_primitives::ScrollTrieAccount;
+use scroll_trie::HashBuilder;
+use tracing::{debug, trace};
 
 #[cfg(feature = "metrics")]
 use crate::metrics::{StateRootMetrics, TrieRootMetrics};
+
+// TODO(frisitano): Instead of introducing this new type we should
 
 /// `StateRoot` is used to compute the root node of a state trie.
 #[derive(Debug)]
@@ -159,7 +164,8 @@ where
         let hashed_account_cursor = self.hashed_cursor_factory.hashed_account_cursor()?;
         let (mut hash_builder, mut account_node_iter) = match self.previous_state {
             Some(state) => {
-                let hash_builder = state.hash_builder.with_updates(retain_updates);
+                let hash_builder = state.hash_builder.with_updates(retain_updates).into();
+
                 let walker = TrieWalker::from_stack(
                     trie_cursor,
                     state.walker_stack,
@@ -179,7 +185,6 @@ where
             }
         };
 
-        let mut account_rlp = Vec::with_capacity(128);
         let mut hashed_entries_walked = 0;
         let mut updated_storage_nodes = 0;
         while let Some(node) = account_node_iter.try_next()? {
@@ -226,13 +231,12 @@ where
                         storage_root_calculator.root()?
                     };
 
-                    account_rlp.clear();
-                    let account = TrieAccount::from((account, storage_root));
-                    account.encode(&mut account_rlp as &mut dyn BufMut);
+                    let account: ScrollTrieAccount =
+                        TrieAccount::from((account, storage_root)).into();
+                    let account_hash = PosiedonValueHasher::hash_account(account);
                     hash_builder.add_leaf(
-                        // TODO(frisitano): replace this with key abstraction.
                         Nibbles::unpack_and_truncate_bits(hashed_address),
-                        &account_rlp,
+                        account_hash.as_slice(),
                     );
 
                     // Decide if we need to return intermediate progress.
@@ -246,7 +250,7 @@ where
                         trie_updates.account_nodes.extend(hash_builder_updates);
 
                         let state = IntermediateStateRootState {
-                            hash_builder,
+                            hash_builder: hash_builder.into(),
                             walker_stack,
                             last_account_key: hashed_address,
                         };
@@ -265,7 +269,7 @@ where
 
         trie_updates.finalize(
             account_node_iter.walker,
-            hash_builder,
+            hash_builder.into(),
             self.prefix_sets.destroyed_accounts,
         );
 
@@ -314,7 +318,7 @@ impl<T, H> StorageRoot<T, H> {
         Self::new_hashed(
             trie_cursor_factory,
             hashed_cursor_factory,
-            keccak256(address),
+            PoseidonKeyHasher::hash_key(address),
             #[cfg(feature = "metrics")]
             metrics,
         )
@@ -427,11 +431,11 @@ where
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 TrieElement::Leaf(hashed_slot, value) => {
+                    let hashed_value = PosiedonValueHasher::hash_storage(value);
                     tracker.inc_leaf();
                     hash_builder.add_leaf(
-                        // TODO(frisitano): replace this with key abstraction.
                         Nibbles::unpack_and_truncate_bits(hashed_slot),
-                        alloy_rlp::encode_fixed_size(&value).as_ref(),
+                        hashed_value.as_ref(),
                     );
                 }
             }
@@ -440,7 +444,7 @@ where
         let root = hash_builder.root();
 
         let mut trie_updates = StorageTrieUpdates::default();
-        trie_updates.finalize(storage_node_iter.walker, hash_builder);
+        trie_updates.finalize(storage_node_iter.walker, hash_builder.into());
 
         let stats = tracker.finish();
 
@@ -459,5 +463,367 @@ where
 
         let storage_slots_walked = stats.leaves_added() as usize;
         Ok((root, storage_slots_walked, trie_updates))
+    }
+}
+
+use reth_trie_db::{
+    DatabaseHashedCursorFactory, DatabaseStateRoot, DatabaseTrieCursorFactory, PrefixSetLoader,
+};
+use std::ops::RangeInclusive;
+
+impl<'a, TX: DbTx> DatabaseStateRoot<'a, TX>
+    for StateRoot<DatabaseTrieCursorFactory<'a, TX>, DatabaseHashedCursorFactory<'a, TX>>
+{
+    fn from_tx(tx: &'a TX) -> Self {
+        Self::new(DatabaseTrieCursorFactory::new(tx), DatabaseHashedCursorFactory::new(tx))
+    }
+
+    fn incremental_root_calculator(
+        tx: &'a TX,
+        range: RangeInclusive<BlockNumber>,
+    ) -> Result<Self, StateRootError> {
+        let loaded_prefix_sets = PrefixSetLoader::new(tx).load(range)?;
+        Ok(Self::from_tx(tx).with_prefix_sets(loaded_prefix_sets))
+    }
+
+    fn incremental_root(
+        tx: &'a TX,
+        range: RangeInclusive<BlockNumber>,
+    ) -> Result<B256, StateRootError> {
+        debug!(target: "trie::loader", ?range, "incremental state root");
+        Self::incremental_root_calculator(tx, range)?.root()
+    }
+
+    fn incremental_root_with_updates(
+        tx: &'a TX,
+        range: RangeInclusive<BlockNumber>,
+    ) -> Result<(B256, TrieUpdates), StateRootError> {
+        debug!(target: "trie::loader", ?range, "incremental state root");
+        Self::incremental_root_calculator(tx, range)?.root_with_updates()
+    }
+
+    fn incremental_root_with_progress(
+        tx: &'a TX,
+        range: RangeInclusive<BlockNumber>,
+    ) -> Result<StateRootProgress, StateRootError> {
+        debug!(target: "trie::loader", ?range, "incremental state root with progress");
+        Self::incremental_root_calculator(tx, range)?.root_with_progress()
+    }
+
+    fn overlay_root(tx: &'a TX, post_state: HashedPostState) -> Result<B256, StateRootError> {
+        let prefix_sets = post_state.construct_prefix_sets().freeze();
+        let state_sorted = post_state.into_sorted();
+        StateRoot::new(
+            DatabaseTrieCursorFactory::new(tx),
+            HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
+        )
+        .with_prefix_sets(prefix_sets)
+        .root()
+    }
+
+    fn overlay_root_with_updates(
+        tx: &'a TX,
+        post_state: HashedPostState,
+    ) -> Result<(B256, TrieUpdates), StateRootError> {
+        let prefix_sets = post_state.construct_prefix_sets().freeze();
+        let state_sorted = post_state.into_sorted();
+        StateRoot::new(
+            DatabaseTrieCursorFactory::new(tx),
+            HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
+        )
+        .with_prefix_sets(prefix_sets)
+        .root_with_updates()
+    }
+
+    fn overlay_root_from_nodes(tx: &'a TX, input: TrieInput) -> Result<B256, StateRootError> {
+        let state_sorted = input.state.into_sorted();
+        let nodes_sorted = input.nodes.into_sorted();
+        StateRoot::new(
+            InMemoryTrieCursorFactory::new(DatabaseTrieCursorFactory::new(tx), &nodes_sorted),
+            HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
+        )
+        .with_prefix_sets(input.prefix_sets.freeze())
+        .root()
+    }
+
+    fn overlay_root_from_nodes_with_updates(
+        tx: &'a TX,
+        input: TrieInput,
+    ) -> Result<(B256, TrieUpdates), StateRootError> {
+        let state_sorted = input.state.into_sorted();
+        let nodes_sorted = input.nodes.into_sorted();
+        StateRoot::new(
+            InMemoryTrieCursorFactory::new(DatabaseTrieCursorFactory::new(tx), &nodes_sorted),
+            HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
+        )
+        .with_prefix_sets(input.prefix_sets.freeze())
+        .root_with_updates()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::StateRoot;
+    use alloy_consensus::constants::KECCAK_EMPTY;
+    use alloy_primitives::{
+        aliases::U248, b256, hex_literal::hex, keccak256, Address, FixedBytes, Uint, B256, U256,
+    };
+    use proptest::{prelude::ProptestConfig, proptest};
+    use proptest_arbitrary_interop::arb;
+    use reth_db::{
+        cursor::{DbCursorRO, DbCursorRW, DbDupCursorRO},
+        tables,
+        test_utils::TempDatabase,
+        transaction::{DbTx, DbTxMut},
+        DatabaseEnv,
+    };
+    use reth_primitives::{constants::EMPTY_ROOT_HASH, Account, StorageEntry};
+    use reth_provider::{
+        test_utils::create_test_provider_factory, DatabaseProviderRW, StorageTrieWriter, TrieWriter,
+    };
+    use reth_trie::{
+        prefix_set::PrefixSetMut,
+        test_utils::{state_root, state_root_prehashed, storage_root, storage_root_prehashed},
+        BranchNodeCompact, StorageRoot, TrieMask,
+    };
+    use reth_trie_db::{DatabaseStateRoot, DatabaseStorageRoot, DatabaseTrieCursorFactory};
+    use std::{
+        collections::{BTreeMap, HashMap},
+        ops::Mul,
+        str::FromStr,
+        sync::Arc,
+    };
+
+    use alloy_rlp::Encodable;
+    use poseidon_bn254::{hash_with_domain, Fr, PrimeField};
+    use reth_trie::{
+        prefix_set::TriePrefixSets, trie_cursor::InMemoryTrieCursorFactory,
+        updates::StorageTrieUpdates, HashedPostState, IntermediateStateRootState, Nibbles,
+        StateRootProgress, TrieAccount,
+    };
+    use std::sync::Once;
+    use tracing_subscriber::{self, fmt::format::FmtSpan};
+    use zktrie::HashField;
+    use zktrie_rust::{
+        db::SimpleDb,
+        hash::AsHash,
+        types::{Hashable, TrieHashScheme},
+    };
+
+    static INIT: Once = Once::new();
+
+    pub fn init_test_logger() {
+        INIT.call_once(|| {
+            tracing_subscriber::fmt()
+                .with_test_writer() // Capture logs for test output
+                .with_span_events(FmtSpan::CLOSE) // Optional: Add span events
+                .with_env_filter("trace") // Set log level as needed
+                .init();
+        });
+    }
+
+    // TODO(frisitano): Clean up tests and add tests for storage trie.
+
+    type State = BTreeMap<Address, (Account, BTreeMap<B256, U256>)>;
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            cases: 1, ..ProptestConfig::default()
+        })]
+
+        #[test]
+        fn fuzz_in_memory_account_nodes(mut init_state: BTreeMap<B256, (u32, U256, Option<B256>)>, state_updates: [BTreeMap<B256, Option<U256>>; 4]) {
+            // init_test_logger();
+
+            let mut init_state: BTreeMap<B256, Account> = init_state.into_iter().take(1).map(|(mut address, (nonce, mut balance, bytecode_hash))| {
+                // set the largest byte to 0
+                <B256 as AsMut<[u8; 32]>>::as_mut(&mut address)[31] = 0;
+                // set the most significant 8 bits to 0
+                unsafe {
+                    balance.as_limbs_mut()[3] &= 0x00FFFFFFFFFFFFFF;
+                }
+                let account = Account { balance, nonce: nonce.into(), bytecode_hash };
+                (address, account)
+            }).collect();
+            let state_updates: Vec<BTreeMap<_, _>> = state_updates.into_iter().map(|update| {
+                let update = update.into_iter().take(1).map(|(mut address, mut update)| {
+                    // set the largest byte to 0
+                    <B256 as AsMut<[u8; 32]>>::as_mut(&mut address)[31] = 0;
+                    // set the most significant 8 bits to 0
+                    let account = if let Some(mut balance) = update {
+                        unsafe {
+                            balance.as_limbs_mut()[3] &= 0x00FFFFFFFFFFFFFF;
+                        }
+                        Some(Account { balance, ..Default::default() })
+                    } else { None };
+                    (address, account)
+                }).collect::<BTreeMap<_, _>>();
+                update
+            }).collect();
+
+
+            let factory = create_test_provider_factory();
+            let provider = factory.provider_rw().unwrap();
+            let mut hashed_account_cursor = provider.tx_ref().cursor_write::<tables::HashedAccounts>().unwrap();
+
+            // Insert init state into database
+            for (hashed_address, account) in init_state.clone().into_iter() {
+                hashed_account_cursor.upsert(reverse_bits(hashed_address), account).unwrap();
+            }
+
+            // Compute initial root and updates
+            let (_, mut trie_nodes) = StateRoot::from_tx(provider.tx_ref())
+                .root_with_updates()
+                .unwrap();
+
+            let mut state = init_state;
+            for state_update in state_updates {
+                // Insert state updates into database
+                let mut hashed_state = HashedPostState::default();
+                for (hashed_address, account) in state_update.into_iter().take(4) {
+                    if let Some(account) = account {
+                        hashed_account_cursor.upsert(reverse_bits(hashed_address), account).unwrap();
+                        hashed_state.accounts.insert(reverse_bits(hashed_address), Some(account));
+                        state.insert(hashed_address, account);
+                    } else {
+                        hashed_state.accounts.insert(reverse_bits(hashed_address), None);
+                        state.remove(&hashed_address);
+                    }
+                }
+
+                // Compute root with in-memory trie nodes overlay
+                let (state_root, trie_updates) = StateRoot::from_tx(provider.tx_ref())
+                    .with_prefix_sets(hashed_state.construct_prefix_sets().freeze())
+                    .with_trie_cursor_factory(InMemoryTrieCursorFactory::new(
+                        DatabaseTrieCursorFactory::new(provider.tx_ref()), &trie_nodes.clone().into_sorted())
+                    )
+                    .root_with_updates()
+                    .unwrap();
+
+                trie_nodes.extend(trie_updates);
+
+                // Verify the result
+                let expected_root = state_root_zktrie(
+                    state.iter().map(|(key, account)| (*key, (*account, std::iter::empty())))
+                );
+                assert_eq!(expected_root.0, state_root.0);
+
+            }
+        }
+
+
+    }
+
+    fn reverse_bits(b256: B256) -> B256 {
+        let mut b256 = b256.0;
+        for byte in b256.iter_mut() {
+            *byte = byte.reverse_bits();
+        }
+        B256::from(b256)
+    }
+
+    fn state_root_zktrie<I, S>(accounts: I) -> B256
+    where
+        I: IntoIterator<Item = (B256, (Account, S))>,
+        S: IntoIterator<Item = (B256, U256)>,
+    {
+        let mut trie = zktrie();
+        const COMPRESSION_FLAG: u32 = 8;
+        for (address, (account, storage)) in accounts.into_iter() {
+            let mut key = address.0;
+            key.reverse();
+            let key = AsHash::from_bytes(&key).unwrap();
+            let mut account_bytes = Vec::with_capacity(5);
+
+            account_bytes.push(U256::from_limbs([account.nonce, 0, 0, 0]).to_be_bytes());
+            account_bytes.push(account.balance.to_be_bytes());
+            account_bytes.push([0u8; 32]);
+            account_bytes.push(account.bytecode_hash.unwrap_or(KECCAK_EMPTY).0);
+            account_bytes.push([0u8; 32]);
+
+            // for bytes in account_bytes.iter() {
+            //     println!("{:?}", bytes);
+            // }
+
+            trie.try_update(&key, COMPRESSION_FLAG, account_bytes).unwrap();
+        }
+        trie.prepare_root().unwrap();
+        let mut root = trie.root().to_bytes();
+        root.reverse();
+        B256::from_slice(&root)
+        // 00
+    }
+
+    #[test]
+    fn test_basic_state_root_with_updates_succeeds() {
+        let address_1 = Address::with_last_byte(0);
+        let address_2 = Address::with_last_byte(3);
+        let address_3 = Address::with_last_byte(7);
+        let account_1 = Account { balance: Uint::from(1), ..Default::default() };
+        let account_2 = Account { balance: Uint::from(2), ..Default::default() };
+        let account_3 = Account { balance: Uint::from(3), ..Default::default() };
+
+        let factory = create_test_provider_factory();
+        let tx = factory.provider_rw().unwrap();
+
+        insert_account(tx.tx_ref(), address_1, account_1, &Default::default());
+        insert_account(tx.tx_ref(), address_2, account_2, &Default::default());
+        insert_account(tx.tx_ref(), address_3, account_3, &Default::default());
+
+        tx.commit().unwrap();
+
+        let tx = factory.provider_rw().unwrap();
+        let (root, updates) = StateRoot::from_tx(tx.tx_ref()).root_with_updates().unwrap();
+    }
+
+    fn test_state_root_with_state(state: State) {
+        let factory = create_test_provider_factory();
+        let tx = factory.provider_rw().unwrap();
+
+        for (address, (account, storage)) in &state {
+            insert_account(tx.tx_ref(), *address, *account, storage)
+        }
+        tx.commit().unwrap();
+        let expected = state_root(state);
+
+        let tx = factory.provider_rw().unwrap();
+        let got = StateRoot::from_tx(tx.tx_ref()).root().unwrap();
+        assert_eq!(expected, got);
+    }
+
+    fn insert_account(
+        tx: &impl DbTxMut,
+        address: Address,
+        account: Account,
+        storage: &BTreeMap<B256, U256>,
+    ) {
+        let hashed_address = keccak256(address);
+        tx.put::<tables::HashedAccounts>(hashed_address, account).unwrap();
+        insert_storage(tx, hashed_address, storage);
+    }
+
+    fn insert_storage(tx: &impl DbTxMut, hashed_address: B256, storage: &BTreeMap<B256, U256>) {
+        for (k, v) in storage {
+            tx.put::<tables::HashedStorages>(
+                hashed_address,
+                StorageEntry { key: keccak256(k), value: *v },
+            )
+            .unwrap();
+        }
+    }
+
+    fn poseidon_hash_scheme(a: &[u8; 32], b: &[u8; 32], domain: &[u8; 32]) -> Option<[u8; 32]> {
+        let a = Fr::from_repr_vartime(*a)?;
+        let b = Fr::from_repr_vartime(*b)?;
+        let domain = Fr::from_repr_vartime(*domain)?;
+        Some(hash_with_domain(&[a, b], domain).to_repr())
+    }
+
+    fn zktrie() -> zktrie_rust::raw::ZkTrieImpl<AsHash<HashField>, SimpleDb, 248> {
+        zktrie::init_hash_scheme_simple(poseidon_hash_scheme);
+        zktrie_rust::raw::ZkTrieImpl::<AsHash<HashField>, SimpleDb, 248>::new_zktrie_impl(
+            SimpleDb::new(),
+        )
+        .unwrap()
     }
 }

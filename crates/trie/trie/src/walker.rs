@@ -1,4 +1,5 @@
 use crate::{
+    key::BitsCompatibility,
     prefix_set::PrefixSet,
     trie_cursor::{CursorSubNode, TrieCursor},
     BranchNodeCompact, Nibbles,
@@ -83,9 +84,10 @@ impl<C> TrieWalker<C> {
         self.key()
             .and_then(|key| {
                 if self.can_skip_current_node {
-                    key.increment().map(|inc| inc.pack())
+                    // TODO(frisitano): replace this with key abstraction.
+                    key.increment_bit().map(|inc| inc.pack_bits())
                 } else {
-                    Some(key.pack())
+                    Some(key.pack_bits())
                 }
             })
             .map(|mut key| {

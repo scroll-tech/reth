@@ -99,6 +99,8 @@ members = [
     "crates/rpc/rpc-testing-util/",
     "crates/rpc/rpc-types-compat/",
     "crates/rpc/rpc/", 
+    "crates/scroll/primitives", 
+    "crates/scroll/state-commitment",
     "crates/scroll/trie",
     "crates/stages/api/",
     "crates/stages/stages/",
@@ -409,6 +411,11 @@ reth-trie = { path = "crates/trie/trie" }
 reth-trie-common = { path = "crates/trie/common" }
 reth-trie-db = { path = "crates/trie/db" }
 reth-trie-parallel = { path = "crates/trie/parallel" }
+
+# scroll
+scroll-state-commitment = { path = "crates/scroll/state-commitment" }
+scroll-trie = { path = "crates/scroll/trie" }
+scroll-primitives = { path = "crates/scroll/primitives" }
 
 # revm
 revm = { version = "14.0.3", features = [
