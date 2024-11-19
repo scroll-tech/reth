@@ -100,6 +100,10 @@ members = [
     "crates/rpc/rpc-testing-util/",
     "crates/rpc/rpc-types-compat/",
     "crates/rpc/rpc/",
+    "crates/scroll/execution",
+    "crates/scroll/primitives",
+    "crates/scroll/revm",
+    "crates/scroll/storage",
     "crates/stages/api/",
     "crates/stages/stages/",
     "crates/stages/types/",
@@ -149,10 +153,6 @@ members = [
     "examples/custom-beacon-withdrawals",
     "testing/ef-tests/",
     "testing/testing-utils",
-	"crates/scroll/execution",
-	"crates/scroll/primitives",
-	"crates/scroll/revm",
-	"crates/scroll/storage",
 ]
 default-members = ["bin/reth"]
 exclude = ["book/sources"]

@@ -86,4 +86,5 @@ serde-bincode-compat = [
 ]
 scroll = [
 	"reth-scroll-primitives",
+	"revm-primitives/scroll"
 ]
