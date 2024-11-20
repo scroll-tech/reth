@@ -30,6 +30,21 @@ impl From<(StateChangeset, &ScrollPostExecutionContext)> for ScrollStateChangese
     }
 }
 
+// This conversion can cause a loss of information since performed without additional context.
+impl From<StateChangeset> for ScrollStateChangeset {
+    fn from(changeset: StateChangeset) -> Self {
+        Self {
+            accounts: changeset
+                .accounts
+                .into_iter()
+                .map(|(add, acc)| (add, acc.map(Into::into)))
+                .collect(),
+            storage: changeset.storage,
+            contracts: changeset.contracts,
+        }
+    }
+}
+
 /// Code copy of the [`PlainStateReverts`] to accommodate for [`ScrollAccountInfo`].
 #[derive(Clone, Debug, Default)]
 pub struct ScrollPlainStateReverts {
@@ -52,6 +67,22 @@ impl From<(PlainStateReverts, &ScrollPostExecutionContext)> for ScrollPlainState
                         .into_iter()
                         .map(|(add, acc)| (add, acc.map(|a| (a, context).into())))
                         .collect()
+                })
+                .collect(),
+            storage: reverts.storage,
+        }
+    }
+}
+
+// This conversion can cause a loss of information since performed without additional context.
+impl From<PlainStateReverts> for ScrollPlainStateReverts {
+    fn from(reverts: PlainStateReverts) -> Self {
+        Self {
+            accounts: reverts
+                .accounts
+                .into_iter()
+                .map(|accounts| {
+                    accounts.into_iter().map(|(add, acc)| (add, acc.map(Into::into))).collect()
                 })
                 .collect(),
             storage: reverts.storage,

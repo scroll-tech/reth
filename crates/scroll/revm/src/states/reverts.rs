@@ -47,26 +47,34 @@ impl ScrollReverts {
         }
     }
 
-    /// Consume reverts and create plain state reverts.
+    /// Generate a [`ScrollPlainStateReverts`].
     ///
     /// Note that account are sorted by address.
-    pub fn into_plain_state_reverts(mut self) -> ScrollPlainStateReverts {
+    pub fn to_plain_state_reverts(&self) -> ScrollPlainStateReverts {
         let mut state_reverts = ScrollPlainStateReverts::with_capacity(self.0.len());
-        for reverts in self.0.drain(..) {
+        for reverts in &self.0 {
             // pessimistically pre-allocate assuming _all_ accounts changed.
             let mut accounts = Vec::with_capacity(reverts.len());
             let mut storage = Vec::with_capacity(reverts.len());
             for (address, revert_account) in reverts {
-                match revert_account.account {
-                    ScrollAccountInfoRevert::RevertTo(acc) => accounts.push((address, Some(acc))),
-                    ScrollAccountInfoRevert::DeleteIt => accounts.push((address, None)),
+                match &revert_account.account {
+                    ScrollAccountInfoRevert::RevertTo(acc) => {
+                        // cloning is cheap, because account info has 3 small
+                        // fields and a Bytes
+                        accounts.push((*address, Some(acc.clone())))
+                    }
+                    ScrollAccountInfoRevert::DeleteIt => accounts.push((*address, None)),
                     ScrollAccountInfoRevert::DoNothing => (),
                 }
                 if revert_account.wipe_storage || !revert_account.storage.is_empty() {
                     storage.push(PlainStorageRevert {
-                        address,
+                        address: *address,
                         wiped: revert_account.wipe_storage,
-                        storage_revert: revert_account.storage.into_iter().collect::<Vec<_>>(),
+                        storage_revert: revert_account
+                            .storage
+                            .iter()
+                            .map(|(k, v)| (*k, *v))
+                            .collect::<Vec<_>>(),
                     });
                 }
             }
@@ -95,6 +103,18 @@ impl From<(AccountRevert, &ScrollPostExecutionContext)> for ScrollAccountRevert 
     fn from((account, context): (AccountRevert, &ScrollPostExecutionContext)) -> Self {
         Self {
             account: (account.account, context).into(),
+            storage: account.storage,
+            previous_status: account.previous_status,
+            wipe_storage: account.wipe_storage,
+        }
+    }
+}
+
+// This conversion can cause a loss of information since performed without additional context.
+impl From<AccountRevert> for ScrollAccountRevert {
+    fn from(account: AccountRevert) -> Self {
+        Self {
+            account: account.account.into(),
             storage: account.storage,
             previous_status: account.previous_status,
             wipe_storage: account.wipe_storage,
@@ -140,6 +160,17 @@ impl From<(AccountInfoRevert, &ScrollPostExecutionContext)> for ScrollAccountInf
             AccountInfoRevert::DoNothing => Self::DoNothing,
             AccountInfoRevert::DeleteIt => Self::DeleteIt,
             AccountInfoRevert::RevertTo(account) => Self::RevertTo((account, context).into()),
+        }
+    }
+}
+
+// This conversion can cause a loss of information since performed without additional context.
+impl From<AccountInfoRevert> for ScrollAccountInfoRevert {
+    fn from(account: AccountInfoRevert) -> Self {
+        match account {
+            AccountInfoRevert::DoNothing => Self::DoNothing,
+            AccountInfoRevert::DeleteIt => Self::DeleteIt,
+            AccountInfoRevert::RevertTo(account) => Self::RevertTo(account.into()),
         }
     }
 }

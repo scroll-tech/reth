@@ -26,7 +26,7 @@ pub use states::ScrollAccountInfo;
 
 /// Shared module, available for all feature flags.
 pub mod shared {
-    pub use revm::primitives::AccountInfo;
+    pub use revm::{db::states::BundleState, primitives::AccountInfo};
 }
 
 /// Match the `revm` module structure

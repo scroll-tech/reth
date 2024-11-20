@@ -21,7 +21,6 @@ use reth_provider::{
     StatsReader, TransactionVariant,
 };
 use reth_prune_types::PruneModes;
-use reth_revm::database::StateProviderDatabase;
 use reth_stages_api::{
     BlockErrorKind, CheckpointBlockRange, EntitiesCheckpoint, ExecInput, ExecOutput,
     ExecutionCheckpoint, ExecutionStageThresholds, Stage, StageCheckpoint, StageError, StageId,
@@ -225,7 +224,11 @@ where
             None
         };
 
-        let db = StateProviderDatabase(LatestStateProviderRef::new(provider));
+        let state = LatestStateProviderRef::new(provider);
+        #[cfg(feature = "scroll")]
+        let db = reth_scroll_storage::ScrollStateProviderDatabase::new(state);
+        #[cfg(not(feature = "scroll"))]
+        let db = reth_revm::database::StateProviderDatabase(state);
         let mut executor = self.executor_provider.batch_executor(db);
         executor.set_tip(max_block);
         executor.set_prune_modes(prune_modes);
@@ -661,7 +664,7 @@ where
 mod tests {
     use super::*;
     use crate::test_utils::TestStageDB;
-    use alloy_primitives::{address, hex_literal::hex, keccak256, Address, B256, U256};
+    use alloy_primitives::{address, b256, hex_literal::hex, keccak256, Address, B256, U256};
     use alloy_rlp::Decodable;
     use assert_matches::assert_matches;
     use reth_chainspec::ChainSpecBuilder;
@@ -884,9 +887,10 @@ mod tests {
                     nonce: 0,
                     balance: U256::ZERO,
                     bytecode_hash: Some(code_hash),
-                    // TODO (scroll): use `from_bytecode`
                     #[cfg(feature = "scroll")]
-                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+                    account_extension: Some(
+                        reth_scroll_primitives::AccountExtension::from_bytecode(&code),
+                    ),
                 },
             )
             .unwrap();
@@ -953,9 +957,10 @@ mod tests {
                 balance: U256::ZERO,
                 nonce: 0x00,
                 bytecode_hash: Some(code_hash),
-                // TODO (scroll): use `from_bytecode`.
                 #[cfg(feature = "scroll")]
-                account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+                account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
+                    &code,
+                )),
             };
             let account2 = address!("2adc25665018aa1fe0e6bc666dac8fc2697ff9ba");
             let account2_info = Account {
@@ -1051,9 +1056,8 @@ mod tests {
             nonce: 0,
             balance: U256::ZERO,
             bytecode_hash: Some(code_hash),
-            // TODO (scroll): use `from_bytecode`.
             #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+            account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(&code)),
         };
         let acc2 = address!("a94f5374fce5edbc8e2a8697c15331677e6ebf0b");
         let acc2_info = Account {
@@ -1190,9 +1194,8 @@ mod tests {
             nonce: 0,
             balance: U256::ZERO,
             bytecode_hash: Some(code_hash),
-            // TODO (scroll): use `from_bytecode`.
             #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+            account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(&code)),
         };
 
         // set account

@@ -86,7 +86,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateRootProvider
 {
     fn state_root(&self, hashed_state: HashedPostState) -> ProviderResult<B256> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        let mut state = HashedPostState::from_bundle_state(&bundle_state.state);
+        let mut state = HashedPostState::from_bundle_state(bundle_state);
         state.extend(hashed_state);
         self.state_provider.state_root(state)
     }
@@ -100,7 +100,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateRootProvider
         hashed_state: HashedPostState,
     ) -> ProviderResult<(B256, TrieUpdates)> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        let mut state = HashedPostState::from_bundle_state(&bundle_state.state);
+        let mut state = HashedPostState::from_bundle_state(bundle_state);
         state.extend(hashed_state);
         self.state_provider.state_root_with_updates(state)
     }
@@ -110,7 +110,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateRootProvider
         mut input: TrieInput,
     ) -> ProviderResult<(B256, TrieUpdates)> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        input.prepend(HashedPostState::from_bundle_state(&bundle_state.state));
+        input.prepend(HashedPostState::from_bundle_state(bundle_state));
         self.state_provider.state_root_from_nodes_with_updates(input)
     }
 }
@@ -150,7 +150,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateProofProvider
         slots: &[B256],
     ) -> ProviderResult<AccountProof> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        input.prepend(HashedPostState::from_bundle_state(&bundle_state.state));
+        input.prepend(HashedPostState::from_bundle_state(bundle_state));
         self.state_provider.proof(input, address, slots)
     }
 
@@ -160,7 +160,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateProofProvider
         targets: HashMap<B256, HashSet<B256>>,
     ) -> ProviderResult<MultiProof> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        input.prepend(HashedPostState::from_bundle_state(&bundle_state.state));
+        input.prepend(HashedPostState::from_bundle_state(bundle_state));
         self.state_provider.multiproof(input, targets)
     }
 
@@ -170,7 +170,7 @@ impl<SP: StateProvider, EDP: ExecutionDataProvider> StateProofProvider
         target: HashedPostState,
     ) -> ProviderResult<HashMap<B256, Bytes>> {
         let bundle_state = self.block_execution_data_provider.execution_outcome().state();
-        input.prepend(HashedPostState::from_bundle_state(&bundle_state.state));
+        input.prepend(HashedPostState::from_bundle_state(bundle_state));
         self.state_provider.witness(input, target)
     }
 }

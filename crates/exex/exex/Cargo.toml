@@ -81,3 +81,16 @@ serde = [
 	"secp256k1/serde",
 	"reth-primitives-traits/serde",
 ]
+scroll = [
+    "reth-node-core/scroll",
+    "reth-evm/scroll",
+    "reth-primitives/scroll",
+    "reth-provider/scroll",
+    "reth-evm-ethereum/scroll",
+    "reth-testing-utils/scroll",
+    "reth-revm/scroll",
+    "reth-primitives-traits/scroll",
+    "reth-node-api/scroll",
+    "reth-blockchain-tree/scroll",
+    "reth-db-common/scroll"
+]

@@ -1,4 +1,5 @@
 use alloy_primitives::{keccak256, map::B256HashMap, Bytes, B256};
+use reth_scroll_execution::ContextFul;
 use reth_trie::{HashedPostState, HashedStorage};
 use revm::State;
 
@@ -22,7 +23,7 @@ pub struct ExecutionWitnessRecord {
 
 impl ExecutionWitnessRecord {
     /// Records the state after execution.
-    pub fn record_executed_state<DB>(&mut self, statedb: &State<DB>) {
+    pub fn record_executed_state<DB: ContextFul>(&mut self, statedb: &State<DB>) {
         self.codes = statedb
             .cache
             .contracts
@@ -43,9 +44,17 @@ impl ExecutionWitnessRecord {
 
         for (address, account) in &statedb.cache.accounts {
             let hashed_address = keccak256(address);
-            self.hashed_state
-                .accounts
-                .insert(hashed_address, account.account.as_ref().map(|a| a.info.clone().into()));
+            #[cfg(feature = "scroll")]
+            let hashed_account = account.account.as_ref().map(|a| {
+                Into::<reth_scroll_revm::AccountInfo>::into((
+                    a.info.clone(),
+                    statedb.database.context(),
+                ))
+                .into()
+            });
+            #[cfg(not(feature = "scroll"))]
+            let hashed_account = account.account.as_ref().map(|a| a.info.clone().into());
+            self.hashed_state.accounts.insert(hashed_address, hashed_account);
 
             let storage = self
                 .hashed_state
@@ -68,7 +77,7 @@ impl ExecutionWitnessRecord {
     }
 
     /// Creates the record from the state after execution.
-    pub fn from_executed_state<DB>(state: &State<DB>) -> Self {
+    pub fn from_executed_state<DB: ContextFul>(state: &State<DB>) -> Self {
         let mut record = Self::default();
         record.record_executed_state(state);
         record

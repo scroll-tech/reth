@@ -22,6 +22,7 @@ use reth_optimism_consensus::validate_block_post_execution;
 use reth_optimism_forks::OpHardfork;
 use reth_primitives::{BlockWithSenders, Receipt, TxType};
 use reth_revm::{Database, State};
+use reth_scroll_execution::ContextFul;
 use revm_primitives::{
     db::DatabaseCommit, BlockEnv, CfgEnvWithHandlerCfg, EnvWithHandlerCfg, ResultAndState, U256,
 };
@@ -55,12 +56,12 @@ where
     EvmConfig:
         Clone + Unpin + Sync + Send + 'static + ConfigureEvm<Header = alloy_consensus::Header>,
 {
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display>> =
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> =
         OpExecutionStrategy<DB, EvmConfig>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
+        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -116,7 +117,7 @@ where
 
 impl<DB, EvmConfig> BlockExecutionStrategy<DB> for OpExecutionStrategy<DB, EvmConfig>
 where
-    DB: Database<Error: Into<ProviderError> + Display>,
+    DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
     EvmConfig: ConfigureEvm<Header = alloy_consensus::Header>,
 {
     type Error = BlockExecutionError;

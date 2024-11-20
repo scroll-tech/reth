@@ -91,8 +91,8 @@ pub trait DatabaseStateRoot<'a, TX>: Sized {
     ///         nonce: 1,
     ///         balance: U256::from(10),
     ///         bytecode_hash: None,
-    ///         // TODO (scroll): remove at last Scroll `Account` related PR.
-    ///         ..Default::default()
+    ///         #[cfg(feature = "scroll")]
+    ///         account_extension: None,
     ///     }),
     /// );
     ///
@@ -291,7 +291,7 @@ mod tests {
             .build();
         assert_eq!(bundle_state.reverts.len(), 1);
 
-        let post_state = HashedPostState::from_bundle_state(&bundle_state.state);
+        let post_state = HashedPostState::from_bundle_state(&bundle_state);
         assert_eq!(post_state.accounts.len(), 2);
         assert_eq!(post_state.storages.len(), 2);
 

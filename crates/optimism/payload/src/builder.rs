@@ -42,6 +42,7 @@ use crate::{
 use op_alloy_consensus::DepositTransaction;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use reth_revm::witness::ExecutionWitnessRecord;
+use reth_scroll_execution::ContextFul;
 use reth_transaction_pool::pool::BestPayloadTransactions;
 
 /// Optimism's payload builder
@@ -364,7 +365,7 @@ where
             execution_outcome.block_logs_bloom(block_number).expect("Number is in range");
 
         // // calculate the state root
-        let hashed_state = HashedPostState::from_bundle_state(&execution_outcome.state().state);
+        let hashed_state = HashedPostState::from_bundle_state(execution_outcome.state());
         let (state_root, trie_output) = {
             state.database.as_ref().state_root_with_updates(hashed_state.clone()).inspect_err(
                 |err| {
@@ -461,7 +462,7 @@ where
     ) -> Result<ExecutionWitness, PayloadBuilderError>
     where
         EvmConfig: ConfigureEvm<Header = Header>,
-        DB: Database<Error = ProviderError> + AsRef<P>,
+        DB: Database<Error = ProviderError> + AsRef<P> + ContextFul,
         P: StateProofProvider,
     {
         let _ = self.execute(state, ctx)?;

@@ -17,6 +17,7 @@ use revm_primitives::db::Database;
 
 // re-export Either
 pub use futures_util::future::Either;
+use reth_scroll_execution::ContextFul;
 use revm::State;
 
 impl<A, B> BlockExecutorProvider for Either<A, B>
@@ -24,15 +25,15 @@ where
     A: BlockExecutorProvider,
     B: BlockExecutorProvider,
 {
-    type Executor<DB: Database<Error: Into<ProviderError> + Display>> =
+    type Executor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> =
         Either<A::Executor<DB>, B::Executor<DB>>;
 
-    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display>> =
+    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> =
         Either<A::BatchExecutor<DB>, B::BatchExecutor<DB>>;
 
     fn executor<DB>(&self, db: DB) -> Self::Executor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
+        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
     {
         match self {
             Self::Left(a) => Either::Left(a.executor(db)),
@@ -42,7 +43,7 @@ where
 
     fn batch_executor<DB>(&self, db: DB) -> Self::BatchExecutor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
+        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
     {
         match self {
             Self::Left(a) => Either::Left(a.batch_executor(db)),

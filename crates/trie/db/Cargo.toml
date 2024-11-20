@@ -21,7 +21,7 @@ reth-storage-errors.workspace = true
 reth-trie-common.workspace = true
 reth-trie.workspace = true
 
-revm.workspace = true
+revm = { package = "reth-scroll-revm", path = "../../scroll/revm" }
 
 # alloy
 alloy-rlp.workspace = true
@@ -88,4 +88,10 @@ test-utils = [
 	"reth-trie/test-utils",
 	"revm/test-utils"
 ]
-scroll = []
+scroll = [
+    "reth-db/scroll",
+    "reth-primitives/scroll",
+    "reth-trie-common/scroll",
+    "reth-provider/scroll",
+    "revm/scroll"
+]

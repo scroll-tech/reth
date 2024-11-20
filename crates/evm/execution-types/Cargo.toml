@@ -16,7 +16,8 @@ reth-execution-errors.workspace = true
 reth-trie.workspace = true
 reth-primitives-traits.workspace = true
 
-revm.workspace = true
+# scroll
+revm = { package = "reth-scroll-revm", path = "../../scroll/revm" }
 
 # alloy
 alloy-primitives.workspace = true
@@ -57,4 +58,8 @@ std = [
 	"revm/std",
 	"serde?/std",
 	"reth-primitives-traits/std",
+]
+scroll = [
+    "revm/scroll",
+    "reth-primitives/scroll"
 ]

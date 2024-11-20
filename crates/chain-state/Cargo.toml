@@ -44,7 +44,7 @@ pin-project.workspace = true
 alloy-signer = { workspace = true, optional = true }
 alloy-signer-local = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
-revm = { workspace = true, optional = true }
+revm = { package = "reth-scroll-revm", path = "../scroll/revm", optional = true }
 
 [dev-dependencies]
 reth-testing-utils.workspace = true
@@ -52,7 +52,7 @@ alloy-signer.workspace = true
 alloy-signer-local.workspace = true
 alloy-consensus.workspace = true
 rand.workspace = true
-revm.workspace = true
+revm = { package = "reth-scroll-revm", path = "../scroll/revm" }
 
 [features]
 test-utils = [

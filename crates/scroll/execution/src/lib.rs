@@ -2,5 +2,5 @@
 
 #![warn(unused_crate_dependencies)]
 
-pub use context::{ContextFul, FinalizeExecution, WithContext};
+pub use context::{ContextFul, ExecutionContext, FinalizeExecution, WithContext, DEFAULT_CONTEXT};
 mod context;

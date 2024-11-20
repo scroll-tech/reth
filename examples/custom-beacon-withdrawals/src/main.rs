@@ -2,6 +2,9 @@
 //! custom mechanism instead of minting native tokens
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use alloy_eips::{eip4895::Withdrawal, eip7685::Requests};
 use alloy_sol_macro::sol;
@@ -30,6 +33,7 @@ use reth_evm::execute::{
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_ethereum::{node::EthereumAddOns, BasicBlockExecutorProvider, EthereumNode};
 use reth_primitives::{BlockWithSenders, Receipt};
+use reth_scroll_execution::ContextFul;
 use std::{fmt::Display, sync::Arc};
 
 pub const SYSTEM_ADDRESS: Address = address!("fffffffffffffffffffffffffffffffffffffffe");
@@ -91,11 +95,12 @@ pub struct CustomExecutorStrategyFactory {
 }
 
 impl BlockExecutionStrategyFactory for CustomExecutorStrategyFactory {
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display>> = CustomExecutorStrategy<DB>;
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> =
+        CustomExecutorStrategy<DB>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
+        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -143,7 +148,7 @@ where
 
 impl<DB> BlockExecutionStrategy<DB> for CustomExecutorStrategy<DB>
 where
-    DB: Database<Error: Into<ProviderError> + Display>,
+    DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
 {
     type Error = BlockExecutionError;
 

@@ -62,6 +62,7 @@ parking_lot.workspace = true
 assert_matches.workspace = true
 alloy-genesis.workspace = true
 alloy-consensus.workspace = true
+revm = { package = "reth-scroll-revm", path = "../scroll/revm" }
 
 [features]
 test-utils = [
@@ -76,12 +77,26 @@ test-utils = [
 	"reth-db-api/test-utils",
 	"reth-provider/test-utils",
 	"reth-trie-db/test-utils",
-	"reth-trie/test-utils"
+    "reth-trie/test-utils",
+    "revm/test-utils"
 ]
 optimism = [
 	"reth-primitives/optimism",
 	"reth-provider/optimism",
 	"reth-execution-types/optimism",
 	"reth-db/optimism",
-	"reth-db-api/optimism"
+    "reth-db-api/optimism",
+    "revm/optimism"
+]
+scroll = [
+    "reth-evm/scroll",
+    "reth-primitives/scroll",
+    "reth-revm/scroll",
+    "reth-execution-types/scroll",
+    "reth-db/scroll",
+    "reth-provider/scroll",
+    "reth-trie-db/scroll",
+    "reth-testing-utils/scroll",
+    "reth-trie/scroll",
+    "revm/scroll"
 ]
