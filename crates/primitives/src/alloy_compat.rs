@@ -341,7 +341,7 @@ mod tests {
             assert_eq!(l1_message_tx.value, U256::ZERO);
             assert_eq!(l1_message_tx.sender, address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"));
         } else {
-            panic!("Expected Deposit transaction");
+            panic!("Expected L1 message transaction");
         }
     }
 }

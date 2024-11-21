@@ -112,7 +112,7 @@ impl TxL1Message {
 
     /// Encode the fields of the transaction without a RLP header.
     /// <https://github.com/scroll-tech/go-ethereum/blob/9fff27e4f34fb5097100ed76ee725ce056267f4b/core/types/l1_message_tx.go#L12-L19>
-    pub(crate) fn rlp_encode_fields(&self, out: &mut dyn BufMut) {
+    fn rlp_encode_fields(&self, out: &mut dyn BufMut) {
         self.queue_index.encode(out);
         self.gas_limit.encode(out);
         self.to.encode(out);
