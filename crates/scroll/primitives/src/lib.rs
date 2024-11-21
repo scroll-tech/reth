@@ -8,5 +8,8 @@ mod execution_context;
 pub use account_extension::AccountExtension;
 mod account_extension;
 
+pub use l1_transaction::{ScrollL1MessageTransactionFields, TxL1Message};
+pub mod l1_transaction;
+
 pub use poseidon::{hash_code, POSEIDON_EMPTY};
 mod poseidon;
