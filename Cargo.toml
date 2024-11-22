@@ -479,8 +479,8 @@ alloy-transport-ipc = { version = "0.6.4", default-features = false }
 alloy-transport-ws = { version = "0.6.4", default-features = false }
 
 # scroll
-# TODO (scroll): point to crates.io/tag once the crate is published/ a tag is created.
-poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master", features = ["bn254"] }
+# TODO (scroll): point to crates.io/tag once the crate is published/a tag is created.
+poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", rev = "526a64a", features = ["bn254"] }
 
 # op
 op-alloy-rpc-types = "0.6.5"
