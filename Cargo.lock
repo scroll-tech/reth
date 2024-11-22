@@ -8612,6 +8612,7 @@ dependencies = [
  "reth-codecs",
  "reth-ethereum-forks",
  "reth-primitives-traits",
+ "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-static-file-types",
  "reth-testing-utils",

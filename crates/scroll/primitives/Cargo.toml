@@ -53,14 +53,24 @@ default = [
 arbitrary = [
     "dep:arbitrary",
     "alloy-primitives/arbitrary",
-	"reth-codecs/arbitrary"
+    "alloy-consensus/arbitrary",
+    "alloy-eips/arbitrary",
+    "alloy-serde/arbitrary",
+    "reth-codecs/arbitrary"
 ]
 reth-codec = [
     "dep:reth-codecs",
     "dep:reth-codecs-derive",
     "std"
 ]
-serde = ["alloy-primitives/serde"]
+serde = [
+    "alloy-primitives/serde",
+    "alloy-consensus/serde",
+    "alloy-eips/serde",
+    "bytes/serde",
+    "rand/serde",
+    "reth-codecs/serde"
+]
 std = [
     "serde/std",
     "alloy-primitives/std",

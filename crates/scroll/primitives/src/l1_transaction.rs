@@ -7,9 +7,9 @@ use alloy_primitives::{
 };
 use alloy_rlp::Decodable;
 use bytes::BufMut;
-use reth_codecs::Compact;
-use reth_codecs_derive::add_arbitrary_tests;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "reth-codec"))]
+use {reth_codecs::Compact, reth_codecs_derive::add_arbitrary_tests};
 
 const L1_MESSAGE_TRANSACTION_TYPE: u8 = 0x7E;
 
@@ -24,11 +24,12 @@ const L1_MESSAGE_TRANSACTION_TYPE: u8 = 0x7E;
 /// types require optional serialization for RPC compatibility. Since `TxL1Message` doesn't
 /// contain optionally serializable fields, no `bincode` compatible bridge implementation is
 /// required.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Compact)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(any(test, feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(any(test, feature = "serde"), serde(rename_all = "camelCase"))]
 #[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
-#[add_arbitrary_tests(compact, rlp)]
+#[cfg_attr(any(test, feature = "reth-codec"), derive(Compact))]
+#[cfg_attr(any(test, feature = "reth-codec"), add_arbitrary_tests(compact, rlp))]
 pub struct TxL1Message {
     /// The queue index of the message in the L1 contract queue.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
