@@ -1,5 +1,6 @@
-use reth_revm::{database::StateProviderDatabase, db::CacheDB, Database, State};
-use std::sync::LazyLock;
+#[cfg(feature = "test-utils")]
+use reth_revm::{database::StateProviderDatabase, db::CacheDB};
+use reth_revm::{Database, State};
 
 /// Finalize the execution of the type and return the output
 pub trait FinalizeExecution<Output> {
@@ -34,7 +35,6 @@ pub trait WithContext {
 type ExecutionContext = ();
 #[cfg(feature = "scroll")]
 type ExecutionContext = reth_scroll_primitives::ScrollPostExecutionContext;
-static DEFAULT_CONTEXT: LazyLock<ExecutionContext> = LazyLock::new(Default::default);
 
 #[cfg(feature = "scroll")]
 impl<DB> WithContext for reth_scroll_storage::ScrollStateProviderDatabase<DB> {
@@ -45,7 +45,12 @@ impl<DB> WithContext for reth_scroll_storage::ScrollStateProviderDatabase<DB> {
     }
 }
 
-impl<DB> WithContext for CacheDB<DB> {
+#[cfg(feature = "test-utils")]
+static DEFAULT_CONTEXT: std::sync::LazyLock<ExecutionContext> =
+    std::sync::LazyLock::new(Default::default);
+
+#[cfg(feature = "test-utils")]
+impl<DB> WithContext for StateProviderDatabase<DB> {
     type Context = ExecutionContext;
 
     fn context(&self) -> &Self::Context {
@@ -53,7 +58,8 @@ impl<DB> WithContext for CacheDB<DB> {
     }
 }
 
-impl<DB> WithContext for StateProviderDatabase<DB> {
+#[cfg(feature = "test-utils")]
+impl<DB> WithContext for CacheDB<DB> {
     type Context = ExecutionContext;
 
     fn context(&self) -> &Self::Context {

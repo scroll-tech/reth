@@ -29,3 +29,7 @@ scroll = [
 	"reth-scroll-revm/scroll",
 	"reth-scroll-storage/scroll",
 ]
+test-utils = [
+	"reth-scroll-revm/test-utils",
+	"reth-revm/test-utils"
+]
