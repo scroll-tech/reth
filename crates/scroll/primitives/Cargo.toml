@@ -19,7 +19,7 @@ alloy-primitives.workspace = true
 reth-codecs.workspace = true
 
 # scroll
-poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master", features = ["bn254"] }
+poseidon-bn254 = { workspace = true, features = ["bn254"] }
 
 # misc
 arbitrary = { workspace = true, features = ["derive"], optional = true }

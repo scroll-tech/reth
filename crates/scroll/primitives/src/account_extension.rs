@@ -1,4 +1,4 @@
-use crate::{poseidon, POSEIDON_EMPTY};
+use crate::{hash_code, POSEIDON_EMPTY};
 use alloy_primitives::B256;
 use reth_codecs::Compact;
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl AccountExtension {
         let code = code.as_ref();
         Self {
             code_size: code.len() as u64,
-            poseidon_code_hash: (!code.is_empty()).then_some(poseidon(code)),
+            poseidon_code_hash: (!code.is_empty()).then_some(hash_code(code)),
         }
     }
 }

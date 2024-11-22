@@ -1,4 +1,4 @@
-use reth_scroll_primitives::{poseidon, ScrollPostExecutionContext, POSEIDON_EMPTY};
+use reth_scroll_primitives::{hash_code, ScrollPostExecutionContext, POSEIDON_EMPTY};
 use revm::primitives::{AccountInfo, Bytecode, B256, KECCAK_EMPTY, U256};
 
 /// The Scroll account information. Code copy of [`AccountInfo`]. Provides additional `code_size`
@@ -28,7 +28,7 @@ impl From<(AccountInfo, &ScrollPostExecutionContext)> for ScrollAccountInfo {
             .or_else(|| {
                 info.code
                     .as_ref()
-                    .map(|code| (code.len() as u64, poseidon(code.original_byte_slice())))
+                    .map(|code| (code.len() as u64, hash_code(code.original_byte_slice())))
             })
             .unwrap_or((0, POSEIDON_EMPTY));
         Self {
@@ -142,7 +142,7 @@ impl ScrollAccountInfo {
     pub fn from_bytecode(bytecode: Bytecode) -> Self {
         let hash = bytecode.hash_slow();
         let code_size = bytecode.len() as u64;
-        let poseidon_code_hash = poseidon(bytecode.bytecode());
+        let poseidon_code_hash = hash_code(bytecode.bytecode());
 
         Self {
             balance: U256::ZERO,

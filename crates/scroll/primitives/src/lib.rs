@@ -8,5 +8,5 @@ mod execution_context;
 pub use account_extension::AccountExtension;
 mod account_extension;
 
-pub use poseidon::{poseidon, POSEIDON_EMPTY};
+pub use poseidon::{hash_code, POSEIDON_EMPTY};
 mod poseidon;

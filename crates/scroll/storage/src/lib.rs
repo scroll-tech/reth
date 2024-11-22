@@ -105,7 +105,7 @@ mod tests {
     use reth_codecs::{test_utils::UnusedBits, validate_bitflag_backwards_compat};
     use reth_primitives_traits::Account;
     use reth_revm::{test_utils::StateProviderTest, Database};
-    use reth_scroll_primitives::{poseidon, AccountExtension};
+    use reth_scroll_primitives::{hash_code, AccountExtension};
 
     #[test]
     fn test_ensure_account_backwards_compatibility() {
@@ -178,7 +178,7 @@ mod tests {
         // check post execution context is correct for contract
         let (code_size, poseidon_code_hash) = post_execution_context.get(&bytecode_hash).unwrap();
         assert_eq!(*code_size, 6);
-        assert_eq!(*poseidon_code_hash, poseidon(&bytecode));
+        assert_eq!(*poseidon_code_hash, hash_code(&bytecode));
 
         Ok(())
     }
