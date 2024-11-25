@@ -204,9 +204,6 @@ pub trait EthCall: EstimateCall + Call + LoadPendingBlock {
                             parent_hash,
                             total_difficulty,
                             return_full_transactions,
-                            #[cfg(feature = "scroll")]
-                            &mut db,
-                            #[cfg(not(feature = "scroll"))]
                             &db,
                             this.tx_resp_builder(),
                         )?;

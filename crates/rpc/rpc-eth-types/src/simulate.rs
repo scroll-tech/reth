@@ -150,7 +150,7 @@ pub fn build_block<T: TransactionCompat<Error: FromEthApiError>>(
     parent_hash: B256,
     total_difficulty: U256,
     full_transactions: bool,
-    #[cfg(feature = "scroll")] db: &mut CacheDB<
+    #[cfg(feature = "scroll")] db: &CacheDB<
         reth_scroll_storage::ScrollStateProviderDatabase<StateProviderTraitObjWrapper<'_>>,
     >,
     #[cfg(not(feature = "scroll"))] db: &CacheDB<

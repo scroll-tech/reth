@@ -20,7 +20,7 @@ use std::{
     ops::RangeInclusive,
 };
 
-/// An code copy of the [`BundleState`] modified with Scroll compatible fields.
+/// A code copy of the [`BundleState`] modified with Scroll compatible fields.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ScrollBundleState {
