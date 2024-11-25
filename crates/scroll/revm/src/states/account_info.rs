@@ -48,7 +48,7 @@ impl From<AccountInfo> for ScrollAccountInfo {
         let (code_size, poseidon_code_hash) = info
             .code
             .as_ref()
-            .map(|code| (code.len() as u64, poseidon(code.original_byte_slice())))
+            .map(|code| (code.len() as u64, hash_code(code.original_byte_slice())))
             .unwrap_or((0, POSEIDON_EMPTY));
         Self {
             balance: info.balance,
