@@ -71,6 +71,7 @@ impl From<(BundleState, &ScrollPostExecutionContext)> for ScrollBundleState {
 }
 
 // This conversion can cause a loss of information since performed without additional context.
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
 impl From<BundleState> for ScrollBundleState {
     fn from(bundle: BundleState) -> Self {
         (bundle, &ScrollPostExecutionContext::default()).into()
@@ -78,6 +79,7 @@ impl From<BundleState> for ScrollBundleState {
 }
 
 // This conversion can cause a loss of information since performed without additional context.
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
 impl From<(BundleState, &())> for ScrollBundleState {
     fn from((bundle, _): (BundleState, &())) -> Self {
         bundle.into()
