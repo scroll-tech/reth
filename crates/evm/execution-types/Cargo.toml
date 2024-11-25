@@ -17,7 +17,7 @@ reth-trie.workspace = true
 reth-primitives-traits.workspace = true
 
 # scroll
-revm = { package = "reth-scroll-revm", path = "../../scroll/revm" }
+revm.workspace = true
 
 # alloy
 alloy-primitives.workspace = true

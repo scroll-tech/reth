@@ -42,7 +42,7 @@ alloy-rpc-types-engine.workspace = true
 alloy-consensus.workspace = true
 
 # scroll
-revm = { package = "reth-scroll-revm", path = "../../scroll/revm" }
+revm.workspace = true
 reth-scroll-primitives = { workspace = true, optional = true }
 
 # optimism

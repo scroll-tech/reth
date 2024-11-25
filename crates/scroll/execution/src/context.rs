@@ -8,17 +8,15 @@ pub trait FinalizeExecution<Output> {
     fn finalize(&mut self) -> Output;
 }
 
-impl<DB: Database + ContextFul> FinalizeExecution<reth_scroll_revm::states::ScrollBundleState>
-    for State<DB>
-{
-    fn finalize(&mut self) -> reth_scroll_revm::states::ScrollBundleState {
+impl<DB: Database + ContextFul> FinalizeExecution<revm::states::ScrollBundleState> for State<DB> {
+    fn finalize(&mut self) -> revm::states::ScrollBundleState {
         let bundle = self.take_bundle();
         (bundle, self.database.context()).into()
     }
 }
 
-impl<DB: Database> FinalizeExecution<reth_scroll_revm::shared::BundleState> for State<DB> {
-    fn finalize(&mut self) -> reth_scroll_revm::shared::BundleState {
+impl<DB: Database> FinalizeExecution<revm::shared::BundleState> for State<DB> {
+    fn finalize(&mut self) -> revm::shared::BundleState {
         self.take_bundle()
     }
 }

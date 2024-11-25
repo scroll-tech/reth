@@ -65,7 +65,7 @@ parking_lot.workspace = true
 assert_matches.workspace = true
 alloy-genesis.workspace = true
 alloy-consensus.workspace = true
-revm = { package = "reth-scroll-revm", path = "../scroll/revm" }
+revm.workspace = true
 
 [features]
 test-utils = [

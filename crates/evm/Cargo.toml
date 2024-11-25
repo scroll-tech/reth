@@ -27,7 +27,7 @@ reth-storage-errors.workspace = true
 revm-primitives.workspace = true
 
 # scroll
-revm = { package = "reth-scroll-revm", path = "../scroll/revm" }
+revm.workspace = true
 reth-scroll-execution.workspace = true
 
 # alloy

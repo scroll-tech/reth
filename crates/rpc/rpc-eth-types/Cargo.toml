@@ -38,7 +38,7 @@ revm-primitives = { workspace = true, features = ["dev"] }
 alloy-eips.workspace = true
 
 # scroll
-revm = { package = "reth-scroll-revm", path = "../../scroll/revm" }
+revm.workspace = true
 reth-scroll-storage = { workspace = true, optional = true }
 
 # rpc

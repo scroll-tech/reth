@@ -46,11 +46,7 @@ impl ExecutionWitnessRecord {
             let hashed_address = keccak256(address);
             #[cfg(feature = "scroll")]
             let hashed_account = account.account.as_ref().map(|a| {
-                Into::<reth_scroll_revm::AccountInfo>::into((
-                    a.info.clone(),
-                    statedb.database.context(),
-                ))
-                .into()
+                Into::<revm::AccountInfo>::into((a.info.clone(), statedb.database.context())).into()
             });
             #[cfg(not(feature = "scroll"))]
             let hashed_account = account.account.as_ref().map(|a| a.info.clone().into());
