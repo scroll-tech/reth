@@ -1339,10 +1339,7 @@ mod tests {
             },
             B256::random(),
         );
-        let transaction = reth_primitives::TransactionSigned::from_transaction_and_signature(
-            transaction,
-            signature,
-        );
+        let transaction = reth_primitives::TransactionSigned::new_unhashed(transaction, signature);
         let block = SealedBlock::new(
             header,
             reth_primitives::BlockBody {
