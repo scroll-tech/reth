@@ -34,6 +34,9 @@ reth-node-types.workspace = true
 alloy-primitives.workspace = true
 alloy-eips.workspace = true
 
+# scroll
+reth-scroll-storage = { workspace = true, optional = true }
+
 # common
 parking_lot.workspace = true
 tracing.workspace = true
@@ -98,5 +101,6 @@ scroll = [
     "reth-trie-db/scroll",
     "reth-testing-utils/scroll",
     "reth-trie/scroll",
-    "revm/scroll"
+    "revm/scroll",
+	"reth-scroll-storage/scroll"
 ]

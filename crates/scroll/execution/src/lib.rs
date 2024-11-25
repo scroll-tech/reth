@@ -2,5 +2,7 @@
 
 #![warn(unused_crate_dependencies)]
 
-pub use context::{ContextFul, ExecutionContext, FinalizeExecution, WithContext, DEFAULT_CONTEXT};
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+pub use context::DEFAULT_EMPTY_CONTEXT;
+pub use context::{ContextFul, ExecutionContext, FinalizeExecution, WithContext};
 mod context;

@@ -69,7 +69,8 @@ test-utils = [
     "reth-primitives-traits/test-utils",
     "reth-revm/test-utils",
     "revm/test-utils",
-    "reth-prune-types/test-utils"
+    "reth-prune-types/test-utils",
+    "reth-scroll-execution/test-utils"
 ]
 scroll = [
     "revm/scroll",

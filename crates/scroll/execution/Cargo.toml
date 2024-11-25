@@ -29,5 +29,5 @@ scroll = [
 ]
 test-utils = [
 	"reth-scroll-revm/test-utils",
-	"reth-revm/test-utils"
+	"revm/test-utils"
 ]

@@ -37,22 +37,16 @@ pub trait WithContext {
     fn context(&self) -> &Self::Context;
 }
 
+/// The default empty post execution context.
 #[cfg(not(feature = "scroll"))]
 pub type ExecutionContext = ();
+/// The Scroll execution context hidden behind a feature flag.
 #[cfg(feature = "scroll")]
 pub type ExecutionContext = reth_scroll_primitives::ScrollPostExecutionContext;
 
-#[cfg(feature = "scroll")]
-impl<DB> WithContext for reth_scroll_storage::ScrollStateProviderDatabase<DB> {
-    type Context = ExecutionContext;
-
-    fn context(&self) -> &Self::Context {
-        &self.post_execution_context
-    }
-}
-
-#[cfg(feature = "test-utils")]
-pub static DEFAULT_CONTEXT: std::sync::LazyLock<ExecutionContext> =
+/// A default static post execution context.
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+pub static DEFAULT_EMPTY_CONTEXT: std::sync::LazyLock<ExecutionContext> =
     std::sync::LazyLock::new(Default::default);
 
 #[cfg(feature = "test-utils")]
@@ -60,6 +54,6 @@ impl<DB> WithContext for CacheDB<DB> {
     type Context = ExecutionContext;
 
     fn context(&self) -> &Self::Context {
-        &DEFAULT_CONTEXT
+        &DEFAULT_EMPTY_CONTEXT
     }
 }

@@ -56,7 +56,8 @@ test-utils = [
 	"revm/test-utils",
 	"reth-prune-types/test-utils",
     "reth-primitives-traits/test-utils",
-    "reth-scroll-revm?/test-utils"
+    "reth-scroll-revm?/test-utils",
+	"reth-scroll-execution/test-utils"
 ]
 serde = [
     "revm/serde",
