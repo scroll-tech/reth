@@ -533,7 +533,7 @@ impl ReceiptWithBloomEncoder<'_> {
             }
             #[cfg(all(feature = "scroll", not(feature = "optimism")))]
             TxType::L1Message => {
-                out.put_u8(crate::transaction::L1_MESSAGE_TX_TYPE_ID);
+                out.put_u8(reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE);
             }
         }
         out.put_slice(payload.as_ref());

@@ -571,7 +571,7 @@ impl reth_codecs::Compact for Transaction {
                         (Self::Deposit(tx), buf)
                     }
                     #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-                    tx_type::L1_MESSAGE_TX_TYPE_ID => {
+                    reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE => {
                         let (tx, buf) = TxL1Message::from_compact(buf, buf.len());
                         (Self::L1Message(tx), buf)
                     }
@@ -685,6 +685,8 @@ impl alloy_consensus::Transaction for Transaction {
             Self::Eip7702(tx) => tx.max_fee_per_blob_gas(),
             #[cfg(all(feature = "optimism", not(feature = "scroll")))]
             Self::Deposit(tx) => tx.max_fee_per_blob_gas(),
+            #[cfg(all(feature = "scroll", not(feature = "optimism")))]
+            Self::L1Message(tx) => tx.max_fee_per_blob_gas(),
         }
     }
 

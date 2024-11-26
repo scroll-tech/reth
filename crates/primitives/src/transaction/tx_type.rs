@@ -140,7 +140,7 @@ impl From<TxType> for u8 {
             #[cfg(all(feature = "optimism", not(feature = "scroll")))]
             TxType::Deposit => op_alloy_consensus::DEPOSIT_TX_TYPE_ID,
             #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-            TxType::L1Message => L1_MESSAGE_TX_TYPE_ID,
+            TxType::L1Message => reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE,
         }
     }
 }
@@ -225,7 +225,7 @@ impl reth_codecs::Compact for TxType {
             }
             #[cfg(all(feature = "scroll", not(feature = "optimism")))]
             Self::L1Message => {
-                buf.put_u8(L1_MESSAGE_TX_TYPE_ID);
+                buf.put_u8(reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE);
                 COMPACT_EXTENDED_IDENTIFIER_FLAG
             }
         }
@@ -249,7 +249,7 @@ impl reth_codecs::Compact for TxType {
                         #[cfg(all(feature = "optimism", not(feature = "scroll")))]
                         op_alloy_consensus::DEPOSIT_TX_TYPE_ID => Self::Deposit,
                         #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-                        L1_MESSAGE_TX_TYPE_ID => Self::L1Message,
+                        reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE => Self::L1Message,
                         _ => panic!("Unsupported TxType identifier: {extended_identifier}"),
                     }
                 }
@@ -317,7 +317,10 @@ mod tests {
     )]
     #[cfg_attr(
         all(feature = "scroll", not(feature = "optimism")),
-        case(U64::from(L1_MESSAGE_TX_TYPE_ID), Ok(TxType::L1Message))
+        case(
+            U64::from(reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE),
+            Ok(TxType::L1Message)
+        )
     )]
     #[case(U64::MAX, Err("invalid tx type"))]
     fn test_u64_to_tx_type(#[case] input: U64, #[case] expected: Result<TxType, &'static str>) {
@@ -332,7 +335,7 @@ mod tests {
     #[case(TxType::Eip4844, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![EIP4844_TX_TYPE_ID])]
     #[case(TxType::Eip7702, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![EIP7702_TX_TYPE_ID])]
     #[cfg_attr(all(feature = "optimism", not(feature = "scroll")), case(TxType::Deposit, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![op_alloy_consensus::DEPOSIT_TX_TYPE_ID]))]
-    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(TxType::L1Message, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![L1_MESSAGE_TX_TYPE_ID]))]
+    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(TxType::L1Message, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE]))]
     fn test_txtype_to_compact(
         #[case] tx_type: TxType,
         #[case] expected_identifier: usize,
@@ -352,7 +355,7 @@ mod tests {
     #[case(TxType::Eip4844, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![EIP4844_TX_TYPE_ID])]
     #[case(TxType::Eip7702, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![EIP7702_TX_TYPE_ID])]
     #[cfg_attr(all(feature = "optimism", not(feature = "scroll")), case(TxType::Deposit, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![op_alloy_consensus::DEPOSIT_TX_TYPE_ID]))]
-    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(TxType::L1Message, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![L1_MESSAGE_TX_TYPE_ID]))]
+    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(TxType::L1Message, COMPACT_EXTENDED_IDENTIFIER_FLAG, vec![reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE]))]
     fn test_txtype_from_compact(
         #[case] expected_type: TxType,
         #[case] identifier: usize,
@@ -372,7 +375,7 @@ mod tests {
     #[case(&[EIP7702_TX_TYPE_ID], Ok(TxType::Eip7702))]
     #[case(&[u8::MAX], Err(alloy_rlp::Error::InputTooShort))]
     #[cfg_attr(all(feature = "optimism", not(feature = "scroll")), case(&[op_alloy_consensus::DEPOSIT_TX_TYPE_ID], Ok(TxType::Deposit)))]
-    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(&[L1_MESSAGE_TX_TYPE_ID], Ok(TxType::L1Message)))]
+    #[cfg_attr(all(feature = "scroll", not(feature = "optimism")), case(&[reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE], Ok(TxType::L1Message)))]
     fn decode_tx_type(#[case] input: &[u8], #[case] expected: Result<TxType, alloy_rlp::Error>) {
         let tx_type_result = TxType::decode(&mut &input[..]);
         assert_eq!(tx_type_result, expected)
