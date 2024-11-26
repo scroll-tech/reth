@@ -3,7 +3,7 @@ use alloy_primitives::{keccak256, map::HashMap, Address, B256, U256};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use proptest::{prelude::*, strategy::ValueTree, test_runner::TestRunner};
 use reth_trie::{HashedPostState, HashedStorage};
-use revm::db::{states::BundleBuilder, BundleAccount, BundleState};
+use revm::db::{states::BundleBuilder, BundleAccount};
 
 pub fn hash_post_state(c: &mut Criterion) {
     let mut group = c.benchmark_group("Hash Post State");
@@ -17,7 +17,6 @@ pub fn hash_post_state(c: &mut Criterion) {
             b.iter(|| from_bundle_state_seq(&state))
         });
 
-        let state = BundleState { state, ..Default::default() };
         // parallel
         group.bench_function(BenchmarkId::new("parallel hashing", size), |b| {
             b.iter(|| HashedPostState::from_bundle_state(&state))

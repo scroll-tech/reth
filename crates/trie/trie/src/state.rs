@@ -2,11 +2,11 @@ use crate::{
     prefix_set::{PrefixSetMut, TriePrefixSetsMut},
     Nibbles,
 };
-use alloy_primitives::{keccak256, B256, U256};
+use alloy_primitives::{keccak256, Address, B256, U256};
 use itertools::Itertools;
-use rayon::prelude::{ParallelBridge, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use reth_primitives::Account;
-use revm::db::{AccountStatus, BundleState};
+use revm::db::{AccountStatus, BundleAccount};
 use std::{
     borrow::Cow,
     collections::{hash_map, HashMap, HashSet},
@@ -25,11 +25,11 @@ impl HashedPostState {
     /// Initialize [`HashedPostState`] from bundle state.
     /// Hashes all changed accounts and storage entries that are currently stored in the bundle
     /// state.
-    pub fn from_bundle_state(state: &BundleState) -> Self {
+    pub fn from_bundle_state<'a>(
+        state: impl IntoParallelIterator<Item = (&'a Address, &'a BundleAccount)>,
+    ) -> Self {
         let hashed = state
-            .state
-            .iter()
-            .par_bridge()
+            .into_par_iter()
             .map(|(address, account)| {
                 let hashed_address = keccak256(address);
                 let hashed_account = account.info.clone().map(Into::into);
@@ -433,13 +433,10 @@ mod tests {
         };
 
         // Create a vector of tuples representing the bundle state.
-        let state = vec![(address, account)];
-        let state_size = state.len();
-        let state =
-            BundleState { state: state.into_iter().collect(), state_size, ..Default::default() };
+        let state = vec![(&address, &account)];
 
         // Convert the bundle state into a hashed post state.
-        let hashed_state = HashedPostState::from_bundle_state(&state);
+        let hashed_state = HashedPostState::from_bundle_state(state);
 
         // Validate the hashed post state.
         assert_eq!(hashed_state.accounts.len(), 1);

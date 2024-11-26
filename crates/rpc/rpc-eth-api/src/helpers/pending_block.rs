@@ -390,7 +390,7 @@ pub trait LoadPendingBlock:
             block_number,
             Vec::new(),
         );
-        let hashed_state = HashedPostState::from_bundle_state(execution_outcome.state());
+        let hashed_state = HashedPostState::from_bundle_state(&execution_outcome.state().state);
 
         let receipts_root = self.receipts_root(&block_env, &execution_outcome, block_number);
 

@@ -180,7 +180,7 @@ where
         self.ensure_payment(&block, &output, &message)?;
 
         let state_root =
-            state_provider.state_root(HashedPostState::from_bundle_state(&output.state))?;
+            state_provider.state_root(HashedPostState::from_bundle_state(&output.state.state))?;
 
         if state_root != block.state_root {
             return Err(ConsensusError::BodyStateRootDiff(

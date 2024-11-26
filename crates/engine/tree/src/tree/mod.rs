@@ -2215,7 +2215,7 @@ where
             return Err(err.into())
         }
 
-        let hashed_state = HashedPostState::from_bundle_state(&output.state);
+        let hashed_state = HashedPostState::from_bundle_state(&output.state.state);
 
         trace!(target: "engine::tree", block=?sealed_block.num_hash(), "Calculating block state root");
         let root_time = Instant::now();

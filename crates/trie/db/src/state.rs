@@ -291,7 +291,7 @@ mod tests {
             .build();
         assert_eq!(bundle_state.reverts.len(), 1);
 
-        let post_state = HashedPostState::from_bundle_state(&bundle_state);
+        let post_state = HashedPostState::from_bundle_state(&bundle_state.state);
         assert_eq!(post_state.accounts.len(), 2);
         assert_eq!(post_state.storages.len(), 2);
 

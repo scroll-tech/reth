@@ -121,7 +121,7 @@ where
         db.merge_transitions(BundleRetention::Reverts);
 
         // Take the bundle state
-        let mut bundle_state = db.finalize();
+        let mut bundle_state: reth_scroll_revm::db::BundleState = db.finalize();
 
         // Initialize a map of preimages.
         let mut state_preimages = HashMap::default();
@@ -130,7 +130,7 @@ where
         //
         // Note: We grab *all* accounts in the cache here, as the `BundleState` prunes
         // referenced accounts + storage slots.
-        let mut hashed_state = HashedPostState::from_bundle_state(&bundle_state);
+        let mut hashed_state = HashedPostState::from_bundle_state(&bundle_state.state);
         for (address, account) in db.cache.accounts {
             let hashed_address = keccak256(address);
             #[cfg(feature = "scroll")]

@@ -167,7 +167,7 @@ impl<T> ExecutionOutcome<T> {
     /// Returns [`HashedPostState`] for this execution outcome.
     /// See [`HashedPostState::from_bundle_state`] for more info.
     pub fn hash_state_slow(&self) -> HashedPostState {
-        HashedPostState::from_bundle_state(&self.bundle)
+        HashedPostState::from_bundle_state(&self.bundle.state)
     }
 
     /// Transform block number to the index of block.
