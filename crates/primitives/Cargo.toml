@@ -168,9 +168,9 @@ serde-bincode-compat = [
 	"alloy-eips/serde-bincode-compat",
 ]
 scroll = [
-    "reth-trie-common/scroll",
-    "reth-primitives-traits/scroll",
-    "reth-testing-utils/scroll",
+	"reth-trie-common/scroll",
+	"reth-primitives-traits/scroll",
+	"reth-testing-utils/scroll"
 ]
 
 [[bench]]

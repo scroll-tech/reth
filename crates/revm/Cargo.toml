@@ -63,6 +63,6 @@ serde = [
     "alloy-eips/serde",
     "alloy-primitives/serde",
     "alloy-consensus/serde",
-	"reth-primitives-traits/serde",
+    "reth-primitives-traits/serde",
 ]
 scroll = ["reth-primitives/scroll"]

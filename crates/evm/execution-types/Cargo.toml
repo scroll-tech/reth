@@ -60,6 +60,6 @@ std = [
 	"reth-primitives-traits/std",
 ]
 scroll = [
-    "revm/scroll",
-    "reth-primitives/scroll"
+	"revm/scroll",
+	"reth-primitives/scroll"
 ]

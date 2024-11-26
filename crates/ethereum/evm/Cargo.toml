@@ -58,6 +58,6 @@ std = [
 	"secp256k1/std"
 ]
 scroll = [
-    "reth-primitives/scroll",
-    "reth-testing-utils/scroll",
+	"reth-primitives/scroll",
+	"reth-testing-utils/scroll",
 ]
