@@ -365,7 +365,7 @@ where
             execution_outcome.block_logs_bloom(block_number).expect("Number is in range");
 
         // // calculate the state root
-        let hashed_state = HashedPostState::from_bundle_state(execution_outcome.state());
+        let hashed_state = HashedPostState::from_bundle_state(&execution_outcome.state().state);
         let (state_root, trie_output) = {
             state.database.as_ref().state_root_with_updates(hashed_state.clone()).inspect_err(
                 |err| {

@@ -233,6 +233,26 @@ impl From<Account> for revm_primitives::shared::AccountInfo {
     }
 }
 
+#[cfg(feature = "scroll")]
+impl From<revm_primitives::shared::AccountInfo> for Account {
+    fn from(info: revm_primitives::shared::AccountInfo) -> Self {
+        Self {
+            balance: info.balance,
+            nonce: info.nonce,
+            bytecode_hash: (info.code_hash != KECCAK_EMPTY).then_some(info.code_hash),
+            account_extension: Some(
+                info.code
+                    .map(|code| {
+                        reth_scroll_primitives::AccountExtension::from_bytecode(
+                            &code.original_byte_slice(),
+                        )
+                    })
+                    .unwrap_or(reth_scroll_primitives::AccountExtension::empty()),
+            ),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use alloy_primitives::{hex_literal::hex, B256, U256};
