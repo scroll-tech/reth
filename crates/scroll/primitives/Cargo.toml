@@ -28,7 +28,7 @@ poseidon-bn254 = { workspace = true, features = ["bn254"] }
 
 # required by reth-codecs
 bytes.workspace = true
-modular-bitfield.workspace = true
+modular-bitfield = { workspace = true, optional = true }
 serde.workspace = true
 
 # misc
@@ -61,6 +61,7 @@ arbitrary = [
 reth-codec = [
     "dep:reth-codecs",
     "dep:reth-codecs-derive",
+    "modular-bitfield",
     "std"
 ]
 serde = [
