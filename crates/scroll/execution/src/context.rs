@@ -1,57 +1,75 @@
-#[cfg(feature = "test-utils")]
-use revm::db::CacheDB;
-use revm::{Database, State};
+#![allow(clippy::useless_conversion)]
+
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+use reth_revm::{cached::CachedReadsDbMut, revm::CacheDB, DatabaseRef};
+use reth_revm::{
+    database::{EvmStateProvider, StateProviderDatabase},
+    revm::State,
+};
+#[cfg(feature = "scroll")]
+use reth_scroll_storage::ScrollStateProviderDatabase;
 
 /// Finalize the execution of the type and return the output
-pub trait FinalizeExecution<Output> {
+pub trait FinalizeExecution {
+    /// The output of the finalization.
+    type Output;
+
     /// Finalize the state and return the output.
-    fn finalize(&mut self) -> Output;
+    fn finalize(&mut self) -> Self::Output;
 }
 
-impl<DB: Database + ContextFul> FinalizeExecution<revm::states::ScrollBundleState> for State<DB> {
-    fn finalize(&mut self) -> revm::states::ScrollBundleState {
-        let bundle = self.take_bundle();
-        (bundle, self.database.context()).into()
-    }
-}
-
-impl<DB: Database> FinalizeExecution<revm::shared::BundleState> for State<DB> {
-    fn finalize(&mut self) -> revm::shared::BundleState {
-        self.take_bundle()
-    }
-}
-
-/// A type that returns additional execution context.
-pub trait ContextFul: WithContext<Context = ExecutionContext> {}
-impl<T> ContextFul for T where T: WithContext<Context = ExecutionContext> {}
-
-/// Types that can provide a context.
-#[auto_impl::auto_impl(&, &mut)]
-pub trait WithContext {
-    /// The context returned.
-    type Context;
-
-    /// Returns the context from the type.
-    fn context(&self) -> &Self::Context;
-}
-
-/// The default empty post execution context.
-#[cfg(not(feature = "scroll"))]
-pub type ExecutionContext = ();
-/// The Scroll execution context hidden behind a feature flag.
 #[cfg(feature = "scroll")]
-pub type ExecutionContext = reth_scroll_primitives::ScrollPostExecutionContext;
+impl<DB: EvmStateProvider> FinalizeExecution for State<ScrollStateProviderDatabase<DB>> {
+    type Output = reth_revm::states::ScrollBundleState;
 
-/// A default static post execution context.
+    fn finalize(&mut self) -> Self::Output {
+        let bundle = self.take_bundle();
+        (bundle, &self.database.post_execution_context).into()
+    }
+}
+
+#[cfg(feature = "scroll")]
+impl<DB: EvmStateProvider> FinalizeExecution for State<&mut ScrollStateProviderDatabase<DB>> {
+    type Output = reth_revm::states::ScrollBundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        let bundle = self.take_bundle();
+        (bundle, &self.database.post_execution_context).into()
+    }
+}
+
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-pub static DEFAULT_EMPTY_CONTEXT: std::sync::LazyLock<ExecutionContext> =
-    std::sync::LazyLock::new(Default::default);
+impl<DB: EvmStateProvider> FinalizeExecution for State<StateProviderDatabase<DB>> {
+    type Output = reth_revm::db::BundleState;
 
-#[cfg(feature = "test-utils")]
-impl<DB> WithContext for CacheDB<DB> {
-    type Context = ExecutionContext;
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
+    }
+}
 
-    fn context(&self) -> &Self::Context {
-        &DEFAULT_EMPTY_CONTEXT
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+impl<DB: EvmStateProvider> FinalizeExecution for State<&mut StateProviderDatabase<DB>> {
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
+    }
+}
+
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+impl<DB: DatabaseRef> FinalizeExecution for State<CacheDB<DB>> {
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
+    }
+}
+
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+impl<DB: DatabaseRef> FinalizeExecution for State<CachedReadsDbMut<'_, DB>> {
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
     }
 }
