@@ -22,6 +22,7 @@ use reth::{
             address, Address, BlockEnv, Bytes, CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg,
             TransactTo, TxEnv, U256,
         },
+        shared::BundleState,
         Database, DatabaseCommit, Evm, State,
     },
 };
@@ -33,7 +34,7 @@ use reth_evm::execute::{
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_ethereum::{node::EthereumAddOns, BasicBlockExecutorProvider, EthereumNode};
 use reth_primitives::{BlockWithSenders, Receipt};
-use reth_scroll_execution::ContextFul;
+use reth_scroll_execution::FinalizeExecution;
 use std::{fmt::Display, sync::Arc};
 
 pub const SYSTEM_ADDRESS: Address = address!("fffffffffffffffffffffffffffffffffffffffe");
@@ -95,12 +96,15 @@ pub struct CustomExecutorStrategyFactory {
 }
 
 impl BlockExecutionStrategyFactory for CustomExecutorStrategyFactory {
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> =
-        CustomExecutorStrategy<DB>;
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display>>
+        = CustomExecutorStrategy<DB>
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -148,7 +152,8 @@ where
 
 impl<DB> BlockExecutionStrategy<DB> for CustomExecutorStrategy<DB>
 where
-    DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+    DB: Database<Error: Into<ProviderError> + Display>,
+    State<DB>: FinalizeExecution<Output = BundleState>,
 {
     type Error = BlockExecutionError;
 

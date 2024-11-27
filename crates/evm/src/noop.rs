@@ -6,9 +6,9 @@ use reth_execution_errors::BlockExecutionError;
 use reth_execution_types::{BlockExecutionInput, BlockExecutionOutput, ExecutionOutcome};
 use reth_primitives::{BlockWithSenders, Receipt};
 use reth_prune_types::PruneModes;
-use reth_scroll_execution::ContextFul;
+use reth_scroll_execution::FinalizeExecution;
 use reth_storage_errors::provider::ProviderError;
-use revm::State;
+use revm::{db::BundleState, State};
 use revm_primitives::db::Database;
 
 use crate::{
@@ -24,20 +24,28 @@ const UNAVAILABLE_FOR_NOOP: &str = "execution unavailable for noop";
 pub struct NoopBlockExecutorProvider;
 
 impl BlockExecutorProvider for NoopBlockExecutorProvider {
-    type Executor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> = Self;
+    type Executor<DB: Database<Error: Into<ProviderError> + Display>>
+        = Self
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
-    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> = Self;
+    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display>>
+        = Self
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
     fn executor<DB>(&self, _: DB) -> Self::Executor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         Self
     }
 
     fn batch_executor<DB>(&self, _: DB) -> Self::BatchExecutor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         Self
     }

@@ -121,7 +121,7 @@ where
         db.merge_transitions(BundleRetention::Reverts);
 
         // Take the bundle state
-        let mut bundle_state: reth_revm::db::BundleState = db.finalize();
+        let mut bundle_state = db.finalize();
 
         // Initialize a map of preimages.
         let mut state_preimages = HashMap::default();

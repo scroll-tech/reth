@@ -14,9 +14,9 @@ use reth_execution_errors::BlockExecutionError;
 use reth_execution_types::ExecutionOutcome;
 use reth_primitives::{BlockWithSenders, Receipt, Receipts};
 use reth_prune_types::PruneModes;
-use reth_scroll_execution::ContextFul;
+use reth_scroll_execution::FinalizeExecution;
 use reth_storage_errors::provider::ProviderError;
-use revm::State;
+use revm::{db::BundleState, State};
 use revm_primitives::db::Database;
 use std::{fmt::Display, sync::Arc};
 
@@ -34,20 +34,28 @@ impl MockExecutorProvider {
 }
 
 impl BlockExecutorProvider for MockExecutorProvider {
-    type Executor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> = Self;
+    type Executor<DB: Database<Error: Into<ProviderError> + Display>>
+        = Self
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
-    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display> + ContextFul> = Self;
+    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display>>
+        = Self
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
     fn executor<DB>(&self, _: DB) -> Self::Executor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         self.clone()
     }
 
     fn batch_executor<DB>(&self, _: DB) -> Self::BatchExecutor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display> + ContextFul,
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         self.clone()
     }
@@ -120,7 +128,8 @@ impl<DB> BatchExecutor<DB> for MockExecutorProvider {
 impl<S, DB> BasicBlockExecutor<S, DB>
 where
     S: BlockExecutionStrategy<DB>,
-    DB: Database + ContextFul,
+    DB: Database,
+    State<DB>: FinalizeExecution<Output = BundleState>,
 {
     /// Provides safe read access to the state
     pub fn with_state<F, R>(&self, f: F) -> R
@@ -142,7 +151,8 @@ where
 impl<S, DB> BasicBatchExecutor<S, DB>
 where
     S: BlockExecutionStrategy<DB>,
-    DB: Database + ContextFul,
+    DB: Database,
+    State<DB>: FinalizeExecution<Output = BundleState>,
 {
     /// Provides safe read access to the state
     pub fn with_state<F, R>(&self, f: F) -> R

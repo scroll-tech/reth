@@ -95,15 +95,6 @@ impl<DB> DerefMut for StateProviderDatabase<DB> {
     }
 }
 
-#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-impl<DB> reth_scroll_execution::WithContext for StateProviderDatabase<DB> {
-    type Context = reth_scroll_execution::ExecutionContext;
-
-    fn context(&self) -> &Self::Context {
-        &reth_scroll_execution::DEFAULT_EMPTY_CONTEXT
-    }
-}
-
 impl<DB: EvmStateProvider> Database for StateProviderDatabase<DB> {
     type Error = ProviderError;
 

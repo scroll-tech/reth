@@ -42,37 +42,6 @@ impl From<(AccountInfo, &ScrollPostExecutionContext)> for ScrollAccountInfo {
     }
 }
 
-// This conversion can cause a loss of information since performed without additional context.
-impl From<AccountInfo> for ScrollAccountInfo {
-    fn from(info: AccountInfo) -> Self {
-        let (code_size, poseidon_code_hash) = info
-            .code
-            .as_ref()
-            .map(|code| (code.len() as u64, hash_code(code.original_byte_slice())))
-            .unwrap_or((0, POSEIDON_EMPTY));
-        Self {
-            balance: info.balance,
-            nonce: info.nonce,
-            code_hash: info.code_hash,
-            code: info.code,
-            code_size,
-            poseidon_code_hash,
-        }
-    }
-}
-
-// This conversion causes a loss of information.
-impl From<ScrollAccountInfo> for AccountInfo {
-    fn from(info: ScrollAccountInfo) -> Self {
-        Self {
-            balance: info.balance,
-            nonce: info.nonce,
-            code_hash: info.code_hash,
-            code: info.code,
-        }
-    }
-}
-
 impl Default for ScrollAccountInfo {
     fn default() -> Self {
         Self {

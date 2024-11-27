@@ -42,7 +42,6 @@ use crate::{
 use op_alloy_consensus::DepositTransaction;
 use op_alloy_rpc_types_engine::OpPayloadAttributes;
 use reth_revm::witness::ExecutionWitnessRecord;
-use reth_scroll_execution::ContextFul;
 use reth_transaction_pool::pool::BestPayloadTransactions;
 
 /// Optimism's payload builder
@@ -462,7 +461,7 @@ where
     ) -> Result<ExecutionWitness, PayloadBuilderError>
     where
         EvmConfig: ConfigureEvm<Header = Header>,
-        DB: Database<Error = ProviderError> + AsRef<P> + ContextFul,
+        DB: Database<Error = ProviderError> + AsRef<P>,
         P: StateProofProvider,
     {
         let _ = self.execute(state, ctx)?;

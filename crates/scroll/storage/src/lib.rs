@@ -6,7 +6,6 @@
 
 use alloy_primitives::{Address, B256, U256};
 use reth_revm::{database::EvmStateProvider, primitives::Bytecode, Database, DatabaseRef};
-use reth_scroll_execution::{ExecutionContext, WithContext};
 use reth_scroll_primitives::{AccountExtension, ScrollPostExecutionContext};
 use reth_scroll_revm::shared::AccountInfo;
 use reth_storage_errors::provider::ProviderError;
@@ -36,13 +35,6 @@ impl<DB> DerefMut for ScrollStateProviderDatabase<DB> {
     }
 }
 
-impl<DB> WithContext for ScrollStateProviderDatabase<DB> {
-    type Context = ExecutionContext;
-
-    fn context(&self) -> &Self::Context {
-        &self.post_execution_context
-    }
-}
 impl<DB> ScrollStateProviderDatabase<DB> {
     /// Creates a [`ScrollStateProviderDatabase`] from the provided DB.
     pub fn new(db: DB) -> Self {

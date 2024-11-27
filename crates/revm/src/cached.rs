@@ -102,15 +102,6 @@ where
     }
 }
 
-#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-impl<DB> reth_scroll_execution::WithContext for CachedReadsDbMut<'_, DB> {
-    type Context = reth_scroll_execution::ExecutionContext;
-
-    fn context(&self) -> &Self::Context {
-        &reth_scroll_execution::DEFAULT_EMPTY_CONTEXT
-    }
-}
-
 impl<DB: DatabaseRef> Database for CachedReadsDbMut<'_, DB> {
     type Error = <DB as DatabaseRef>::Error;
 

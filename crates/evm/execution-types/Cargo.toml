@@ -16,7 +16,6 @@ reth-execution-errors.workspace = true
 reth-trie.workspace = true
 reth-primitives-traits.workspace = true
 
-# scroll
 revm.workspace = true
 
 # alloy

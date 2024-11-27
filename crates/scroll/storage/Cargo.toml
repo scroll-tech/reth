@@ -20,7 +20,6 @@ reth-revm.workspace = true
 reth-storage-errors.workspace = true
 
 # scroll
-reth-scroll-execution.workspace = true
 reth-scroll-primitives.workspace = true
 reth-scroll-revm.workspace = true
 
@@ -34,5 +33,4 @@ reth-revm = { workspace = true, features = ["test-utils"] }
 scroll = [
 	"reth-primitives-traits/scroll",
 	"reth-scroll-revm/scroll",
-	"reth-scroll-execution/scroll",
 ]
