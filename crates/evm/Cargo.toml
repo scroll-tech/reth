@@ -80,9 +80,3 @@ scroll = [
     "reth-execution-types/scroll",
     "reth-scroll-execution/scroll"
 ]
-scroll = [
-    "reth-primitives/scroll",
-    "reth-primitives-traits/scroll",
-    "reth-execution-types/scroll",
-    "reth-chainspec/scroll",
-]

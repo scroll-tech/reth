@@ -1,6 +1,7 @@
 use revm::{
     db::{states::StorageSlot, StorageWithOriginalValues},
-    primitives::{address, bytes, AccountInfo, Address, Bytecode, Bytes, U256},
+    primitives::{address, bytes, Address, Bytecode, Bytes, U256},
+    shared::AccountInfo,
     Database, State,
 };
 

@@ -1,8 +1,9 @@
+use derive_more::{Display, From};
 use reth_consensus::ConsensusError;
 use reth_evm::execute::{BlockExecutionError, BlockValidationError, ProviderError};
 
 /// Execution error for Scroll.
-#[derive(thiserror::Error, derive_more::Display, derive_more::From, Debug)]
+#[derive(thiserror::Error, Display, From, Debug)]
 pub enum ScrollBlockExecutionError {
     /// Error occurred at block execution.
     BlockExecution(BlockExecutionError),
@@ -12,7 +13,7 @@ pub enum ScrollBlockExecutionError {
 }
 
 /// Scroll hard fork error.
-#[derive(Debug, derive_more::Display)]
+#[derive(Debug, Display)]
 pub enum HardForkError {
     /// Error occurred at the Curie hard fork.
     Curie,

@@ -14,7 +14,9 @@ use reth_primitives::{
 };
 use reth_revm::primitives::{CfgEnvWithHandlerCfg, U256};
 use reth_scroll_consensus::apply_curie_hard_fork;
+use reth_scroll_execution::FinalizeExecution;
 use revm::{
+    db::BundleState,
     primitives::{BlockEnv, EnvWithHandlerCfg, ResultAndState},
     Database, DatabaseCommit, State,
 };
@@ -54,6 +56,7 @@ where
 impl<DB, EvmConfig> BlockExecutionStrategy<DB> for ScrollExecutionStrategy<DB, EvmConfig>
 where
     DB: Database<Error: Into<ProviderError> + Display>,
+    State<DB>: FinalizeExecution<Output = BundleState>,
     EvmConfig: ConfigureEvm<Header = Header>,
 {
     type Error = ScrollBlockExecutionError;
@@ -108,7 +111,7 @@ where
             // TODO (scroll): verify the logic from the stateless block verifier
             // https://github.com/scroll-tech/stateless-block-verifier/blob/master/crates/core/src/executor/mod.rs#L71
             self.evm_config.fill_tx_env(evm.tx_mut(), transaction, *sender);
-            if transaction.is_l1_messaging() {
+            if transaction.is_l1_message() {
                 evm.context.evm.env.cfg.disable_base_fee = true; // disable base fee for l1 msg
             }
 

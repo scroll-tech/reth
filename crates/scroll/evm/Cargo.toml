@@ -1,0 +1,41 @@
+[package]
+name = "reth-scroll-evm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# reth
+reth-chainspec = { workspace = true, features = ["scroll"] }
+reth-consensus.workspace = true
+reth-ethereum-consensus.workspace = true
+reth-evm = { workspace = true, features = ["scroll"] }
+reth-primitives = { workspace = true, features = ["scroll"] }
+reth-revm = { workspace = true, features = ["scroll"] }
+
+# revm
+revm = { workspace = true, features = ["scroll", "optional_no_base_fee"] }
+
+# alloy
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+
+# scroll
+reth-scroll-consensus.workspace = true
+reth-scroll-execution = { workspace = true, features = ["scroll"] }
+
+# misc
+auto_impl.workspace = true
+derive_more.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[features]
+optimism = []

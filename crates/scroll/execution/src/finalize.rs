@@ -1,11 +1,10 @@
 #![allow(clippy::useless_conversion)]
 
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-use reth_revm::{cached::CachedReadsDbMut, revm::CacheDB, DatabaseRef};
 use reth_revm::{
-    database::{EvmStateProvider, StateProviderDatabase},
-    revm::State,
+    cached::CachedReadsDbMut, database::StateProviderDatabase, revm::CacheDB, DatabaseRef,
 };
+use reth_revm::{database::EvmStateProvider, revm::State};
 #[cfg(feature = "scroll")]
 use reth_scroll_storage::ScrollStateProviderDatabase;
 

@@ -10,7 +10,7 @@ exclude.workspace = true
 
 [dependencies]
 # revm
-revm.workspace = true
+revm = { workspace = true, features = ["scroll"] }
 
 [lints]
 workspace = true

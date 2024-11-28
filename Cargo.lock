@@ -9123,11 +9123,11 @@ dependencies = [
 name = "reth-scroll-consensus"
 version = "1.1.2"
 dependencies = [
- "revm",
+ "reth-scroll-revm",
 ]
 
 [[package]]
-name = "reth-scroll-execution"
+name = "reth-scroll-evm"
 version = "1.1.2"
 dependencies = [
  "alloy-consensus",
@@ -9141,12 +9141,18 @@ dependencies = [
  "reth-primitives",
  "reth-revm",
  "reth-scroll-consensus",
- "reth-scroll-primitives",
+ "reth-scroll-execution",
  "reth-scroll-revm",
- "reth-scroll-storage",
- "revm",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "reth-scroll-execution"
+version = "1.1.2"
+dependencies = [
+ "reth-revm",
+ "reth-scroll-storage",
 ]
 
 [[package]]
