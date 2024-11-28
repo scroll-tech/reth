@@ -1,4 +1,3 @@
-use alloy_primitives::U256;
 use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition};
 
 #[cfg(not(feature = "std"))]
@@ -20,17 +19,12 @@ pub static DEV_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(|| {
         (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::London.boxed(), ForkCondition::Block(0)),
-        (
-            EthereumHardfork::Paris.boxed(),
-            ForkCondition::TTD { fork_block: None, total_difficulty: U256::ZERO },
-        ),
-        (crate::OpHardfork::Bedrock.boxed(), ForkCondition::Block(0)),
-        (crate::OpHardfork::Regolith.boxed(), ForkCondition::Timestamp(0)),
+        (EthereumHardfork::Paris.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Shanghai.boxed(), ForkCondition::Timestamp(0)),
-        (crate::OpHardfork::Canyon.boxed(), ForkCondition::Timestamp(0)),
         (EthereumHardfork::Cancun.boxed(), ForkCondition::Timestamp(0)),
-        (crate::OpHardfork::Ecotone.boxed(), ForkCondition::Timestamp(0)),
-        (crate::OpHardfork::Fjord.boxed(), ForkCondition::Timestamp(0)),
-        (crate::OpHardfork::Granite.boxed(), ForkCondition::Timestamp(0)),
+        (crate::ScrollHardFork::Bernoulli.boxed(), ForkCondition::Block(0)),
+        (crate::ScrollHardFork::Curie.boxed(), ForkCondition::Block(0)),
+        (crate::ScrollHardFork::Darwin.boxed(), ForkCondition::Timestamp(0)),
+        (crate::ScrollHardFork::DarwinV2.boxed(), ForkCondition::Timestamp(0)),
     ])
 });
