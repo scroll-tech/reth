@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(any(test, feature = "reth-codec"))]
 use {reth_codecs::Compact, reth_codecs_derive::add_arbitrary_tests};
 
-/// L1 message transaction type id.
-pub const L1_MESSAGE_TRANSACTION_TYPE: u8 = 0x7E;
+/// L1 message transaction type id, 0x7e in hex.
+pub const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 
 /// A message transaction sent from the settlement layer to the L2 for execution.
 ///

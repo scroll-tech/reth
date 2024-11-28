@@ -425,7 +425,7 @@ impl Transaction {
     /// Returns true if the transaction is a Scroll L1 messaging transaction.
     #[cfg(all(feature = "scroll", not(feature = "optimism")))]
     #[inline]
-    pub fn is_l1_messaging(&self) -> bool {
+    pub fn is_l1_message(&self) -> bool {
         matches!(self, Self::L1Message(_))
     }
 
@@ -1741,7 +1741,7 @@ impl<'a> arbitrary::Arbitrary<'a> for TransactionSigned {
         let signature = if transaction.is_deposit() { TxDeposit::signature() } else { signature };
         #[cfg(all(feature = "scroll", not(feature = "optimism")))]
         let signature =
-            if transaction.is_l1_messaging() { TxL1Message::signature() } else { signature };
+            if transaction.is_l1_message() { TxL1Message::signature() } else { signature };
 
         Ok(Self::new_unhashed(transaction, signature))
     }
