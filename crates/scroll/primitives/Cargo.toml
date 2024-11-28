@@ -47,40 +47,40 @@ test-fuzz.workspace = true
 
 [features]
 default = [
-    "reth-codec",
-    "std"
-]
-arbitrary = [
-    "dep:arbitrary",
-    "alloy-primitives/arbitrary",
-    "alloy-consensus/arbitrary",
-    "alloy-eips/arbitrary",
-    "alloy-serde/arbitrary",
-    "reth-codecs/arbitrary"
-]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:reth-codecs-derive",
-    "modular-bitfield",
-    "std"
-]
-serde = [
-    "alloy-primitives/serde",
-    "alloy-consensus/serde",
-    "alloy-eips/serde",
-    "bytes/serde",
-    "rand/serde",
-    "reth-codecs/serde"
+	"reth-codec",
+	"std"
 ]
 std = [
-    "serde/std",
-    "alloy-primitives/std",
-    "reth-codecs/std",
-    "alloy-consensus/std",
-    "alloy-eips/std",
-    "alloy-rlp/std",
-    "alloy-serde/std",
-    "bytes/std",
-    "proptest/std",
-    "rand/std"
+	"serde/std",
+	"alloy-primitives/std",
+	"reth-codecs/std",
+	"alloy-consensus/std",
+	"alloy-eips/std",
+	"alloy-rlp/std",
+	"alloy-serde/std",
+	"bytes/std",
+	"proptest/std",
+	"rand/std"
+]
+arbitrary = [
+	"dep:arbitrary",
+	"alloy-primitives/arbitrary",
+	"alloy-consensus/arbitrary",
+	"alloy-eips/arbitrary",
+	"alloy-serde/arbitrary",
+	"reth-codecs/arbitrary"
+]
+reth-codec = [
+	"dep:reth-codecs",
+	"dep:reth-codecs-derive",
+	"modular-bitfield",
+	"std"
+]
+serde = [
+	"alloy-primitives/serde",
+	"alloy-consensus/serde",
+	"alloy-eips/serde",
+	"bytes/serde",
+	"rand/serde",
+	"reth-codecs/serde"
 ]

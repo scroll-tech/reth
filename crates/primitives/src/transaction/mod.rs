@@ -1466,7 +1466,7 @@ impl reth_primitives_traits::FillTxEnv for TransactionSigned {
             #[cfg(all(feature = "optimism", not(feature = "scroll")))]
             Transaction::Deposit(_) => {}
             #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-            Transaction::L1Message(_) => {} // TODO (scroll): should this be something?
+            Transaction::L1Message(_) => {}
         }
     }
 }
