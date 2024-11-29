@@ -1,5 +1,5 @@
 use revm::{
-    db::{states::StorageSlot, StorageWithOriginalValues},
+    db::states::StorageSlot,
     primitives::{address, bytes, Address, Bytecode, Bytes, U256},
     shared::AccountInfo,
     Database, State,
@@ -27,48 +27,134 @@ const IS_CURIE: U256 = U256::from_limbs([1, 0, 0, 0]);
 pub fn apply_curie_hard_fork<DB: Database>(state: &mut State<DB>) -> Result<(), DB::Error> {
     let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
 
-    // get old oracle account balance and nonce
-    let (old_balance, old_nonce) =
-        oracle.account.as_ref().map(|acc| (acc.info.balance, acc.info.nonce)).unwrap_or_default();
-
     // compute the code hash
     let bytecode = Bytecode::new_raw(CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
+    let bytecode_len = bytecode.len();
     let code_hash = bytecode.hash_slow();
+    let poseidon_code_hash = bytecode.poseidon_hash_slow();
+
+    // get the old oracle account info
+    let old_oracle_info = oracle.account_info().unwrap_or_default();
 
     // init new oracle account information
-    let new_oracle_info =
-        AccountInfo { balance: old_balance, nonce: old_nonce, code_hash, code: Some(bytecode) };
+    let new_oracle_info = AccountInfo {
+        code_size: bytecode_len,
+        code_hash,
+        poseidon_code_hash,
+        code: Some(bytecode),
+        ..old_oracle_info
+    };
 
-    // create `StorageWithOriginalValues` mapping for oracle
-    let storage = oracle
-        .account
-        .as_ref()
-        .map(|acc| {
-            let mut storage_with_original_values = StorageWithOriginalValues::default();
-            for (slot, new_storage_value) in CURIE_L1_GAS_PRICE_ORACLE_STORAGE {
-                storage_with_original_values.insert(
-                    slot,
-                    StorageSlot {
-                        previous_or_original_value: acc
-                            .storage
-                            .get(&slot)
-                            .copied()
-                            .unwrap_or_default(),
-                        present_value: new_storage_value,
-                    },
-                );
-            }
-            storage_with_original_values
+    // init new storage
+    let new_storage = CURIE_L1_GAS_PRICE_ORACLE_STORAGE
+        .into_iter()
+        .map(|(slot, present_value)| {
+            (
+                slot,
+                StorageSlot {
+                    present_value,
+                    previous_or_original_value: oracle.storage_slot(slot).unwrap_or_default(),
+                },
+            )
         })
-        .unwrap_or_default();
+        .collect();
 
     // create transition for oracle new account info and storage
-    let transition = oracle.change(new_oracle_info, storage);
+    let transition = oracle.change(new_oracle_info, new_storage);
 
-    // append transition
+    // add transition
     if let Some(s) = state.transition_state.as_mut() {
         s.add_transitions(vec![(L1_GAS_PRICE_ORACLE_ADDRESS, transition)])
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        apply_curie_hard_fork,
+        curie::{
+            CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE,
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+        },
+    };
+    use revm::{
+        db::states::{bundle_state::BundleRetention, plain_account::PlainStorage, StorageSlot},
+        keccak256,
+        primitives::{bytes, poseidon, U256},
+        shared::AccountInfo,
+        Bytecode, Database, EmptyDB, State,
+    };
+    use std::str::FromStr;
+
+    #[test]
+    fn test_apply_curie_fork() -> eyre::Result<()> {
+        // init state
+        let db = EmptyDB::new();
+        let mut state =
+            State::builder().with_database(db).with_bundle_update().without_state_clear().build();
+
+        // oracle pre fork state
+        let bytecode_pre_fork = Bytecode::new_raw( bytes!("608060405234801561001057600080fd5b50600436106100cf5760003560e01c8063715018a61161008c578063bede39b511610066578063bede39b51461018d578063de26c4a1146101a0578063f2fde38b146101b3578063f45e65d8146101c657600080fd5b8063715018a6146101475780638da5cb5b1461014f57806393e59dc11461017a57600080fd5b80630c18c162146100d45780633577afc5146100f05780633d0f963e1461010557806349948e0e14610118578063519b4bd31461012b5780637046559714610134575b600080fd5b6100dd60025481565b6040519081526020015b60405180910390f35b6101036100fe366004610671565b6101cf565b005b61010361011336600461068a565b610291565b6100dd6101263660046106d0565b61031c565b6100dd60015481565b610103610142366004610671565b610361565b610103610416565b600054610162906001600160a01b031681565b6040516001600160a01b0390911681526020016100e7565b600454610162906001600160a01b031681565b61010361019b366004610671565b61044c565b6100dd6101ae3660046106d0565b610533565b6101036101c136600461068a565b610595565b6100dd60035481565b6000546001600160a01b031633146102025760405162461bcd60e51b81526004016101f990610781565b60405180910390fd5b621c9c388111156102555760405162461bcd60e51b815260206004820152601760248201527f657863656564206d6178696d756d206f7665726865616400000000000000000060448201526064016101f9565b60028190556040518181527f32740b35c0ea213650f60d44366b4fb211c9033b50714e4a1d34e65d5beb9bb4906020015b60405180910390a150565b6000546001600160a01b031633146102bb5760405162461bcd60e51b81526004016101f990610781565b600480546001600160a01b038381166001600160a01b031983168117909355604080519190921680825260208201939093527f22d1c35fe072d2e42c3c8f9bd4a0d34aa84a0101d020a62517b33fdb3174e5f7910160405180910390a15050565b60008061032883610533565b905060006001548261033a91906107b8565b9050633b9aca006003548261034f91906107b8565b61035991906107e5565b949350505050565b6000546001600160a01b0316331461038b5760405162461bcd60e51b81526004016101f990610781565b61039b633b9aca006103e86107b8565b8111156103e15760405162461bcd60e51b8152602060048201526014602482015273657863656564206d6178696d756d207363616c6560601b60448201526064016101f9565b60038190556040518181527f3336cd9708eaf2769a0f0dc0679f30e80f15dcd88d1921b5a16858e8b85c591a90602001610286565b6000546001600160a01b031633146104405760405162461bcd60e51b81526004016101f990610781565b61044a6000610621565b565b6004805460405163efc7840160e01b815233928101929092526001600160a01b03169063efc7840190602401602060405180830381865afa158015610495573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104b99190610807565b6104fe5760405162461bcd60e51b81526020600482015260166024820152752737ba103bb434ba32b634b9ba32b21039b2b73232b960511b60448201526064016101f9565b60018190556040518181527f351fb23757bb5ea0546c85b7996ddd7155f96b939ebaa5ff7bc49c75f27f2c4490602001610286565b80516000908190815b818110156105865784818151811061055657610556610829565b01602001516001600160f81b0319166000036105775760048301925061057e565b6010830192505b60010161053c565b50506002540160400192915050565b6000546001600160a01b031633146105bf5760405162461bcd60e51b81526004016101f990610781565b6001600160a01b0381166106155760405162461bcd60e51b815260206004820152601d60248201527f6e6577206f776e657220697320746865207a65726f206164647265737300000060448201526064016101f9565b61061e81610621565b50565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b60006020828403121561068357600080fd5b5035919050565b60006020828403121561069c57600080fd5b81356001600160a01b03811681146106b357600080fd5b9392505050565b634e487b7160e01b600052604160045260246000fd5b6000602082840312156106e257600080fd5b813567ffffffffffffffff808211156106fa57600080fd5b818401915084601f83011261070e57600080fd5b813581811115610720576107206106ba565b604051601f8201601f19908116603f01168101908382118183101715610748576107486106ba565b8160405282815287602084870101111561076157600080fd5b826020860160208301376000928101602001929092525095945050505050565b60208082526017908201527f63616c6c6572206973206e6f7420746865206f776e6572000000000000000000604082015260600190565b60008160001904831182151516156107e057634e487b7160e01b600052601160045260246000fd5b500290565b60008261080257634e487b7160e01b600052601260045260246000fd5b500490565b60006020828403121561081957600080fd5b815180151581146106b357600080fd5b634e487b7160e01b600052603260045260246000fdfea26469706673582212205ea335809638809cf032c794fd966e2439020737b1dcc2218435cb438286efcf64736f6c63430008100033"));
+        let oracle_pre_fork = AccountInfo {
+            code_size: bytecode_pre_fork.len(),
+            code_hash: bytecode_pre_fork.hash_slow(),
+            poseidon_code_hash: bytecode_pre_fork.poseidon_hash_slow(),
+            code: Some(bytecode_pre_fork),
+            ..Default::default()
+        };
+        let oracle_storage_pre_fork = PlainStorage::from_iter([
+            (U256::ZERO, U256::from_str("0x13d24a7ff6f5ec5ff0e9c40fc3b8c9c01c65437b")?),
+            (U256::from(1), U256::from(0x15f50e5e)),
+            (U256::from(2), U256::from(0x38)),
+            (U256::from(3), U256::from(0x3e95ba80)),
+            (U256::from(4), U256::from_str("0x5300000000000000000000000000000000000003")?),
+        ]);
+        state.insert_account_with_storage(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            oracle_pre_fork.clone(),
+            oracle_storage_pre_fork.clone(),
+        );
+
+        // apply curie fork
+        apply_curie_hard_fork(&mut state)?;
+
+        // merge transitions
+        state.merge_transitions(BundleRetention::Reverts);
+        let bundle = state.take_bundle();
+
+        // check oracle account info
+        let oracle = bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS).unwrap().clone();
+        let code_hash = keccak256(&CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
+        let bytecode = Bytecode::new_raw(CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
+        let expected_oracle_info = AccountInfo {
+            code_size: CURIE_L1_GAS_PRICE_ORACLE_BYTECODE.len(),
+            code_hash,
+            poseidon_code_hash: poseidon(&CURIE_L1_GAS_PRICE_ORACLE_BYTECODE),
+            code: Some(bytecode.clone()),
+            ..Default::default()
+        };
+
+        assert_eq!(oracle.original_info.unwrap(), oracle_pre_fork);
+        assert_eq!(oracle.info.unwrap(), expected_oracle_info);
+
+        // check oracle storage changeset
+        let mut storage = oracle.storage.into_iter().collect::<Vec<(U256, StorageSlot)>>();
+        storage.sort_by(|(a, _), (b, _)| a.cmp(b));
+        for (got, expected) in storage.into_iter().zip(CURIE_L1_GAS_PRICE_ORACLE_STORAGE) {
+            assert_eq!(got.0, expected.0);
+            assert_eq!(got.1, StorageSlot { present_value: expected.1, ..Default::default() });
+        }
+
+        // check oracle original storage
+        for (slot, value) in oracle_storage_pre_fork {
+            assert_eq!(state.storage(L1_GAS_PRICE_ORACLE_ADDRESS, slot)?, value)
+        }
+
+        // check deployed contract
+        assert_eq!(bundle.contracts.get(&code_hash).unwrap().clone(), bytecode);
+
+        Ok(())
+    }
 }

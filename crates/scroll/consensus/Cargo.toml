@@ -8,9 +8,12 @@ homepage.workspace = true
 repository.workspace = true
 exclude.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 # revm
 revm = { workspace = true, features = ["scroll"] }
 
-[lints]
-workspace = true
+[dev-dependencies]
+eyre.workspace = true
