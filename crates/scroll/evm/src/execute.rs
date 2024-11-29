@@ -2,7 +2,7 @@
 
 use crate::{HardForkError, ScrollBlockExecutionError};
 use alloy_consensus::{Header, Transaction};
-use alloy_eips::eip7685::Requests;
+use alloy_eips::{eip2718::Encodable2718, eip7685::Requests};
 use reth_chainspec::{ChainSpec, EthereumHardfork, EthereumHardforks};
 use reth_consensus::ConsensusError;
 use reth_evm::{
@@ -17,7 +17,7 @@ use reth_scroll_consensus::apply_curie_hard_fork;
 use reth_scroll_execution::FinalizeExecution;
 use revm::{
     db::BundleState,
-    primitives::{BlockEnv, EnvWithHandlerCfg, ResultAndState},
+    primitives::{bytes::BytesMut, BlockEnv, EnvWithHandlerCfg, ResultAndState},
     Database, DatabaseCommit, State,
 };
 use std::fmt::{Debug, Display};
@@ -29,10 +29,17 @@ pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     chain_spec: ChainSpec,
     /// Evm configuration.
     // TODO (scroll): EvmConfig should set the correct coinbase in `fill_block_env`.
-    // TODO (scroll): Should we have a ScrollConfig?
+    // TODO (scroll): EvmConfig should use the `Scroll` evm handler from revm.
     evm_config: EvmConfig,
     /// Current state for the execution.
     state: State<DB>,
+}
+
+impl<DB, EvmConfig> ScrollExecutionStrategy<DB, EvmConfig> {
+    /// Returns an instance of [`ScrollExecutionStrategy`].
+    pub const fn new(chain_spec: ChainSpec, evm_config: EvmConfig, state: State<DB>) -> Self {
+        Self { chain_spec, evm_config, state }
+    }
 }
 
 impl<DB, EvmConfig> ScrollExecutionStrategy<DB, EvmConfig>
@@ -108,13 +115,19 @@ where
                 .into())
             }
 
-            // TODO (scroll): verify the logic from the stateless block verifier
-            // https://github.com/scroll-tech/stateless-block-verifier/blob/master/crates/core/src/executor/mod.rs#L71
             self.evm_config.fill_tx_env(evm.tx_mut(), transaction, *sender);
             if transaction.is_l1_message() {
                 evm.context.evm.env.cfg.disable_base_fee = true; // disable base fee for l1 msg
             }
 
+            // RLP encode the transaction following eip 2718
+            let mut buf = BytesMut::with_capacity(transaction.encode_2718_len());
+            transaction.encode_2718(&mut buf);
+            let transaction_rlp_bytes = buf.freeze();
+            evm.context.evm.env.tx.scroll.rlp_bytes = Some(transaction_rlp_bytes.into());
+            evm.context.evm.env.tx.scroll.is_l1_msg = transaction.is_l1_message();
+
+            // execute the transaction and commit the result to the database
             let ResultAndState { result, state } =
                 evm.transact().map_err(|err| BlockValidationError::EVM {
                     hash: transaction.recalculate_hash(),
@@ -123,15 +136,20 @@ where
 
             evm.db_mut().commit(state);
 
-            // TODO (scroll): uncomment once we have the scroll/revm fork integrated
-            let l1_fee = U256::ZERO;
-            // if !transaction.is_l1_msg() {
-            //     let mut rlp_bytes = BytesMut::new();
-            //     transaction.eip2718_encode(&mut rlp_bytes, transaction.signature());
-            //     let l1_block_info =
-            //         evm.context.evm.inner.l1_block_info.as_ref().expect("l1 block info exists");
-            //     l1_fee = l1_block_info.calculate_tx_l1_cost(rlp_bytes, evm.handler.cfg.spec_id);
-            // }
+            let l1_fee = if transaction.is_l1_message() {
+                U256::ZERO
+            } else {
+                // compute l1 fee for all non-l1 transaction
+                let l1_block_info =
+                    evm.context.evm.inner.l1_block_info.as_ref().ok_or_else(|| {
+                        ScrollBlockExecutionError::l1_fee("missing l1 block info")
+                    })?;
+                let transaction_rlp_bytes =
+                    evm.context.evm.env.tx.scroll.rlp_bytes.as_ref().ok_or_else(|| {
+                        ScrollBlockExecutionError::l1_fee("missing transaction rlp bytes")
+                    })?;
+                l1_block_info.calculate_tx_l1_cost(transaction_rlp_bytes, evm.handler.cfg.spec_id)
+            };
 
             cumulative_gas_used += result.gas_used();
 

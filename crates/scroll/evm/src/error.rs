@@ -10,6 +10,19 @@ pub enum ScrollBlockExecutionError {
     /// Error occurred at a hard fork.
     #[display("failed to apply hard fork: {_0}")]
     HardFork(HardForkError),
+    /// Error occurred at L1 fee computation.
+    #[display("failed to compute l1 fee: {reason}")]
+    L1FeeComputation {
+        /// The reason for the fee computation error.
+        reason: &'static str,
+    },
+}
+
+impl ScrollBlockExecutionError {
+    /// Returns a [`ScrollBlockExecutionError`] with the `L1FeeComputation` variant.
+    pub const fn l1_fee(reason: &'static str) -> Self {
+        Self::L1FeeComputation { reason }
+    }
 }
 
 /// Scroll hard fork error.
