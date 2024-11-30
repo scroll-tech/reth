@@ -167,3 +167,174 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
         Ok((cfg_with_handler_cfg, block_env))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_consensus::Header;
+    use reth_chainspec::NamedChain::Scroll;
+    use revm::primitives::{address, SpecId, B256};
+
+    #[test]
+    fn test_spec_at_head() {
+        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
+        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+
+        // prepare all fork heads
+        let euclid_head = &Head { number: u64::MAX, ..Default::default() };
+        let curie_head = &Head { number: 7096836, ..Default::default() };
+        let bernouilli_head = &Head { number: 5220340, ..Default::default() };
+        let pre_bernouilli_head = &Head { number: 0, ..Default::default() };
+
+        // check correct spec id
+        assert_eq!(config.spec_id_at_head(euclid_head), SpecId::EUCLID);
+        assert_eq!(config.spec_id_at_head(curie_head), SpecId::CURIE);
+        assert_eq!(config.spec_id_at_head(bernouilli_head), SpecId::BERNOULLI);
+        assert_eq!(config.spec_id_at_head(pre_bernouilli_head), SpecId::PRE_BERNOULLI);
+    }
+
+    #[test]
+    fn test_fill_cfg_env() {
+        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
+        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+
+        // euclid header
+        let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
+        let euclid_header = Header { number: u64::MAX, ..Default::default() };
+
+        // fill cfg env
+        config.fill_cfg_env(&mut cfg_env, &euclid_header, U256::ZERO);
+
+        // check correct cfg env
+        assert_eq!(cfg_env.chain_id, Scroll as u64);
+        assert_eq!(cfg_env.perf_analyse_created_bytecodes, AnalysisKind::Analyse);
+        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::EUCLID);
+        assert!(cfg_env.handler_cfg.is_scroll);
+
+        // curie
+        let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
+        let curie_header = Header { number: 7096836, ..Default::default() };
+
+        // fill cfg env
+        config.fill_cfg_env(&mut cfg_env, &curie_header, U256::ZERO);
+
+        // check correct cfg env
+        assert_eq!(cfg_env.chain_id, Scroll as u64);
+        assert_eq!(cfg_env.perf_analyse_created_bytecodes, AnalysisKind::Analyse);
+        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::CURIE);
+        assert!(cfg_env.handler_cfg.is_scroll);
+
+        // bernouilli
+        let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
+        let bernouilli_header = Header { number: 5220340, ..Default::default() };
+
+        // fill cfg env
+        config.fill_cfg_env(&mut cfg_env, &bernouilli_header, U256::ZERO);
+
+        // check correct cfg env
+        assert_eq!(cfg_env.chain_id, Scroll as u64);
+        assert_eq!(cfg_env.perf_analyse_created_bytecodes, AnalysisKind::Analyse);
+        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::BERNOULLI);
+        assert!(cfg_env.handler_cfg.is_scroll);
+
+        // pre-bernouilli
+        let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
+        let pre_bernouilli_header = Header { number: 0, ..Default::default() };
+
+        // fill cfg env
+        config.fill_cfg_env(&mut cfg_env, &pre_bernouilli_header, U256::ZERO);
+
+        // check correct cfg env
+        assert_eq!(cfg_env.chain_id, Scroll as u64);
+        assert_eq!(cfg_env.perf_analyse_created_bytecodes, AnalysisKind::Analyse);
+        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::PRE_BERNOULLI);
+        assert!(cfg_env.handler_cfg.is_scroll);
+    }
+
+    #[test]
+    fn test_fill_block_env() {
+        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
+        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+        let mut block_env = BlockEnv::default();
+
+        // curie header
+        let header = Header {
+            number: 7096836,
+            beneficiary: Address::random(),
+            timestamp: 1719994277,
+            mix_hash: B256::random(),
+            base_fee_per_gas: Some(155157341),
+            gas_limit: 10000000,
+            ..Default::default()
+        };
+
+        // fill block env
+        config.fill_block_env(&mut block_env, &header, true);
+
+        // verify block env correctly updated
+        // TODO (scroll): replace with `config.chain_spec.fee_vault_address.unwrap()`
+        const FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
+        let expected = BlockEnv {
+            number: U256::from(header.number),
+            coinbase: FEE_VAULT_ADDRESS,
+            timestamp: U256::from(header.timestamp),
+            prevrandao: Some(header.mix_hash),
+            difficulty: U256::ZERO,
+            basefee: U256::from(header.base_fee_per_gas.unwrap_or_default()),
+            gas_limit: U256::from(header.gas_limit),
+            ..Default::default()
+        };
+        assert_eq!(block_env, expected)
+    }
+
+    #[test]
+    fn test_next_cfg_and_block_env() -> eyre::Result<()> {
+        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
+        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+
+        // pre curie header
+        let header = Header {
+            number: 7096835,
+            beneficiary: Address::random(),
+            timestamp: 1719994274,
+            mix_hash: B256::random(),
+            base_fee_per_gas: None,
+            gas_limit: 10000000,
+            ..Default::default()
+        };
+
+        // curie block attributes
+        let attributes = NextBlockEnvAttributes {
+            timestamp: 1719994277,
+            suggested_fee_recipient: Address::random(),
+            prev_randao: B256::random(),
+        };
+
+        // get next cfg env and block env
+        let (cfg_env, block_env) = config.next_cfg_and_block_env(&header, attributes)?;
+
+        // verify cfg env
+        assert_eq!(cfg_env.chain_id, Scroll as u64);
+        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::CURIE);
+        assert!(cfg_env.handler_cfg.is_scroll);
+
+        // verify block env
+        // TODO (scroll): replace with `config.chain_spec.fee_vault_address.unwrap()`
+        const FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
+        let expected = BlockEnv {
+            number: U256::from(header.number + 1),
+            coinbase: FEE_VAULT_ADDRESS,
+            timestamp: U256::from(attributes.timestamp),
+            prevrandao: Some(attributes.prev_randao),
+            difficulty: U256::ZERO,
+            // TODO (scroll): update once the Scroll chain spec is available
+            // TODO (scroll): this shouldn't be 0 at curie fork
+            basefee: U256::ZERO,
+            gas_limit: U256::from(header.gas_limit),
+            ..Default::default()
+        };
+        assert_eq!(block_env, expected);
+
+        Ok(())
+    }
+}
