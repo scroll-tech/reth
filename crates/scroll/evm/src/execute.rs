@@ -28,8 +28,6 @@ pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     /// Chain specification.
     chain_spec: ChainSpec,
     /// Evm configuration.
-    // TODO (scroll): EvmConfig should set the correct coinbase in `fill_block_env`.
-    // TODO (scroll): EvmConfig should use the `Scroll` evm handler from revm.
     evm_config: EvmConfig,
     /// Current state for the execution.
     state: State<DB>,

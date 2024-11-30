@@ -18,6 +18,7 @@ reth-consensus.workspace = true
 reth-ethereum-consensus.workspace = true
 reth-evm = { workspace = true, features = ["scroll"] }
 reth-primitives = { workspace = true, features = ["scroll"] }
+reth-primitives-traits = { workspace = true, features = ["scroll"] }
 reth-revm = { workspace = true, features = ["scroll"] }
 
 # revm
@@ -36,6 +37,9 @@ auto_impl.workspace = true
 derive_more.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+eyre.workspace = true
 
 [features]
 optimism = []
