@@ -4,7 +4,7 @@
 use reth_revm::{
     cached::CachedReadsDbMut, database::StateProviderDatabase, revm::CacheDB, DatabaseRef,
 };
-use reth_revm::{database::EvmStateProvider, revm::State};
+use reth_revm::{database::EvmStateProvider, revm::State, EmptyDBTyped};
 #[cfg(feature = "scroll")]
 use reth_scroll_storage::ScrollStateProviderDatabase;
 
@@ -66,6 +66,15 @@ impl<DB: DatabaseRef> FinalizeExecution for State<CacheDB<DB>> {
 
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
 impl<DB: DatabaseRef> FinalizeExecution for State<CachedReadsDbMut<'_, DB>> {
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
+    }
+}
+
+#[cfg(feature = "test-utils")]
+impl<E> FinalizeExecution for State<EmptyDBTyped<E>> {
     type Output = reth_revm::db::BundleState;
 
     fn finalize(&mut self) -> Self::Output {

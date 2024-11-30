@@ -20,13 +20,16 @@ use revm::{
     primitives::{bytes::BytesMut, BlockEnv, EnvWithHandlerCfg, ResultAndState},
     Database, DatabaseCommit, State,
 };
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    sync::Arc,
+};
 
 /// The Scroll block execution strategy.
 #[derive(Debug)]
 pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     /// Chain specification.
-    chain_spec: ChainSpec,
+    chain_spec: Arc<ChainSpec>,
     /// Evm configuration.
     evm_config: EvmConfig,
     /// Current state for the execution.
@@ -35,7 +38,7 @@ pub struct ScrollExecutionStrategy<DB, EvmConfig> {
 
 impl<DB, EvmConfig> ScrollExecutionStrategy<DB, EvmConfig> {
     /// Returns an instance of [`ScrollExecutionStrategy`].
-    pub const fn new(chain_spec: ChainSpec, evm_config: EvmConfig, state: State<DB>) -> Self {
+    pub const fn new(chain_spec: Arc<ChainSpec>, evm_config: EvmConfig, state: State<DB>) -> Self {
         Self { chain_spec, evm_config, state }
     }
 }
@@ -212,6 +215,181 @@ where
                 return Err(error);
             }
         }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ScrollEvmConfig;
+    use reth_chainspec::ChainSpecBuilder;
+    use reth_primitives::{Block, BlockBody, TransactionSigned};
+    use reth_scroll_consensus::{
+        CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE,
+        L1_GAS_PRICE_ORACLE_ADDRESS,
+    };
+    use revm::{
+        db::states::{bundle_state::BundleRetention, StorageSlot},
+        primitives::{Address, TxType, B256},
+        Bytecode, EmptyDBTyped, TxKind,
+    };
+
+    fn strategy() -> ScrollExecutionStrategy<EmptyDBTyped<ProviderError>, ScrollEvmConfig> {
+        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
+        let chain_spec = Arc::new(ChainSpecBuilder::mainnet().build());
+        let config = ScrollEvmConfig::new(chain_spec.clone());
+        let db = EmptyDBTyped::<ProviderError>::new();
+        let state =
+            State::builder().with_database(db).with_bundle_update().without_state_clear().build();
+
+        ScrollExecutionStrategy::new(chain_spec, config, state)
+    }
+
+    fn transaction(typ: TxType, gas_limit: u64) -> TransactionSigned {
+        let pk = B256::random();
+        let transaction = match typ {
+            TxType::BlobTx => reth_primitives::Transaction::Eip4844(alloy_consensus::TxEip4844 {
+                gas_limit,
+                to: Address::ZERO,
+                ..Default::default()
+            }),
+            _ => reth_primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
+                gas_limit,
+                to: TxKind::Call(Address::ZERO),
+                ..Default::default()
+            }),
+        };
+        let signature = reth_primitives::sign_message(pk, transaction.signature_hash()).unwrap();
+        reth_primitives::TransactionSigned::new_unhashed(transaction, signature)
+    }
+
+    #[test]
+    fn test_apply_pre_execution_changes_at_curie_block() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // init curie transition block
+        let curie_block = BlockWithSenders {
+            block: Block {
+                header: Header { number: 7096836, ..Default::default() },
+                ..Default::default()
+            },
+            senders: vec![],
+        };
+
+        // apply pre execution change
+        strategy.apply_pre_execution_changes(&curie_block, U256::ZERO)?;
+
+        // take bundle
+        let mut state = strategy.state;
+        state.merge_transitions(BundleRetention::Reverts);
+        let bundle = state.take_bundle();
+
+        // assert oracle contract contains updated bytecode and storage
+        let oracle = bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS).unwrap().clone();
+        let bytecode = Bytecode::new_raw(CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
+        assert_eq!(oracle.info.unwrap().code.unwrap(), bytecode);
+
+        // check oracle storage changeset
+        let mut storage = oracle.storage.into_iter().collect::<Vec<(U256, StorageSlot)>>();
+        storage.sort_by(|(a, _), (b, _)| a.cmp(b));
+        for (got, expected) in storage.into_iter().zip(CURIE_L1_GAS_PRICE_ORACLE_STORAGE) {
+            assert_eq!(got.0, expected.0);
+            assert_eq!(got.1, StorageSlot { present_value: expected.1, ..Default::default() });
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_pre_execution_changes_not_at_curie_block() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // init curie transition block
+        let curie_block = BlockWithSenders {
+            block: Block {
+                header: Header { number: 7096837, ..Default::default() },
+                ..Default::default()
+            },
+            senders: vec![],
+        };
+
+        // apply pre execution change
+        strategy.apply_pre_execution_changes(&curie_block, U256::ZERO)?;
+
+        // take bundle
+        let mut state = strategy.state;
+        state.merge_transitions(BundleRetention::Reverts);
+        let bundle = state.take_bundle();
+
+        // assert oracle contract contains updated bytecode and storage
+        let oracle = bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS);
+        assert!(oracle.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transaction_exceeds_block_gas_limit() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transactions exceeding block gas limit
+        let gas_limit = 10_000_000;
+        let transaction = transaction(TxType::Legacy, gas_limit + 1);
+        let senders = vec![transaction.recover_signer().unwrap()];
+        let block = BlockWithSenders {
+            block: Block {
+                header: Header { number: 7096837, gas_limit, ..Default::default() },
+                body: BlockBody { transactions: vec![transaction], ..Default::default() },
+            },
+            senders: senders.clone(),
+        };
+
+        // load accounts in state
+        strategy.state.insert_account(Address::ZERO, Default::default());
+        strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
+        for add in senders {
+            strategy.state.insert_account(add, Default::default());
+        }
+
+        let res = strategy.execute_transactions(&block, U256::ZERO);
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "transaction gas limit 10000001 is more than blocks available gas 10000000"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transaction_eip4844() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transactions exceeding block gas limit
+        let transaction = transaction(TxType::BlobTx, 1_000);
+        let senders = vec![transaction.recover_signer().unwrap()];
+        let block = BlockWithSenders {
+            block: Block {
+                header: Header { number: 7096837, gas_limit: 10_000_000, ..Default::default() },
+                body: BlockBody { transactions: vec![transaction], ..Default::default() },
+            },
+            senders: senders.clone(),
+        };
+
+        // load accounts in state
+        strategy.state.insert_account(Address::ZERO, Default::default());
+        strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
+        for add in senders {
+            strategy.state.insert_account(add, Default::default());
+        }
+
+        let res = strategy.execute_transactions(&block, U256::ZERO);
+        assert_eq!(res.unwrap_err().to_string(), "EIP-4844 transactions are disabled");
 
         Ok(())
     }
