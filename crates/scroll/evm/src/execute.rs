@@ -223,17 +223,19 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ScrollEvmConfig;
-    use reth_chainspec::ChainSpecBuilder;
+    use crate::{ScrollEvmConfig, ScrollExecutionStrategy};
+    use reth_chainspec::{ChainSpecBuilder, MIN_TRANSACTION_GAS};
     use reth_evm::execute::ExecuteOutput;
-    use reth_primitives::{Block, BlockBody, Receipt, TransactionSigned, TxType};
+    use reth_primitives::{Block, BlockBody, BlockWithSenders, Receipt, TransactionSigned, TxType};
     use reth_scroll_consensus::{
-        CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE,
-        L1_GAS_PRICE_ORACLE_ADDRESS,
+        BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
+        CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BASE_FEE_SLOT, L1_BLOB_BASE_FEE_SLOT,
+        L1_GAS_PRICE_ORACLE_ADDRESS, OVER_HEAD_SLOT, SCALAR_SLOT,
     };
     use revm::{
         db::states::{bundle_state::BundleRetention, StorageSlot},
         primitives::{Address, B256, U256},
+        shared::AccountInfo,
         Bytecode, EmptyDBTyped, TxKind,
     };
 
@@ -246,6 +248,18 @@ mod tests {
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
 
         ScrollExecutionStrategy::new(chain_spec, config, state)
+    }
+
+    const BLOCK_GAS_LIMIT: u64 = 10_000_000;
+    fn block(number: u64, transactions: Vec<TransactionSigned>) -> BlockWithSenders {
+        let senders = transactions.iter().map(|t| t.recover_signer().unwrap()).collect();
+        BlockWithSenders {
+            block: Block {
+                header: Header { number, gas_limit: BLOCK_GAS_LIMIT, ..Default::default() },
+                body: BlockBody { transactions, ..Default::default() },
+            },
+            senders,
+        }
     }
 
     fn transaction(typ: TxType, gas_limit: u64) -> TransactionSigned {
@@ -280,13 +294,7 @@ mod tests {
         let mut strategy = strategy();
 
         // init curie transition block
-        let curie_block = BlockWithSenders {
-            block: Block {
-                header: Header { number: 7096836, ..Default::default() },
-                ..Default::default()
-            },
-            senders: vec![],
-        };
+        let curie_block = block(7096836, vec![]);
 
         // apply pre execution change
         strategy.apply_pre_execution_changes(&curie_block, U256::ZERO)?;
@@ -296,12 +304,12 @@ mod tests {
         state.merge_transitions(BundleRetention::Reverts);
         let bundle = state.take_bundle();
 
-        // assert oracle contract contains updated bytecode and storage
+        // assert oracle contract contains updated bytecode
         let oracle = bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS).unwrap().clone();
         let bytecode = Bytecode::new_raw(CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
         assert_eq!(oracle.info.unwrap().code.unwrap(), bytecode);
 
-        // check oracle storage changeset
+        // check oracle contract contains storage changeset
         let mut storage = oracle.storage.into_iter().collect::<Vec<(U256, StorageSlot)>>();
         storage.sort_by(|(a, _), (b, _)| a.cmp(b));
         for (got, expected) in storage.into_iter().zip(CURIE_L1_GAS_PRICE_ORACLE_STORAGE) {
@@ -317,24 +325,18 @@ mod tests {
         // init strategy
         let mut strategy = strategy();
 
-        // init curie transition block
-        let curie_block = BlockWithSenders {
-            block: Block {
-                header: Header { number: 7096837, ..Default::default() },
-                ..Default::default()
-            },
-            senders: vec![],
-        };
+        // init block
+        let not_curie_block = block(7096837, vec![]);
 
         // apply pre execution change
-        strategy.apply_pre_execution_changes(&curie_block, U256::ZERO)?;
+        strategy.apply_pre_execution_changes(&not_curie_block, U256::ZERO)?;
 
         // take bundle
         let mut state = strategy.state;
         state.merge_transitions(BundleRetention::Reverts);
         let bundle = state.take_bundle();
 
-        // assert oracle contract contains updated bytecode and storage
+        // assert oracle contract is empty
         let oracle = bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS);
         assert!(oracle.is_none());
 
@@ -346,23 +348,9 @@ mod tests {
         // init strategy
         let mut strategy = strategy();
 
-        // prepare transactions exceeding block gas limit
-        let gas_limit = 10_000_000;
-        let transaction = transaction(TxType::Legacy, gas_limit + 1);
-        let senders = vec![transaction.recover_signer().unwrap()];
-        let block = BlockWithSenders {
-            block: Block {
-                header: Header { number: 7096837, gas_limit, ..Default::default() },
-                body: BlockBody { transactions: vec![transaction], ..Default::default() },
-            },
-            senders: senders.clone(),
-        };
-
-        // load accounts in state
-        strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
-        for add in senders {
-            strategy.state.insert_account(add, Default::default());
-        }
+        // prepare transaction exceeding block gas limit
+        let transaction = transaction(TxType::Legacy, BLOCK_GAS_LIMIT + 1);
+        let block = block(7096837, vec![transaction]);
 
         // execute and verify error
         let res = strategy.execute_transactions(&block, U256::ZERO);
@@ -381,14 +369,7 @@ mod tests {
 
         // prepare transactions exceeding block gas limit
         let transaction = transaction(TxType::Eip4844, 1_000);
-        let senders = vec![transaction.recover_signer().unwrap()];
-        let block = BlockWithSenders {
-            block: Block {
-                header: Header { number: 7096837, gas_limit: 10_000_000, ..Default::default() },
-                body: BlockBody { transactions: vec![transaction], ..Default::default() },
-            },
-            senders: senders.clone(),
-        };
+        let block = block(7096837, vec![transaction]);
 
         // execute and verify error
         let res = strategy.execute_transactions(&block, U256::ZERO);
@@ -398,34 +379,119 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_transaction_l1_message() -> eyre::Result<()> {
+    fn test_execute_transactions_l1_message() -> eyre::Result<()> {
         // init strategy
         let mut strategy = strategy();
 
         // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::L1Message, 21_000);
-        let senders = vec![transaction.recover_signer().unwrap()];
-        let block = BlockWithSenders {
-            block: Block {
-                header: Header { number: 7096837, gas_limit: 10_000_000, ..Default::default() },
-                body: BlockBody { transactions: vec![transaction], ..Default::default() },
-            },
-            senders: senders.clone(),
-        };
+        let transaction = transaction(TxType::L1Message, MIN_TRANSACTION_GAS);
+        let block = block(7096837, vec![transaction]);
 
         // load accounts in state
         strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
-        for add in senders {
-            strategy.state.insert_account(add, Default::default());
+        for add in &block.senders {
+            strategy.state.insert_account(*add, Default::default());
         }
 
         // execute and verify output
         let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
         let expected = vec![Receipt {
             tx_type: TxType::L1Message,
-            cumulative_gas_used: 21_000,
+            cumulative_gas_used: MIN_TRANSACTION_GAS,
             success: true,
             l1_fee: U256::ZERO,
+            ..Default::default()
+        }];
+
+        assert_eq!(receipts, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_curie_fork() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transactions exceeding block gas limit
+        let transaction = transaction(TxType::Legacy, MIN_TRANSACTION_GAS);
+        let block = block(7096837, vec![transaction]);
+
+        // load l1 gas price oracle with l1 block info in storage
+        strategy.state.insert_account_with_storage(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            Default::default(),
+            [
+                (L1_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                (BLOB_SCALAR_SLOT, U256::from(1000)),
+                (IS_CURIE_SLOT, U256::from(1)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        // load accounts in state
+        for add in &block.senders {
+            strategy
+                .state
+                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
+        }
+
+        // execute and verify output
+        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
+        let expected = vec![Receipt {
+            tx_type: TxType::Legacy,
+            cumulative_gas_used: MIN_TRANSACTION_GAS,
+            success: true,
+            // TODO (scroll): set this to the correct value (should be different from
+            // not_curie_fork)
+            l1_fee: U256::from(3),
+            ..Default::default()
+        }];
+
+        assert_eq!(receipts, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_not_curie_fork() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transactions exceeding block gas limit
+        let transaction = transaction(TxType::Legacy, MIN_TRANSACTION_GAS);
+        let block = block(7096835, vec![transaction]);
+
+        // load l1 gas price oracle with l1 block info in storage
+        strategy.state.insert_account_with_storage(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            Default::default(),
+            [
+                (L1_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        // load accounts in state
+        for add in &block.senders {
+            strategy
+                .state
+                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
+        }
+
+        // execute and verify output
+        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
+        let expected = vec![Receipt {
+            tx_type: TxType::Legacy,
+            cumulative_gas_used: MIN_TRANSACTION_GAS,
+            success: true,
+            l1_fee: U256::from(2),
             ..Default::default()
         }];
 
