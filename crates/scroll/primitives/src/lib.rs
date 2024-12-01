@@ -34,8 +34,7 @@ impl From<TrieAccount> for ScrollTrieAccount {
             code_size: Default::default(),
             nonce: value.nonce,
             balance: value.balance,
-            // TODO(frisitano): introduce storage root
-            storage_root: Default::default(),
+            storage_root: value.storage_root,
             code_hash: value.code_hash,
         }
     }

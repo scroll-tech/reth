@@ -253,11 +253,13 @@ mod serde_nibbles_set {
         Vec::<String>::deserialize(deserializer)?
             .into_iter()
             .map(|node| {
-                // TODO(frisitano): replace this with key abstraction.
-                Ok(Nibbles::unpack_and_truncate_bits(
-                    alloy_primitives::hex::decode(node)
-                        .map_err(|err| D::Error::custom(err.to_string()))?,
-                ))
+                let data = alloy_primitives::hex::decode(node)
+                    .map_err(|err| D::Error::custom(err.to_string()))?;
+                #[cfg(not(feature = "scroll"))]
+                let result = Ok(Nibbles::unpack(data));
+                #[cfg(feature = "scroll")]
+                let result = Ok(Nibbles::unpack_and_truncate_bits(data));
+                result
             })
             .collect::<Result<HashSet<_>, _>>()
     }
@@ -279,6 +281,7 @@ mod serde_nibbles_map {
         Deserialize, Deserializer, Serialize, Serializer,
     };
 
+    #[cfg(feature = "scroll")]
     use crate::key::BitsCompatibility;
 
     pub(super) fn serialize<S, T>(
@@ -294,8 +297,10 @@ mod serde_nibbles_map {
         storage_nodes.sort_unstable_by_key(|node| node.0);
         for (k, v) in storage_nodes {
             // pack, then hex encode the Nibbles
-            // TODO(frisitano): replace this with key abstraction.
+            #[cfg(feature = "scroll")]
             let packed = alloy_primitives::hex::encode(k.pack_bits());
+            #[cfg(not(feature = "scroll"))]
+            let packed = alloy_primitives::hex::encode(k.pack());
             map_serializer.serialize_entry(&packed, &v)?;
         }
         map_serializer.end()
@@ -331,7 +336,10 @@ mod serde_nibbles_map {
                         hex::decode(&key).map_err(|err| Error::custom(err.to_string()))?;
 
                     // TODO(frisitano): replace this with key abstraction.
+                    #[cfg(feature = "scroll")]
                     let nibbles = Nibbles::unpack_and_truncate_bits(&decoded_key);
+                    #[cfg(not(feature = "scroll"))]
+                    let nibbles = Nibbles::unpack(&decoded_key);
 
                     result.insert(nibbles, value);
                 }

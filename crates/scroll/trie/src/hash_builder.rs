@@ -8,9 +8,10 @@ use alloy_trie::{
     hash_builder::{HashBuilderValue, HashBuilderValueRef},
     nodes::LeafNodeRef,
     proof::{ProofNodes, ProofRetainer},
-    BranchNodeCompact, Nibbles, TrieMask, EMPTY_ROOT_HASH,
+    BranchNodeCompact, Nibbles, TrieMask,
 };
 use core::cmp;
+use scroll_primitives::poseidon::EMPTY_ROOT_HASH;
 use tracing::trace;
 
 #[derive(Debug, Default)]
@@ -142,7 +143,9 @@ impl HashBuilder {
 
     fn current_root(&self) -> B256 {
         if let Some(node_ref) = self.stack.last() {
-            *node_ref
+            let mut root = *node_ref;
+            root.reverse();
+            root
         } else {
             EMPTY_ROOT_HASH
         }
@@ -525,7 +528,7 @@ mod test {
                 let key_fr = Fr::from_repr_vartime(key.encode_leaf_key())
                     .expect("key is valid field element");
                 let value = Fr::from_repr_vartime(*value).expect("value is a valid field element");
-                let hash = hash_with_domain(&[key_fr, value], crate::LEAF_NODE_DOMAIN.into());
+                let hash = hash_with_domain(&[key_fr, value], crate::LEAF_NODE_DOMAIN);
                 (key.clone(), hash)
             })
             .collect();
@@ -549,26 +552,21 @@ mod test {
         let expected: B256 = {
             let node_000 = hash_with_domain(
                 &[*leaf_hashes.get(&leaf_1_key).unwrap(), *leaf_hashes.get(&leaf_2_key).unwrap()],
-                crate::BRANCH_NODE_LTRT_DOMAIN.into(),
+                crate::BRANCH_NODE_LTRT_DOMAIN,
             );
             let node_00 = hash_with_domain(
                 &[node_000, *leaf_hashes.get(&leaf_3_key).unwrap()],
-                crate::BRANCH_NODE_LBRT_DOMAIN.into(),
+                crate::BRANCH_NODE_LBRT_DOMAIN,
             );
-            let node_0 =
-                hash_with_domain(&[node_00, Fr::zero()], crate::BRANCH_NODE_LBRT_DOMAIN.into());
+            let node_0 = hash_with_domain(&[node_00, Fr::zero()], crate::BRANCH_NODE_LBRT_DOMAIN);
             let node_111 = hash_with_domain(
                 &[*leaf_hashes.get(&leaf_4_key).unwrap(), *leaf_hashes.get(&leaf_5_key).unwrap()],
-                crate::BRANCH_NODE_LTRT_DOMAIN.into(),
+                crate::BRANCH_NODE_LTRT_DOMAIN,
             );
-            let node_11 =
-                hash_with_domain(&[Fr::zero(), node_111], crate::BRANCH_NODE_LTRB_DOMAIN.into());
-            let node_1 =
-                hash_with_domain(&[Fr::zero(), node_11], crate::BRANCH_NODE_LTRB_DOMAIN.into());
+            let node_11 = hash_with_domain(&[Fr::zero(), node_111], crate::BRANCH_NODE_LTRB_DOMAIN);
+            let node_1 = hash_with_domain(&[Fr::zero(), node_11], crate::BRANCH_NODE_LTRB_DOMAIN);
 
-            hash_with_domain(&[node_0, node_1], crate::BRANCH_NODE_LBRB_DOMAIN.into())
-                .to_repr()
-                .into()
+            hash_with_domain(&[node_0, node_1], crate::BRANCH_NODE_LBRB_DOMAIN).to_repr().into()
         };
 
         assert_eq!(expected, root);

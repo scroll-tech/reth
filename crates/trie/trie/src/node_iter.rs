@@ -1,9 +1,9 @@
-use crate::{
-    hashed_cursor::HashedCursor, key::BitsCompatibility, trie_cursor::TrieCursor,
-    walker::TrieWalker, Nibbles,
-};
+use crate::{hashed_cursor::HashedCursor, trie_cursor::TrieCursor, walker::TrieWalker, Nibbles};
 use alloy_primitives::B256;
 use reth_storage_errors::db::DatabaseError;
+
+#[cfg(feature = "scroll")]
+use crate::key::BitsCompatibility;
 
 /// Represents a branch node in the trie.
 #[derive(Debug)]
@@ -110,8 +110,11 @@ where
                 // If the walker's key is less than the unpacked hashed key,
                 // reset the checked status and continue
                 if self.walker.key().map_or(false, |key| {
-                    // TODO(frisitano): replace this with key abstraction.
-                    key < &Nibbles::unpack_and_truncate_bits(hashed_key)
+                    #[cfg(not(feature = "scroll"))]
+                    let cmp = key < &Nibbles::unpack(hashed_key);
+                    #[cfg(feature = "scroll")]
+                    let cmp = key < &Nibbles::unpack_and_truncate_bits(hashed_key);
+                    cmp
                 }) {
                     self.current_walker_key_checked = false;
                     continue

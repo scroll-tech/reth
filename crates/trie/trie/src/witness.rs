@@ -1,6 +1,5 @@
 use crate::{
     hashed_cursor::{HashedCursor, HashedCursorFactory},
-    key::BitsCompatibility,
     prefix_set::TriePrefixSetsMut,
     proof::{Proof, StorageProof},
     trie_cursor::TrieCursorFactory,
@@ -153,8 +152,7 @@ where
 
             Self::next_root_from_proofs(storage_trie_nodes, |key: Nibbles| {
                 // Right pad the target with 0s.
-                // TODO(frisitano): remove this with key abstraction
-                let mut padded_key = key.pack_bits();
+                let mut padded_key = key.pack();
                 padded_key.resize(32, 0);
                 let target_key = B256::from_slice(&padded_key);
                 let storage_prefix_set = self
@@ -181,8 +179,7 @@ where
 
         Self::next_root_from_proofs(account_trie_nodes, |key: Nibbles| {
             // Right pad the target with 0s.
-            //TODO(frisitano): remove this with key abstraction
-            let mut padded_key = key.pack_bits();
+            let mut padded_key = key.pack();
             padded_key.resize(32, 0);
             let targets = HashMap::from_iter([(B256::from_slice(&padded_key), HashSet::default())]);
             let proof =

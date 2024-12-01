@@ -25,9 +25,9 @@ impl<'a> SubTreeRef<'a> {
             Fr::from_repr_vartime(self.child.0).expect("child is a valid field element");
         for bit in self.key.as_slice().iter().rev() {
             tree_root = if *bit == 0 {
-                hash_with_domain(&[tree_root, Fr::zero()], Fr::from(BRANCH_NODE_LBRT_DOMAIN))
+                hash_with_domain(&[tree_root, Fr::zero()], BRANCH_NODE_LBRT_DOMAIN)
             } else {
-                hash_with_domain(&[Fr::zero(), tree_root], Fr::from(BRANCH_NODE_LTRB_DOMAIN))
+                hash_with_domain(&[Fr::zero(), tree_root], BRANCH_NODE_LTRB_DOMAIN)
             };
         }
         tree_root.to_repr().into()

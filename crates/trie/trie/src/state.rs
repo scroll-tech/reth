@@ -1,5 +1,4 @@
 use crate::{
-    key::BitsCompatibility,
     prefix_set::{PrefixSetMut, TriePrefixSetsMut},
     Nibbles,
 };
@@ -12,6 +11,9 @@ use std::{
     borrow::Cow,
     collections::{hash_map, HashMap, HashSet},
 };
+
+#[cfg(feature = "scroll")]
+use crate::key::BitsCompatibility;
 
 /// Representation of in-memory hashed state.
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -114,9 +116,12 @@ impl HashedPostState {
         let mut account_prefix_set = PrefixSetMut::with_capacity(self.accounts.len());
         let mut destroyed_accounts = HashSet::default();
         for (hashed_address, account) in &self.accounts {
-            account_prefix_set
-                // TODO(frisitano): replace this with key abstraction.
-                .insert(Nibbles::unpack_and_truncate_bits(hashed_address));
+            // TODO(frisitano): replace with key abstraction
+            #[cfg(feature = "scroll")]
+            let nibbles = Nibbles::unpack_and_truncate_bits(hashed_address);
+            #[cfg(not(feature = "scroll"))]
+            let nibbles = Nibbles::unpack(hashed_address);
+            account_prefix_set.insert(nibbles);
 
             if account.is_none() {
                 destroyed_accounts.insert(*hashed_address);
@@ -126,8 +131,12 @@ impl HashedPostState {
         // Populate storage prefix sets.
         let mut storage_prefix_sets = HashMap::with_capacity(self.storages.len());
         for (hashed_address, hashed_storage) in &self.storages {
-            // TODO(frisitano): replace this with key abstraction.
-            account_prefix_set.insert(Nibbles::unpack_and_truncate_bits(hashed_address));
+            // TODO(frisitano): replace this with abstraction.
+            #[cfg(feature = "scroll")]
+            let nibbles = Nibbles::unpack_and_truncate_bits(hashed_address);
+            #[cfg(not(feature = "scroll"))]
+            let nibbles = Nibbles::unpack(hashed_address);
+            account_prefix_set.insert(nibbles);
             storage_prefix_sets.insert(*hashed_address, hashed_storage.construct_prefix_set());
         }
 
@@ -241,7 +250,11 @@ impl HashedStorage {
             let mut prefix_set = PrefixSetMut::with_capacity(self.storage.len());
             for hashed_slot in self.storage.keys() {
                 // TODO(frisitano): replace this with key abstraction.
-                prefix_set.insert(Nibbles::unpack_and_truncate_bits(hashed_slot));
+                #[cfg(feature = "scroll")]
+                let nibbles = Nibbles::unpack_and_truncate_bits(hashed_slot);
+                #[cfg(not(feature = "scroll"))]
+                let nibbles = Nibbles::unpack(hashed_slot);
+                prefix_set.insert(nibbles);
             }
             prefix_set
         }

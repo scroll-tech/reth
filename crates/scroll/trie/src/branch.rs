@@ -97,10 +97,10 @@ impl<'a> BranchNodeRef<'a> {
 
     fn hashing_domain(&self) -> Fr {
         match *self.state_mask {
-            0b1011 => Fr::from(BRANCH_NODE_LBRT_DOMAIN),
-            0b1111 => Fr::from(BRANCH_NODE_LTRT_DOMAIN),
-            0b0111 => Fr::from(BRANCH_NODE_LTRB_DOMAIN),
-            0b0011 => Fr::from(BRANCH_NODE_LBRB_DOMAIN),
+            0b1011 => BRANCH_NODE_LBRT_DOMAIN,
+            0b1111 => BRANCH_NODE_LTRT_DOMAIN,
+            0b0111 => BRANCH_NODE_LTRB_DOMAIN,
+            0b0011 => BRANCH_NODE_LBRB_DOMAIN,
             _ => unreachable!("invalid branch node state mask"),
         }
     }

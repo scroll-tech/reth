@@ -9,10 +9,11 @@ repository.workspace = true
 exclude.workspace = true
 
 [dependencies]
+alloy-consensus = { workspace = true, optional = true}
 alloy-primitives.workspace = true
 alloy-rlp.workspace = true
 reth-execution-errors.workspace = true
-reth-trie.workspace = true
+reth-trie = { workspace = true, features = ["scroll"]}
 reth-primitives.workspace = true
 tracing.workspace = true
 scroll-trie.workspace = true
@@ -25,10 +26,15 @@ reth-db = { workspace = true, features = ["test-utils"] }
 reth-metrics = { workspace = true, optional = true }
 metrics = { workspace = true, optional = true }
 
+# zktrie
+zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie", optional = true }
+zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"], optional = true }
+
 [dev-dependencies]
+scroll-state-commitment = { workspace = true, features = ["test-utils"]}
 alloy-consensus.workspace = true
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
-reth-trie = { workspace = true, features = ["test-utils"] }
+reth-trie = { workspace = true, features = ["test-utils", "scroll"] }
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
 reth-provider = { workspace = true, features = ["test-utils"] }
 proptest.workspace = true
@@ -36,11 +42,13 @@ proptest-arbitrary-interop.workspace = true
 zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie" }
 zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json"] }
+reth-db-api.workspace = true
 
 [lints]
 workspace = true
 
 [features]
+test-utils = ["dep:zktrie_rust", "dep:zktrie", "dep:alloy-consensus"]
 metrics = ["reth-metrics", "dep:metrics"]
 
 

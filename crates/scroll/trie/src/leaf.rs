@@ -18,6 +18,6 @@ impl HashLeaf for LeafNodeRef<'_> {
         )
         .expect("leaf value is a valid field element");
         println!("leaf value: {:?}", leaf_value.to_repr());
-        hash_with_domain(&[leaf_key, leaf_value], Fr::from(LEAF_NODE_DOMAIN)).to_repr().into()
+        hash_with_domain(&[leaf_key, leaf_value], LEAF_NODE_DOMAIN).to_repr().into()
     }
 }

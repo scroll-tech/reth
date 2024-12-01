@@ -12,7 +12,7 @@ exclude.workspace = true
 alloy-trie = { workspace = true, features = ["serde"] }
 alloy-primitives.workspace = true
 scroll-primitives.workspace = true
-tracing = { version = "0.1", default-features = false }
+tracing.workspace = true
 reth-trie.workspace = true
 
 [dev-dependencies]

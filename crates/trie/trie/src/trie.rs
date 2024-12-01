@@ -1,6 +1,5 @@
 use crate::{
     hashed_cursor::{HashedCursorFactory, HashedStorageCursor},
-    key::BitsCompatibility,
     node_iter::{TrieElement, TrieNodeIter},
     prefix_set::{PrefixSet, TriePrefixSets},
     progress::{IntermediateStateRootState, StateRootProgress},
@@ -229,11 +228,7 @@ where
                     account_rlp.clear();
                     let account = TrieAccount::from((account, storage_root));
                     account.encode(&mut account_rlp as &mut dyn BufMut);
-                    hash_builder.add_leaf(
-                        // TODO(frisitano): replace this with key abstraction.
-                        Nibbles::unpack_and_truncate_bits(hashed_address),
-                        &account_rlp,
-                    );
+                    hash_builder.add_leaf(Nibbles::unpack(hashed_address), &account_rlp);
 
                     // Decide if we need to return intermediate progress.
                     let total_updates_len = updated_storage_nodes +
@@ -429,8 +424,7 @@ where
                 TrieElement::Leaf(hashed_slot, value) => {
                     tracker.inc_leaf();
                     hash_builder.add_leaf(
-                        // TODO(frisitano): replace this with key abstraction.
-                        Nibbles::unpack_and_truncate_bits(hashed_slot),
+                        Nibbles::unpack(hashed_slot),
                         alloy_rlp::encode_fixed_size(&value).as_ref(),
                     );
                 }

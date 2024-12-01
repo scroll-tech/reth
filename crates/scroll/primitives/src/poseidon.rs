@@ -1,3 +1,4 @@
+use alloy_primitives::B256;
 pub use poseidon_bn254::{hash_with_domain, Fr, PrimeField};
 
 /// Type that is used to represent a field element in binary representation.
@@ -15,6 +16,9 @@ pub const DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT: u64 = 256;
 /// The domain for hashing two field elements.
 pub const DOMAIN_TWO_FIELD_ELEMENTS: Fr =
     Fr::from_raw([DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT * 2, 0, 0, 0]);
+
+/// The root hash of an empty binary Merle Patricia trie.
+pub const EMPTY_ROOT_HASH: B256 = B256::ZERO;
 
 /// Hash two field elements using poseidon.
 pub fn hash(element_1: Fr, element_2: Fr) -> Fr {
