@@ -225,14 +225,15 @@ mod tests {
     use super::*;
     use crate::ScrollEvmConfig;
     use reth_chainspec::ChainSpecBuilder;
-    use reth_primitives::{Block, BlockBody, TransactionSigned};
+    use reth_evm::execute::ExecuteOutput;
+    use reth_primitives::{Block, BlockBody, Receipt, TransactionSigned, TxType};
     use reth_scroll_consensus::{
         CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE,
         L1_GAS_PRICE_ORACLE_ADDRESS,
     };
     use revm::{
         db::states::{bundle_state::BundleRetention, StorageSlot},
-        primitives::{Address, TxType, B256},
+        primitives::{Address, B256, U256},
         Bytecode, EmptyDBTyped, TxKind,
     };
 
@@ -250,11 +251,19 @@ mod tests {
     fn transaction(typ: TxType, gas_limit: u64) -> TransactionSigned {
         let pk = B256::random();
         let transaction = match typ {
-            TxType::BlobTx => reth_primitives::Transaction::Eip4844(alloy_consensus::TxEip4844 {
+            TxType::Eip4844 => reth_primitives::Transaction::Eip4844(alloy_consensus::TxEip4844 {
                 gas_limit,
                 to: Address::ZERO,
                 ..Default::default()
             }),
+            TxType::L1Message => {
+                reth_primitives::Transaction::L1Message(reth_scroll_primitives::TxL1Message {
+                    gas_limit,
+                    sender: Address::random(),
+                    to: Address::ZERO,
+                    ..Default::default()
+                })
+            }
             _ => reth_primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
                 gas_limit,
                 to: TxKind::Call(Address::ZERO),
@@ -266,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn test_apply_pre_execution_changes_at_curie_block() -> eyre::Result<()> {
+    fn test_apply_pre_execution_changes_curie_block() -> eyre::Result<()> {
         // init strategy
         let mut strategy = strategy();
 
@@ -304,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn test_apply_pre_execution_changes_not_at_curie_block() -> eyre::Result<()> {
+    fn test_apply_pre_execution_changes_not_curie_block() -> eyre::Result<()> {
         // init strategy
         let mut strategy = strategy();
 
@@ -350,12 +359,12 @@ mod tests {
         };
 
         // load accounts in state
-        strategy.state.insert_account(Address::ZERO, Default::default());
         strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
         for add in senders {
             strategy.state.insert_account(add, Default::default());
         }
 
+        // execute and verify error
         let res = strategy.execute_transactions(&block, U256::ZERO);
         assert_eq!(
             res.unwrap_err().to_string(),
@@ -371,7 +380,30 @@ mod tests {
         let mut strategy = strategy();
 
         // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::BlobTx, 1_000);
+        let transaction = transaction(TxType::Eip4844, 1_000);
+        let senders = vec![transaction.recover_signer().unwrap()];
+        let block = BlockWithSenders {
+            block: Block {
+                header: Header { number: 7096837, gas_limit: 10_000_000, ..Default::default() },
+                body: BlockBody { transactions: vec![transaction], ..Default::default() },
+            },
+            senders: senders.clone(),
+        };
+
+        // execute and verify error
+        let res = strategy.execute_transactions(&block, U256::ZERO);
+        assert_eq!(res.unwrap_err().to_string(), "EIP-4844 transactions are disabled");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transaction_l1_message() -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transactions exceeding block gas limit
+        let transaction = transaction(TxType::L1Message, 21_000);
         let senders = vec![transaction.recover_signer().unwrap()];
         let block = BlockWithSenders {
             block: Block {
@@ -382,14 +414,22 @@ mod tests {
         };
 
         // load accounts in state
-        strategy.state.insert_account(Address::ZERO, Default::default());
         strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
         for add in senders {
             strategy.state.insert_account(add, Default::default());
         }
 
-        let res = strategy.execute_transactions(&block, U256::ZERO);
-        assert_eq!(res.unwrap_err().to_string(), "EIP-4844 transactions are disabled");
+        // execute and verify output
+        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
+        let expected = vec![Receipt {
+            tx_type: TxType::L1Message,
+            cumulative_gas_used: 21_000,
+            success: true,
+            l1_fee: U256::ZERO,
+            ..Default::default()
+        }];
+
+        assert_eq!(receipts, expected);
 
         Ok(())
     }

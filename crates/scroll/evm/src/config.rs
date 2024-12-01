@@ -1,7 +1,6 @@
 use reth_chainspec::{ChainSpec, Head};
 use reth_evm::{ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
-use reth_primitives::TransactionSigned;
-use reth_primitives_traits::FillTxEnv;
+use reth_primitives::{transaction::FillTxEnv, TransactionSigned};
 use reth_revm::{inspector_handle_register, Database, Evm, GetInspector, TxEnv};
 use revm::{
     precompile::{Address, Bytes},

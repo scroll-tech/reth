@@ -41,6 +41,7 @@ tracing.workspace = true
 [dev-dependencies]
 eyre.workspace = true
 reth-scroll-execution = { workspace = true, features = ["scroll", "test-utils"] }
+reth-scroll-primitives.workspace = true
 
 [features]
 optimism = []
