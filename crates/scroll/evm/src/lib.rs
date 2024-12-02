@@ -4,8 +4,8 @@
 pub use config::ScrollEvmConfig;
 mod config;
 
-pub use error::{HardForkError, ScrollBlockExecutionError};
+pub use error::{ForkError, ScrollBlockExecutionError};
 mod error;
 
-pub use execute::ScrollExecutionStrategy;
+pub use execute::{ScrollExecutionStrategy, ScrollExecutionStrategyFactory};
 mod execute;
