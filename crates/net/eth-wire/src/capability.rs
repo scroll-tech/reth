@@ -318,8 +318,7 @@ pub fn shared_capability_offsets(
             // If multiple versions are shared of the same (equal name) capability, the numerically
             // highest wins, others are ignored
             if shared_capabilities
-                .get(&peer_capability.name)
-                .map_or(true, |v| peer_capability.version > v.version)
+                .get(&peer_capability.name).is_none_or(|v| peer_capability.version > v.version)
             {
                 shared_capabilities.insert(
                     peer_capability.name.clone(),
