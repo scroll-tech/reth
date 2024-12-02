@@ -1,6 +1,9 @@
 //! This example shows how to implement a node with a custom EVM
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use alloy_consensus::Header;
 use alloy_genesis::Genesis;
@@ -33,7 +36,7 @@ use reth_node_ethereum::{
     node::{EthereumAddOns, EthereumPayloadBuilder},
     BasicBlockExecutorProvider, EthExecutionStrategyFactory, EthereumNode,
 };
-use reth_primitives::TransactionSigned;
+use reth_primitives::{EthPrimitives, TransactionSigned};
 use reth_tracing::{RethTracer, Tracer};
 use std::{convert::Infallible, sync::Arc};
 
@@ -181,7 +184,7 @@ pub struct MyPayloadBuilder {
 
 impl<Types, Node, Pool> PayloadServiceBuilder<Node, Pool> for MyPayloadBuilder
 where
-    Types: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+    Types: NodeTypesWithEngine<ChainSpec = ChainSpec, Primitives = EthPrimitives>,
     Node: FullNodeTypes<Types = Types>,
     Pool: TransactionPool + Unpin + 'static,
     Types::Engine: PayloadTypes<

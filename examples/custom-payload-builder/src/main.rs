@@ -10,6 +10,9 @@
 //! This launch the regular reth node overriding the engine api payload builder with our custom.
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use generator::EmptyBlockPayloadJobGenerator;
 use reth::{
@@ -24,6 +27,7 @@ use reth_chainspec::ChainSpec;
 use reth_node_api::NodeTypesWithEngine;
 use reth_node_ethereum::{node::EthereumAddOns, EthEngineTypes, EthEvmConfig, EthereumNode};
 use reth_payload_builder::PayloadBuilderService;
+use reth_primitives::EthPrimitives;
 
 pub mod generator;
 pub mod job;
@@ -34,7 +38,13 @@ pub struct CustomPayloadBuilder;
 
 impl<Node, Pool> PayloadServiceBuilder<Node, Pool> for CustomPayloadBuilder
 where
-    Node: FullNodeTypes<Types: NodeTypesWithEngine<Engine = EthEngineTypes, ChainSpec = ChainSpec>>,
+    Node: FullNodeTypes<
+        Types: NodeTypesWithEngine<
+            Engine = EthEngineTypes,
+            ChainSpec = ChainSpec,
+            Primitives = EthPrimitives,
+        >,
+    >,
     Pool: TransactionPool + Unpin + 'static,
 {
     async fn spawn_payload_service(

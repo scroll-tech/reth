@@ -2,6 +2,9 @@
 //! custom mechanism instead of minting native tokens
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use alloy_eips::{eip4895::Withdrawal, eip7685::Requests};
 use alloy_sol_macro::sol;
@@ -15,10 +18,8 @@ use reth::{
     providers::ProviderError,
     revm::{
         interpreter::Host,
-        primitives::{
-            address, Address, BlockEnv, Bytes, CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg,
-            TransactTo, TxEnv, U256,
-        },
+        primitives::{address, Address, Bytes, Env, EnvWithHandlerCfg, TransactTo, TxEnv, U256},
+        shared::BundleState,
         Database, DatabaseCommit, Evm, State,
     },
 };
@@ -30,6 +31,7 @@ use reth_evm::execute::{
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_ethereum::{node::EthereumAddOns, BasicBlockExecutorProvider, EthereumNode};
 use reth_primitives::{BlockWithSenders, Receipt};
+use reth_scroll_execution::FinalizeExecution;
 use std::{fmt::Display, sync::Arc};
 
 pub const SYSTEM_ADDRESS: Address = address!("fffffffffffffffffffffffffffffffffffffffe");
@@ -91,11 +93,15 @@ pub struct CustomExecutorStrategyFactory {
 }
 
 impl BlockExecutionStrategyFactory for CustomExecutorStrategyFactory {
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display>> = CustomExecutorStrategy<DB>;
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display>>
+        = CustomExecutorStrategy<DB>
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
         DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -133,10 +139,7 @@ where
         header: &alloy_consensus::Header,
         total_difficulty: U256,
     ) -> EnvWithHandlerCfg {
-        let mut cfg = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
-        let mut block_env = BlockEnv::default();
-        self.evm_config.fill_cfg_and_block_env(&mut cfg, &mut block_env, header, total_difficulty);
-
+        let (cfg, block_env) = self.evm_config.cfg_and_block_env(header, total_difficulty);
         EnvWithHandlerCfg::new_with_cfg_env(cfg, block_env, Default::default())
     }
 }
@@ -144,6 +147,7 @@ where
 impl<DB> BlockExecutionStrategy<DB> for CustomExecutorStrategy<DB>
 where
     DB: Database<Error: Into<ProviderError> + Display>,
+    State<DB>: FinalizeExecution<Output = BundleState>,
 {
     type Error = BlockExecutionError;
 

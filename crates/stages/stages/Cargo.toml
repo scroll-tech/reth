@@ -39,6 +39,10 @@ reth-trie-db = { workspace = true, features = ["metrics"] }
 
 reth-testing-utils = { workspace = true, optional = true }
 
+# scroll
+reth-scroll-primitives = { workspace = true, optional = true }
+reth-scroll-storage = { workspace = true, optional = true }
+
 alloy-eips.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
@@ -74,6 +78,8 @@ reth-testing-utils.workspace = true
 reth-trie = { workspace = true, features = ["test-utils"] }
 reth-provider = { workspace = true, features = ["test-utils"] }
 reth-network-peers.workspace = true
+
+reth-scroll-primitives.workspace = true
 
 alloy-rlp.workspace = true
 itertools.workspace = true
@@ -114,6 +120,21 @@ test-utils = [
     "reth-trie-db/test-utils",
     "reth-trie/test-utils",
     "reth-prune-types/test-utils",
+]
+scroll = [
+    "reth-primitives-traits/scroll",
+    "reth-testing-utils?/scroll",
+    "reth-trie/scroll",
+    "reth-provider/scroll",
+    "reth-primitives/scroll",
+    "reth-evm/scroll",
+    "reth-execution-types/scroll",
+    "reth-trie-db/scroll",
+    "reth-db/scroll",
+    "reth-evm-ethereum/scroll",
+    "reth-exex/scroll",
+    "reth-scroll-storage/scroll",
+    "reth-scroll-primitives"
 ]
 
 [[bench]]

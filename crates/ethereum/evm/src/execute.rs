@@ -21,10 +21,11 @@ use reth_evm::{
     ConfigureEvm, TxEnvOverrides,
 };
 use reth_primitives::{BlockWithSenders, Receipt};
-use reth_revm::db::State;
+use reth_revm::db::{BundleState, State};
+use reth_scroll_execution::FinalizeExecution;
 use revm_primitives::{
     db::{Database, DatabaseCommit},
-    BlockEnv, CfgEnvWithHandlerCfg, EnvWithHandlerCfg, ResultAndState, U256,
+    EnvWithHandlerCfg, ResultAndState, U256,
 };
 
 /// Factory for [`EthExecutionStrategy`].
@@ -60,12 +61,15 @@ where
     EvmConfig:
         Clone + Unpin + Sync + Send + 'static + ConfigureEvm<Header = alloy_consensus::Header>,
 {
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display>> =
-        EthExecutionStrategy<DB, EvmConfig>;
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display>>
+        = EthExecutionStrategy<DB, EvmConfig>
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
         DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -117,10 +121,7 @@ where
         header: &alloy_consensus::Header,
         total_difficulty: U256,
     ) -> EnvWithHandlerCfg {
-        let mut cfg = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
-        let mut block_env = BlockEnv::default();
-        self.evm_config.fill_cfg_and_block_env(&mut cfg, &mut block_env, header, total_difficulty);
-
+        let (cfg, block_env) = self.evm_config.cfg_and_block_env(header, total_difficulty);
         EnvWithHandlerCfg::new_with_cfg_env(cfg, block_env, Default::default())
     }
 }
@@ -128,6 +129,7 @@ where
 impl<DB, EvmConfig> BlockExecutionStrategy<DB> for EthExecutionStrategy<DB, EvmConfig>
 where
     DB: Database<Error: Into<ProviderError> + Display>,
+    State<DB>: FinalizeExecution<Output = BundleState>,
     EvmConfig: ConfigureEvm<Header = alloy_consensus::Header>,
 {
     type Error = BlockExecutionError;
@@ -319,7 +321,9 @@ mod tests {
         BasicBlockExecutorProvider, BatchExecutor, BlockExecutorProvider, Executor,
     };
     use reth_execution_types::BlockExecutionOutput;
-    use reth_primitives::{public_key_to_address, Account, Block, BlockBody, Transaction};
+    use reth_primitives::{
+        public_key_to_address, Account, Block, BlockBody, BlockExt, Transaction,
+    };
     use reth_revm::{
         database::StateProviderDatabase, test_utils::StateProviderTest, TransitionState,
     };
@@ -335,6 +339,10 @@ mod tests {
             balance: U256::ZERO,
             bytecode_hash: Some(keccak256(BEACON_ROOTS_CODE.clone())),
             nonce: 1,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
+                &BEACON_ROOTS_CODE,
+            )),
         };
 
         db.insert_account(
@@ -354,6 +362,10 @@ mod tests {
             nonce: 1,
             balance: U256::ZERO,
             bytecode_hash: Some(keccak256(WITHDRAWAL_REQUEST_PREDEPLOY_CODE.clone())),
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
+                &WITHDRAWAL_REQUEST_PREDEPLOY_CODE,
+            )),
         };
 
         db.insert_account(
@@ -717,6 +729,10 @@ mod tests {
             balance: U256::ZERO,
             bytecode_hash: Some(keccak256(HISTORY_STORAGE_CODE.clone())),
             nonce: 1,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
+                &HISTORY_STORAGE_CODE,
+            )),
         };
 
         db.insert_account(
@@ -1069,7 +1085,13 @@ mod tests {
 
         db.insert_account(
             sender_address,
-            Account { nonce: 1, balance: U256::from(ETH_TO_WEI), bytecode_hash: None },
+            Account {
+                nonce: 1,
+                balance: U256::from(ETH_TO_WEI),
+                bytecode_hash: None,
+                #[cfg(feature = "scroll")]
+                account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+            },
             None,
             HashMap::default(),
         );
@@ -1151,7 +1173,13 @@ mod tests {
         // Insert the sender account into the state with a nonce of 1 and a balance of 1 ETH in Wei
         db.insert_account(
             sender_address,
-            Account { nonce: 1, balance: U256::from(ETH_TO_WEI), bytecode_hash: None },
+            Account {
+                nonce: 1,
+                balance: U256::from(ETH_TO_WEI),
+                bytecode_hash: None,
+                #[cfg(feature = "scroll")]
+                account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+            },
             None,
             HashMap::default(),
         );

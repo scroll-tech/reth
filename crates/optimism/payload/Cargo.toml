@@ -59,3 +59,4 @@ optimism = [
 	"reth-execution-types/optimism",
 	"reth-optimism-consensus/optimism"
 ]
+scroll = []

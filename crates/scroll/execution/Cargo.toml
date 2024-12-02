@@ -1,0 +1,24 @@
+[package]
+name = "reth-scroll-execution"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# reth
+reth-revm.workspace = true
+reth-scroll-storage = { workspace = true, optional = true }
+
+[features]
+scroll = [
+	"reth-scroll-storage/scroll",
+	"reth-revm/scroll"
+]
+test-utils = ["reth-revm/test-utils"]
