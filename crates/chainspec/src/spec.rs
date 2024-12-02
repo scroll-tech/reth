@@ -24,7 +24,7 @@ use reth_ethereum_forks::{
 };
 use reth_network_peers::{
     base_nodes, base_testnet_nodes, holesky_nodes, mainnet_nodes, op_nodes, op_testnet_nodes,
-    sepolia_nodes, NodeRecord,
+    scroll_nodes, scroll_sepolia_nodes, sepolia_nodes, NodeRecord,
 };
 use reth_primitives_traits::SealedHeader;
 use reth_trie_common::root::state_root_ref_unhashed;
@@ -335,7 +335,7 @@ impl ChainSpec {
                 // given timestamp.
                 for (fork, params) in bf_params.iter().rev() {
                     if self.hardforks.is_fork_active_at_timestamp(fork.clone(), timestamp) {
-                        return *params
+                        return *params;
                     }
                 }
 
@@ -354,7 +354,7 @@ impl ChainSpec {
                 // given timestamp.
                 for (fork, params) in bf_params.iter().rev() {
                     if self.hardforks.is_fork_active_at_block(fork.clone(), block_number) {
-                        return *params
+                        return *params;
                     }
                 }
 
@@ -439,8 +439,8 @@ impl ChainSpec {
             // We filter out TTD-based forks w/o a pre-known block since those do not show up in the
             // fork filter.
             Some(match condition {
-                ForkCondition::Block(block) |
-                ForkCondition::TTD { fork_block: Some(block), .. } => ForkFilterKey::Block(block),
+                ForkCondition::Block(block)
+                | ForkCondition::TTD { fork_block: Some(block), .. } => ForkFilterKey::Block(block),
                 ForkCondition::Timestamp(time) => ForkFilterKey::Time(time),
                 _ => return None,
             })
@@ -458,8 +458,8 @@ impl ChainSpec {
         for (_, cond) in self.hardforks.forks_iter() {
             // handle block based forks and the sepolia merge netsplit block edge case (TTD
             // ForkCondition with Some(block))
-            if let ForkCondition::Block(block) |
-            ForkCondition::TTD { fork_block: Some(block), .. } = cond
+            if let ForkCondition::Block(block)
+            | ForkCondition::TTD { fork_block: Some(block), .. } = cond
             {
                 if cond.active_at_head(head) {
                     if block != current_applied {
@@ -469,7 +469,7 @@ impl ChainSpec {
                 } else {
                     // we can return here because this block fork is not active, so we set the
                     // `next` value
-                    return ForkId { hash: forkhash, next: block }
+                    return ForkId { hash: forkhash, next: block };
                 }
             }
         }
@@ -490,7 +490,7 @@ impl ChainSpec {
                 // can safely return here because we have already handled all block forks and
                 // have handled all active timestamp forks, and set the next value to the
                 // timestamp that is known but not active yet
-                return ForkId { hash: forkhash, next: timestamp }
+                return ForkId { hash: forkhash, next: timestamp };
             }
         }
 
@@ -571,8 +571,10 @@ impl ChainSpec {
             C::Holesky => Some(holesky_nodes()),
             C::Base => Some(base_nodes()),
             C::Optimism => Some(op_nodes()),
+            C::Scroll => Some(scroll_nodes()),
             C::BaseGoerli | C::BaseSepolia => Some(base_testnet_nodes()),
             C::OptimismSepolia | C::OptimismGoerli | C::OptimismKovan => Some(op_testnet_nodes()),
+            C::ScrollSepolia => Some(scroll_sepolia_nodes()),
             _ => None,
         }
     }

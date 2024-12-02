@@ -21,7 +21,7 @@ use alloc::{boxed::Box, vec::Vec};
 use alloy_chains::Chain;
 use alloy_consensus::Header;
 use alloy_genesis::Genesis;
-use alloy_primitives::{Bytes, B256, U256};
+use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, Display, From, Into};
 pub use dev::SCROLL_DEV;
 #[cfg(not(feature = "std"))]
@@ -176,19 +176,6 @@ impl core::error::Error for DecodeError {
     }
 }
 
-/// Extracts the Holcene 1599 parameters from the encoded form:
-/// <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/holocene/exec-engine.md#eip1559params-encoding>
-pub fn decode_holocene_1559_params(extra_data: Bytes) -> Result<(u32, u32), DecodeError> {
-    if extra_data.len() < 9 {
-        return Err(DecodeError::InsufficientData);
-    }
-    let denominator: [u8; 4] =
-        extra_data[1..5].try_into().map_err(|_| DecodeError::InvalidDenominator)?;
-    let elasticity: [u8; 4] =
-        extra_data[5..9].try_into().map_err(|_| DecodeError::InvalidElasticity)?;
-    Ok((u32::from_be_bytes(denominator), u32::from_be_bytes(elasticity)))
-}
-
 impl EthChainSpec for ScrollChainSpec {
     fn chain(&self) -> alloy_chains::Chain {
         self.inner.chain()
@@ -232,10 +219,6 @@ impl EthChainSpec for ScrollChainSpec {
 
     fn bootnodes(&self) -> Option<Vec<NodeRecord>> {
         self.inner.bootnodes()
-    }
-
-    fn is_optimism(&self) -> bool {
-        false
     }
 }
 
