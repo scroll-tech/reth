@@ -154,7 +154,7 @@ members = [
     "examples/txpool-tracing/",
     "examples/custom-beacon-withdrawals",
     "testing/ef-tests/",
-    "testing/testing-utils", "crates/scroll/hardforks", "crates/scroll/chainspec",
+    "testing/testing-utils"
 ]
 default-members = ["bin/reth"]
 exclude = ["book/sources"]
