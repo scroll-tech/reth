@@ -660,3 +660,7 @@ tracy-client = "0.17.3"
 #op-alloy-network = { git = "https://github.com/alloy-rs/op-alloy", rev = "6a042e7681b1" }
 #op-alloy-rpc-types = { git = "https://github.com/alloy-rs/op-alloy", rev = "6a042e7681b1" }
 #op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", rev = "6a042e7681b1" }
+
+[patch.crates-io]
+revm = { git = "https://github.com/greged93/revm.git", branch = "scroll-evm-executor/update/v50" }
+revm-primitives = { git = "https://github.com/greged93/revm.git", branch = "scroll-evm-executor/update/v50" }
