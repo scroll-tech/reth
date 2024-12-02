@@ -2,6 +2,9 @@
 //! through rpc.
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use std::sync::Arc;
 
@@ -50,7 +53,7 @@ async fn main() -> eyre::Result<()> {
 
     let head = notifications.next().await.unwrap();
 
-    let tx = head.tip().transactions().next().unwrap();
+    let tx = &head.tip().transactions()[0];
     assert_eq!(tx.hash(), hash);
     println!("mined transaction: {hash}");
     Ok(())

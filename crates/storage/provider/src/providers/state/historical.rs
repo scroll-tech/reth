@@ -23,7 +23,8 @@ use reth_trie::{
     proof::{Proof, StorageProof},
     updates::TrieUpdates,
     witness::TrieWitness,
-    AccountProof, HashedPostState, HashedStorage, MultiProof, StateRoot, StorageRoot, TrieInput,
+    AccountProof, HashedPostState, HashedStorage, MultiProof, StateRoot, StorageMultiProof,
+    StorageRoot, TrieInput,
 };
 use reth_trie_db::{
     DatabaseHashedPostState, DatabaseHashedStorage, DatabaseProof, DatabaseStateRoot,
@@ -347,6 +348,18 @@ impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> StorageRoo
         StorageProof::overlay_storage_proof(self.tx(), address, slot, revert_storage)
             .map_err(Into::<ProviderError>::into)
     }
+
+    fn storage_multiproof(
+        &self,
+        address: Address,
+        slots: &[B256],
+        hashed_storage: HashedStorage,
+    ) -> ProviderResult<StorageMultiProof> {
+        let mut revert_storage = self.revert_storage(address)?;
+        revert_storage.extend(&hashed_storage);
+        StorageProof::overlay_storage_multiproof(self.tx(), address, slots, revert_storage)
+            .map_err(Into::<ProviderError>::into)
+    }
 }
 
 impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> StateProofProvider
@@ -577,13 +590,49 @@ mod tests {
         )
         .unwrap();
 
-        let acc_plain = Account { nonce: 100, balance: U256::ZERO, bytecode_hash: None };
-        let acc_at15 = Account { nonce: 15, balance: U256::ZERO, bytecode_hash: None };
-        let acc_at10 = Account { nonce: 10, balance: U256::ZERO, bytecode_hash: None };
-        let acc_at7 = Account { nonce: 7, balance: U256::ZERO, bytecode_hash: None };
-        let acc_at3 = Account { nonce: 3, balance: U256::ZERO, bytecode_hash: None };
+        let acc_plain = Account {
+            nonce: 100,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
+        let acc_at15 = Account {
+            nonce: 15,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
+        let acc_at10 = Account {
+            nonce: 10,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
+        let acc_at7 = Account {
+            nonce: 7,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
+        let acc_at3 = Account {
+            nonce: 3,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
 
-        let higher_acc_plain = Account { nonce: 4, balance: U256::ZERO, bytecode_hash: None };
+        let higher_acc_plain = Account {
+            nonce: 4,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
+        };
 
         // setup
         tx.put::<tables::AccountChangeSets>(1, AccountBeforeTx { address: ADDRESS, info: None })
