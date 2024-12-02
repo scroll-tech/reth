@@ -21,7 +21,7 @@ pub struct ScrollEvmConfig {
 
 impl ScrollEvmConfig {
     /// Returns a new instance of [`ScrollEvmConfig`].
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
+    pub const fn new(chain_spec: Arc<ChainSpec>) -> Self {
         Self { chain_spec }
     }
 

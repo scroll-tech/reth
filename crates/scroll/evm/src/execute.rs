@@ -1,12 +1,15 @@
 //! Implementation of the [`BlockExecutionStrategy`] for Scroll.
 
-use crate::{HardForkError, ScrollBlockExecutionError};
+use crate::{ForkError, ScrollBlockExecutionError, ScrollEvmConfig};
 use alloy_consensus::{Header, Transaction};
 use alloy_eips::{eip2718::Encodable2718, eip7685::Requests};
 use reth_chainspec::{ChainSpec, EthereumHardfork, EthereumHardforks};
 use reth_consensus::ConsensusError;
 use reth_evm::{
-    execute::{BlockExecutionStrategy, BlockValidationError, ExecuteOutput, ProviderError},
+    execute::{
+        BlockExecutionError, BlockExecutionStrategy, BlockExecutionStrategyFactory,
+        BlockValidationError, ExecuteOutput, ProviderError,
+    },
     ConfigureEvm, ConfigureEvmEnv,
 };
 use reth_primitives::{
@@ -67,7 +70,7 @@ where
     State<DB>: FinalizeExecution<Output = BundleState>,
     EvmConfig: ConfigureEvm<Header = Header>,
 {
-    type Error = ScrollBlockExecutionError;
+    type Error = BlockExecutionError;
 
     fn apply_pre_execution_changes(
         &mut self,
@@ -79,7 +82,7 @@ where
         if self.chain_spec.fork(EthereumHardfork::Dao).transitions_at_block(block.number) {
             if let Err(err) = apply_curie_hard_fork(&mut self.state) {
                 tracing::debug!(%err, "failed to apply curie hardfork");
-                return Err(HardForkError::Curie.into());
+                return Err(ForkError::Curie.into());
             };
         }
 
@@ -220,13 +223,53 @@ where
     }
 }
 
+/// The factory for a [`ScrollExecutionStrategy`].
+#[derive(Clone, Debug)]
+pub struct ScrollExecutionStrategyFactory<EvmConfig = ScrollEvmConfig> {
+    /// The chain specification for the [`ScrollExecutionStrategy`].
+    chain_spec: Arc<ChainSpec>,
+    /// The Evm configuration for the [`ScrollExecutionStrategy`].
+    evm_config: EvmConfig,
+}
+
+impl ScrollExecutionStrategyFactory {
+    /// Returns a new instance of the [`ScrollExecutionStrategyFactory`].
+    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
+        let evm_config = ScrollEvmConfig::new(chain_spec.clone());
+        Self { chain_spec, evm_config }
+    }
+}
+
+impl<EvmConfig> BlockExecutionStrategyFactory for ScrollExecutionStrategyFactory<EvmConfig>
+where
+    EvmConfig: ConfigureEvm<Header = Header>,
+{
+    /// Associated strategy type.
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display>>
+        = ScrollExecutionStrategy<DB, EvmConfig>
+    where
+        State<DB>: FinalizeExecution<Output = BundleState>;
+
+    /// Creates a strategy using the give database.
+    fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
+    where
+        DB: Database<Error: Into<ProviderError> + Display>,
+        State<DB>: FinalizeExecution<Output = BundleState>,
+    {
+        let state =
+            State::builder().with_database(db).without_state_clear().with_bundle_update().build();
+        ScrollExecutionStrategy::new(self.chain_spec.clone(), self.evm_config.clone(), state)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ScrollEvmConfig, ScrollExecutionStrategy};
+    use crate::{ScrollEvmConfig, ScrollExecutionStrategy, ScrollExecutionStrategyFactory};
     use reth_chainspec::{ChainSpecBuilder, MIN_TRANSACTION_GAS};
     use reth_evm::execute::ExecuteOutput;
     use reth_primitives::{Block, BlockBody, BlockWithSenders, Receipt, TransactionSigned, TxType};
+    use reth_primitives_traits::transaction::signed::SignedTransaction;
     use reth_scroll_consensus::{
         BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
         CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BASE_FEE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -242,12 +285,10 @@ mod tests {
     fn strategy() -> ScrollExecutionStrategy<EmptyDBTyped<ProviderError>, ScrollEvmConfig> {
         // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
         let chain_spec = Arc::new(ChainSpecBuilder::mainnet().build());
-        let config = ScrollEvmConfig::new(chain_spec.clone());
+        let factory = ScrollExecutionStrategyFactory::new(chain_spec);
         let db = EmptyDBTyped::<ProviderError>::new();
-        let state =
-            State::builder().with_database(db).with_bundle_update().without_state_clear().build();
 
-        ScrollExecutionStrategy::new(chain_spec, config, state)
+        factory.create_strategy(db)
     }
 
     const BLOCK_GAS_LIMIT: u64 = 10_000_000;

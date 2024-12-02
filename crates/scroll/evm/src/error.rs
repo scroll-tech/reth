@@ -1,21 +1,24 @@
 use derive_more::{Display, From};
-use reth_consensus::ConsensusError;
-use reth_evm::execute::{BlockExecutionError, BlockValidationError, ProviderError};
+use reth_evm::execute::BlockExecutionError;
 
 /// Execution error for Scroll.
 #[derive(thiserror::Error, Display, From, Debug)]
 pub enum ScrollBlockExecutionError {
-    /// Error occurred at block execution.
-    BlockExecution(BlockExecutionError),
     /// Error occurred at a hard fork.
-    #[display("failed to apply hard fork: {_0}")]
-    HardFork(HardForkError),
+    #[display("failed to apply fork: {_0}")]
+    Fork(ForkError),
     /// Error occurred at L1 fee computation.
     #[display("failed to compute l1 fee: {reason}")]
     L1FeeComputation {
         /// The reason for the fee computation error.
         reason: &'static str,
     },
+}
+
+impl From<ScrollBlockExecutionError> for BlockExecutionError {
+    fn from(value: ScrollBlockExecutionError) -> Self {
+        Self::other(value)
+    }
 }
 
 impl ScrollBlockExecutionError {
@@ -25,27 +28,15 @@ impl ScrollBlockExecutionError {
     }
 }
 
-/// Scroll hard fork error.
+/// Scroll fork error.
 #[derive(Debug, Display)]
-pub enum HardForkError {
+pub enum ForkError {
     /// Error occurred at the Curie hard fork.
     Curie,
 }
 
-impl From<ProviderError> for ScrollBlockExecutionError {
-    fn from(value: ProviderError) -> Self {
-        Self::BlockExecution(value.into())
-    }
-}
-
-impl From<BlockValidationError> for ScrollBlockExecutionError {
-    fn from(value: BlockValidationError) -> Self {
-        Self::BlockExecution(value.into())
-    }
-}
-
-impl From<ConsensusError> for ScrollBlockExecutionError {
-    fn from(value: ConsensusError) -> Self {
-        Self::BlockExecution(value.into())
+impl From<ForkError> for BlockExecutionError {
+    fn from(value: ForkError) -> Self {
+        ScrollBlockExecutionError::Fork(value).into()
     }
 }
