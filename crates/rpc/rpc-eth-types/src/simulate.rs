@@ -14,7 +14,6 @@ use reth_primitives::{
 };
 use reth_rpc_server_types::result::rpc_err;
 use reth_rpc_types_compat::{block::from_block, TransactionCompat};
-use reth_storage_api::{KeyHasherProvider, StateRootProvider};
 use revm::Database;
 use revm_primitives::{Address, BlockEnv, Bytes, ExecutionResult, TxKind, B256, U256};
 
