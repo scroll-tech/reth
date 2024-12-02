@@ -460,7 +460,8 @@ impl FinalizedBlockTracker {
     fn update(&mut self, finalized_block: Option<BlockNumber>) -> Option<BlockNumber> {
         let finalized = finalized_block?;
         self.last_finalized_block
-            .replace(finalized).is_none_or(|last| last < finalized)
+            .replace(finalized)
+            .is_none_or(|last| last < finalized)
             .then_some(finalized)
     }
 }
