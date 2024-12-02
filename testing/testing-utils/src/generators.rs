@@ -386,7 +386,16 @@ pub fn random_eoa_account<R: Rng>(rng: &mut R) -> (Address, Account) {
     let balance = U256::from(rng.gen::<u32>());
     let addr = rng.gen();
 
-    (addr, Account { nonce, balance, bytecode_hash: None })
+    (
+        addr,
+        Account {
+            nonce,
+            balance,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(Default::default()),
+        },
+    )
 }
 
 /// Generate random Externally Owned Accounts
@@ -453,6 +462,7 @@ mod tests {
     use alloy_eips::eip2930::AccessList;
     use alloy_primitives::{hex, PrimitiveSignature as Signature};
     use reth_primitives::public_key_to_address;
+    use reth_primitives_traits::SignedTransaction;
     use std::str::FromStr;
 
     #[test]

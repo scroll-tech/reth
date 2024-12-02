@@ -42,6 +42,9 @@ alloy-rpc-types-engine.workspace = true
 alloy-consensus.workspace = true
 revm.workspace = true
 
+# scroll
+reth-scroll-primitives = { workspace = true, optional = true }
+
 # optimism
 reth-optimism-primitives = { workspace = true, optional = true }
 
@@ -79,6 +82,8 @@ reth-trie = { workspace = true, features = ["test-utils"] }
 reth-testing-utils.workspace = true
 reth-ethereum-engine-primitives.workspace = true
 
+reth-scroll-primitives.workspace = true
+
 parking_lot.workspace = true
 tempfile.workspace = true
 assert_matches.workspace = true
@@ -98,21 +103,22 @@ optimism = [
     "revm/optimism",
 ]
 serde = [
-    "reth-execution-types/serde",
-    "reth-trie-db/serde",
-    "reth-trie/serde",
-    "alloy-consensus/serde",
-    "alloy-eips/serde",
-    "alloy-primitives/serde",
-    "alloy-rpc-types-engine/serde",
     "dashmap/serde",
     "notify/serde",
     "parking_lot/serde",
     "rand/serde",
+    "alloy-primitives/serde",
+    "alloy-consensus/serde",
+    "alloy-eips/serde",
+    "alloy-rpc-types-engine/serde",
     "revm/serde",
     "reth-codecs/serde",
     "reth-optimism-primitives?/serde",
     "reth-primitives-traits/serde",
+    "reth-execution-types/serde",
+    "reth-trie-db/serde",
+    "reth-trie/serde",
+    "reth-scroll-primitives?/serde"
 ]
 test-utils = [
     "reth-db/test-utils",
@@ -132,4 +138,14 @@ test-utils = [
     "reth-prune-types/test-utils",
     "reth-stages-types/test-utils",
     "reth-optimism-primitives?/arbitrary",
+]
+scroll = [
+    "reth-primitives/scroll",
+    "reth-testing-utils/scroll",
+    "reth-db/scroll",
+    "reth-trie-db/scroll",
+    "reth-trie/scroll",
+    "reth-execution-types/scroll",
+    "reth-evm/scroll",
+    "reth-scroll-primitives"
 ]

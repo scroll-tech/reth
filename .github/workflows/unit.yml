@@ -6,7 +6,7 @@ on:
   pull_request:
   merge_group:
   push:
-    branches: [main]
+    branches: [main, scroll]
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,8 +19,7 @@ concurrency:
 jobs:
   test:
     name: test / ${{ matrix.type }} (${{ matrix.partition }}/${{ matrix.total_partitions }})
-    runs-on:
-      group: Reth
+    runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
     strategy:
@@ -35,11 +34,11 @@ jobs:
             partition: 2
             total_partitions: 2
           - type: optimism
-            args: --features "asm-keccak optimism" --locked --exclude reth --exclude reth-bench --exclude "example-*"
+            args: --features "asm-keccak optimism" --locked --exclude reth --exclude reth-bench --exclude "example-*" --exclude "reth-ethereum-*" --exclude "*-ethereum"
             partition: 1
             total_partitions: 2
           - type: optimism
-            args: --features "asm-keccak optimism" --locked --exclude reth --exclude reth-bench --exclude "example-*"
+            args: --features "asm-keccak optimism" --locked --exclude reth --exclude reth-bench --exclude "example-*" --exclude "reth-ethereum-*" --exclude "*-ethereum"
             partition: 2
             total_partitions: 2
           - type: book
@@ -48,6 +47,8 @@ jobs:
             total_partitions: 1
     timeout-minutes: 30
     steps:
+      - name: Free up disk space
+        run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -61,19 +62,21 @@ jobs:
       - name: Run tests
         run: |
           cargo nextest run \
-            ${{ matrix.args }} --workspace --exclude ef-tests \
+            ${{ matrix.args }} --workspace \
+            --exclude ef-tests --no-tests=warn \
             --partition hash:${{ matrix.partition }}/2 \
             -E "!kind(test)"
 
   state:
     name: Ethereum state tests
-    runs-on:
-      group: Reth
+    runs-on: ubuntu-latest
     env:
       RUST_LOG: info,sync=error
       RUST_BACKTRACE: 1
     timeout-minutes: 30
     steps:
+      - name: Free up disk space
+        run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
       - name: Checkout ethereum/tests
         uses: actions/checkout@v4
@@ -92,8 +95,7 @@ jobs:
 
   doc:
     name: doc tests (${{ matrix.network }})
-    runs-on:
-      group: Reth
+    runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
     timeout-minutes: 30
