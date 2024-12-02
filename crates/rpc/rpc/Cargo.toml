@@ -106,7 +106,6 @@ jsonrpsee = { workspace = true, features = ["client"] }
 [features]
 js-tracer = ["revm-inspectors/js-tracer", "reth-rpc-eth-types/js-tracer"]
 scroll = [
-    "reth-trie/scroll",
     "reth-evm/scroll",
     "reth-rpc-eth-types/scroll",
     "reth-primitives/scroll",
