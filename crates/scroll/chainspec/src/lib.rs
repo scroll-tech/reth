@@ -38,7 +38,7 @@ pub use scroll_sepolia::SCROLL_SEPOLIA;
 #[cfg(feature = "std")]
 pub(crate) use std::sync::LazyLock;
 
-/// Chain spec builder for a Scroll stack chain.
+/// Chain spec builder for a Scroll chain.
 #[derive(Debug, Default, From)]
 pub struct ScrollChainSpecBuilder {
     /// [`ChainSpecBuilder`]
@@ -136,7 +136,7 @@ impl ScrollChainSpecBuilder {
     }
 }
 
-/// Scroll stack chain spec type.
+/// Scroll chain spec type.
 #[derive(Debug, Clone, Deref, Into, Constructor, PartialEq, Eq)]
 pub struct ScrollChainSpec {
     /// [`ChainSpec`].
