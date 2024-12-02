@@ -9101,6 +9101,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-chainspec"
+version = "1.1.2"
+dependencies = [
+ "alloy-chains",
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-genesis",
+ "alloy-primitives",
+ "alloy-serde",
+ "derive_more 1.0.0",
+ "once_cell",
+ "op-alloy-rpc-types",
+ "reth-chainspec",
+ "reth-ethereum-forks",
+ "reth-network-peers",
+ "reth-primitives-traits",
+ "reth-scroll-forks",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "reth-scroll-execution"
 version = "1.1.2"
 dependencies = [

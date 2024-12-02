@@ -104,6 +104,8 @@ members = [
     "crates/scroll/primitives",
     "crates/scroll/revm",
     "crates/scroll/storage",
+    "crates/scroll/hardforks",
+    "crates/scroll/chainspec",
     "crates/stages/api/",
     "crates/stages/stages/",
     "crates/stages/types/",
@@ -152,7 +154,7 @@ members = [
     "examples/txpool-tracing/",
     "examples/custom-beacon-withdrawals",
     "testing/ef-tests/",
-    "testing/testing-utils", "crates/scroll/hardforks",
+    "testing/testing-utils", "crates/scroll/hardforks", "crates/scroll/chainspec",
 ]
 default-members = ["bin/reth"]
 exclude = ["book/sources"]
@@ -411,6 +413,7 @@ reth-scroll-execution = { path = "crates/scroll/execution" }
 reth-scroll-primitives = { path = "crates/scroll/primitives" }
 reth-scroll-revm = { path = "crates/scroll/revm" }
 reth-scroll-storage = { path = "crates/scroll/storage" }
+reth-scroll-forks = { path = "crates/scroll/hardforks" }
 reth-stages = { path = "crates/stages/stages" }
 reth-stages-api = { path = "crates/stages/api" }
 reth-stages-types = { path = "crates/stages/types" }
