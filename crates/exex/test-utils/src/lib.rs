@@ -7,6 +7,9 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use std::{
     fmt::Debug,
@@ -45,7 +48,7 @@ use reth_node_ethereum::{
     EthEngineTypes, EthEvmConfig,
 };
 use reth_payload_builder::noop::NoopPayloadBuilderService;
-use reth_primitives::{EthPrimitives, Head, SealedBlockWithSenders};
+use reth_primitives::{BlockExt, EthPrimitives, Head, SealedBlockWithSenders};
 use reth_provider::{
     providers::{BlockchainProvider, StaticFileProvider},
     BlockReader, EthStorage, ProviderFactory,
@@ -265,7 +268,7 @@ pub async fn test_exex_context_with_chain_spec(
 
     let (static_dir, _) = create_test_static_files_dir();
     let db = create_test_rw_db();
-    let provider_factory = ProviderFactory::new(
+    let provider_factory = ProviderFactory::<NodeTypesWithDBAdapter<TestNode, _>>::new(
         db,
         chain_spec.clone(),
         StaticFileProvider::read_write(static_dir.into_path()).expect("static file provider"),
@@ -289,7 +292,7 @@ pub async fn test_exex_context_with_chain_spec(
 
     let (_, payload_builder) = NoopPayloadBuilderService::<EthEngineTypes>::new();
 
-    let components = NodeAdapter::<FullNodeTypesAdapter<NodeTypesWithDBAdapter<TestNode, _>, _>, _> {
+    let components = NodeAdapter::<FullNodeTypesAdapter<_, _>, _> {
         components: Components {
             transaction_pool,
             evm_config,
@@ -306,7 +309,7 @@ pub async fn test_exex_context_with_chain_spec(
         .block_by_hash(genesis_hash)?
         .ok_or_else(|| eyre::eyre!("genesis block not found"))?
         .seal_slow()
-        .seal_with_senders()
+        .seal_with_senders::<reth_primitives::Block>()
         .ok_or_else(|| eyre::eyre!("failed to recover senders"))?;
 
     let head = Head {

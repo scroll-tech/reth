@@ -18,17 +18,15 @@ use reth_evm::{
     ConfigureEvm,
 };
 use reth_payload_validator::ExecutionPayloadValidator;
-use reth_primitives::{proofs, Block, BlockBody, Receipt, Receipts};
+use reth_primitives::{proofs, Block, BlockBody, BlockExt, Receipt, Receipts};
 use reth_provider::{BlockReader, ExecutionOutcome, ProviderError, StateProviderFactory};
 use reth_revm::{
-    database::StateProviderDatabase,
     db::{states::bundle_state::BundleRetention, State},
     DatabaseCommit,
 };
 use reth_rpc_types_compat::engine::payload::block_to_payload;
-use revm_primitives::{
-    calc_excess_blob_gas, BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg,
-};
+use reth_scroll_execution::FinalizeExecution;
+use revm_primitives::{calc_excess_blob_gas, EVMError, EnvWithHandlerCfg};
 use std::{
     collections::VecDeque,
     future::Future,
@@ -108,7 +106,7 @@ impl<S, Engine, Provider, Evm, Spec> Stream for EngineReorg<S, Engine, Provider,
 where
     S: Stream<Item = BeaconEngineMessage<Engine>>,
     Engine: EngineTypes,
-    Provider: BlockReader + StateProviderFactory,
+    Provider: BlockReader<Block = reth_primitives::Block> + StateProviderFactory,
     Evm: ConfigureEvm<Header = Header>,
     Spec: EthereumHardforks,
 {
@@ -255,7 +253,7 @@ fn create_reorg_head<Provider, Evm, Spec>(
     next_sidecar: ExecutionPayloadSidecar,
 ) -> RethResult<(ExecutionPayload, ExecutionPayloadSidecar)>
 where
-    Provider: BlockReader + StateProviderFactory,
+    Provider: BlockReader<Block = reth_primitives::Block> + StateProviderFactory,
     Evm: ConfigureEvm<Header = Header>,
     Spec: EthereumHardforks,
 {
@@ -291,15 +289,14 @@ where
 
     // Configure state
     let state_provider = provider.state_by_block_hash(reorg_target.parent_hash)?;
-    let mut state = State::builder()
-        .with_database_ref(StateProviderDatabase::new(&state_provider))
-        .with_bundle_update()
-        .build();
+    #[cfg(not(feature = "scroll"))]
+    let mut db = reth_revm::database::StateProviderDatabase::new(&state_provider);
+    #[cfg(feature = "scroll")]
+    let mut db = reth_scroll_storage::ScrollStateProviderDatabase::new(&state_provider);
+    let mut state = State::builder().with_database(&mut db).with_bundle_update().build();
 
     // Configure environments
-    let mut cfg = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
-    let mut block_env = BlockEnv::default();
-    evm_config.fill_cfg_and_block_env(&mut cfg, &mut block_env, &reorg_target.header, U256::MAX);
+    let (cfg, block_env) = evm_config.cfg_and_block_env(&reorg_target.header, U256::MAX);
     let env = EnvWithHandlerCfg::new_with_cfg_env(cfg, block_env, Default::default());
     let mut evm = evm_config.evm_with_env(&mut state, env);
 
@@ -376,9 +373,9 @@ where
     // and 4788 contract call
     state.merge_transitions(BundleRetention::PlainState);
 
-    let outcome: ExecutionOutcome = ExecutionOutcome::new(
-        state.take_bundle(),
-        Receipts::from(vec![receipts]),
+    let outcome = ExecutionOutcome::new(
+        state.finalize(),
+        Receipts::<Receipt>::from(vec![receipts]),
         reorg_target.number,
         Default::default(),
     );

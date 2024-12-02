@@ -15,6 +15,7 @@ workspace = true
 # reth
 reth-chainspec.workspace = true
 reth-primitives = { workspace = true, features = ["secp256k1"] }
+reth-primitives-traits.workspace = true
 reth-rpc-api.workspace = true
 reth-rpc-eth-api.workspace = true
 reth-errors.workspace = true
@@ -63,6 +64,9 @@ revm = { workspace = true, features = [
 ] }
 revm-primitives = { workspace = true, features = ["serde"] }
 
+# scroll
+reth-scroll-storage = { workspace = true, optional = true }
+
 # rpc
 jsonrpsee.workspace = true
 http.workspace = true
@@ -101,3 +105,14 @@ jsonrpsee = { workspace = true, features = ["client"] }
 
 [features]
 js-tracer = ["revm-inspectors/js-tracer", "reth-rpc-eth-types/js-tracer"]
+scroll = [
+    "reth-evm/scroll",
+    "reth-rpc-eth-types/scroll",
+    "reth-primitives/scroll",
+    "reth-revm/scroll",
+    "reth-provider/scroll",
+    "reth-testing-utils/scroll",
+    "reth-evm-ethereum/scroll",
+    "reth-rpc-eth-api/scroll",
+    "reth-scroll-storage/scroll",
+]
