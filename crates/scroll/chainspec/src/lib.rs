@@ -143,17 +143,17 @@ pub struct ScrollChainSpec {
     pub inner: ChainSpec,
 }
 
-impl ScrollChainSpec {
-    /// Read from parent to determine the base fee for the next block
-    pub fn next_block_base_fee(
-        &self,
-        parent: &Header,
-        timestamp: u64,
-    ) -> Result<U256, DecodeError> {
-        // TODO fulfill here when L2 base fee implemented
-        Ok(U256::try_from(0).unwrap())
-    }
-}
+// // TODO fulfill here when L2 base fee implemented
+// impl ScrollChainSpec {
+//     /// Read from parent to determine the base fee for the next block
+//     pub fn next_block_base_fee(
+//         &self,
+//         parent: &Header,
+//         timestamp: u64,
+//     ) -> Result<U256, DecodeError> {
+//         Ok(U256::try_from(0).unwrap())
+//     }
+// }
 
 #[derive(Clone, Debug, Display, Eq, PartialEq)]
 /// Error type for decoding Holocene 1559 parameters
