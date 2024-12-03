@@ -27,11 +27,11 @@ alloy-genesis.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
-alloy-serde.workspace = true
+alloy-serde = { workspace = true, features = ["std"] }
 
 # io
 serde_json.workspace = true
-serde = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive", "std"] }
 
 # misc
 derive_more.workspace = true
