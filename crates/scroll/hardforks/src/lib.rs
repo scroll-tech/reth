@@ -20,8 +20,8 @@ use reth_ethereum_forks::EthereumHardforks;
 
 /// Extends [`EthereumHardforks`] with scroll helper methods.
 pub trait ScrollHardforks: EthereumHardforks {
-    /// Convenience method to check if [`Bernoulli`](ScrollHardFork::Bernoulli) is active at a given block
-    /// number.
+    /// Convenience method to check if [`Bernoulli`](ScrollHardFork::Bernoulli) is active at a given
+    /// block number.
     fn is_bernoulli_active_at_block(&self, block_number: u64) -> bool {
         self.fork(ScrollHardFork::Bernoulli).active_at_block(block_number)
     }

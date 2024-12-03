@@ -7,8 +7,7 @@ use alloy_primitives::{b256, U256};
 use reth_chainspec::{once_cell_set, ChainSpec};
 use reth_scroll_forks::ScrollHardFork;
 
-use crate::constants::SCROLL_L2_GAS_LIMIT;
-use crate::{LazyLock, ScrollChainSpec};
+use crate::{constants::SCROLL_L2_GAS_LIMIT, LazyLock, ScrollChainSpec};
 
 /// The Scroll Sepolia spec
 pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {

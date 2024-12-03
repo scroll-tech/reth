@@ -7,8 +7,7 @@ use alloy_primitives::{b256, U256};
 use reth_chainspec::{once_cell_set, ChainSpec};
 use reth_scroll_forks::ScrollHardFork;
 
-use crate::constants::SCROLL_L2_GAS_LIMIT;
-use crate::{LazyLock, ScrollChainSpec};
+use crate::{constants::SCROLL_L2_GAS_LIMIT, LazyLock, ScrollChainSpec};
 
 /// The Scroll Mainnet spec
 pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
