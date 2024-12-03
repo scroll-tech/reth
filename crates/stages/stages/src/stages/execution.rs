@@ -262,8 +262,8 @@ where
         + StaticFileProviderFactory
         + StatsReader
         + BlockHashReader
-        + StateCommitmentProvider
-        + StateWriter<Receipt = reth_primitives::Receipt>,
+        + StateWriter<Receipt = reth_primitives::Receipt>
+        + StateCommitmentProvider,
 {
     /// Return the id of the stage
     fn id(&self) -> StageId {
