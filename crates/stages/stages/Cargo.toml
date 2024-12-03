@@ -24,7 +24,9 @@ reth-evm.workspace = true
 reth-exex.workspace = true
 reth-network-p2p.workspace = true
 reth-primitives = { workspace = true, features = ["secp256k1"] }
-reth-primitives-traits = { workspace = true, features = ["serde-bincode-compat"] }
+reth-primitives-traits = { workspace = true, features = [
+    "serde-bincode-compat",
+] }
 reth-provider.workspace = true
 reth-execution-types.workspace = true
 reth-prune.workspace = true
@@ -37,7 +39,13 @@ reth-trie-db = { workspace = true, features = ["metrics"] }
 
 reth-testing-utils = { workspace = true, optional = true }
 
+# scroll
+reth-scroll-primitives = { workspace = true, optional = true }
+reth-scroll-storage = { workspace = true, optional = true }
+
+alloy-eips.workspace = true
 alloy-primitives.workspace = true
+alloy-consensus.workspace = true
 
 # async
 tokio = { workspace = true, features = ["sync"] }
@@ -71,6 +79,8 @@ reth-trie = { workspace = true, features = ["test-utils"] }
 reth-provider = { workspace = true, features = ["test-utils"] }
 reth-network-peers.workspace = true
 
+reth-scroll-primitives.workspace = true
+
 alloy-rlp.workspace = true
 itertools.workspace = true
 tokio = { workspace = true, features = ["rt", "sync", "macros"] }
@@ -81,9 +91,6 @@ tempfile.workspace = true
 
 # Stage benchmarks
 criterion = { workspace = true, features = ["async_tokio"] }
-
-# io
-serde_json.workspace = true
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
 pprof = { workspace = true, features = [
@@ -101,6 +108,33 @@ test-utils = [
     "reth-stages-api/test-utils",
     "dep:reth-testing-utils",
     "dep:tempfile",
+    "reth-chainspec?/test-utils",
+    "reth-consensus/test-utils",
+    "reth-evm/test-utils",
+    "reth-downloaders/test-utils",
+    "reth-primitives/test-utils",
+    "reth-primitives-traits/test-utils",
+    "reth-revm/test-utils",
+    "reth-codecs/test-utils",
+    "reth-db-api/test-utils",
+    "reth-trie-db/test-utils",
+    "reth-trie/test-utils",
+    "reth-prune-types/test-utils",
+]
+scroll = [
+    "reth-primitives-traits/scroll",
+    "reth-testing-utils?/scroll",
+    "reth-trie/scroll",
+    "reth-provider/scroll",
+    "reth-primitives/scroll",
+    "reth-evm/scroll",
+    "reth-execution-types/scroll",
+    "reth-trie-db/scroll",
+    "reth-db/scroll",
+    "reth-evm-ethereum/scroll",
+    "reth-exex/scroll",
+    "reth-scroll-storage/scroll",
+    "reth-scroll-primitives"
 ]
 
 [[bench]]

@@ -1,7 +1,6 @@
-use std::marker::PhantomData;
-
+use alloy_consensus::Header;
 use reth_evm::ConfigureEvm;
-use reth_primitives::Header;
+use reth_primitives::EthPrimitives;
 use reth_provider::{BlockReader, CanonStateSubscriptions, EvmEnvProvider, StateProviderFactory};
 use reth_rpc::{EthFilter, EthPubSub};
 use reth_rpc_eth_api::EthApiTypes;
@@ -11,9 +10,8 @@ use reth_rpc_eth_types::{
 use reth_tasks::TaskSpawner;
 
 /// Alias for `eth` namespace API builder.
-pub type DynEthApiBuilder<Provider, Pool, EvmConfig, Network, Tasks, Events, EthApi> = Box<
-    dyn Fn(&EthApiBuilderCtx<Provider, Pool, EvmConfig, Network, Tasks, Events, EthApi>) -> EthApi,
->;
+pub type DynEthApiBuilder<Provider, Pool, EvmConfig, Network, Tasks, Events, EthApi> =
+    Box<dyn FnOnce(&EthApiBuilderCtx<Provider, Pool, EvmConfig, Network, Tasks, Events>) -> EthApi>;
 
 /// Handlers for core, filter and pubsub `eth` namespace APIs.
 #[derive(Debug, Clone)]
@@ -25,15 +23,20 @@ pub struct EthHandlers<Provider, Pool, Network, Events, EthApi: EthApiTypes> {
     /// Polling based filter handler available on all transports
     pub filter: EthFilter<Provider, Pool, EthApi>,
     /// Handler for subscriptions only available for transports that support it (ws, ipc)
-    pub pubsub: EthPubSub<Provider, Pool, Events, Network, EthApi>,
+    pub pubsub: EthPubSub<Provider, Pool, Events, Network, EthApi::TransactionCompat>,
 }
 
 impl<Provider, Pool, Network, Events, EthApi> EthHandlers<Provider, Pool, Network, Events, EthApi>
 where
-    Provider: StateProviderFactory + BlockReader + EvmEnvProvider + Clone + Unpin + 'static,
+    Provider: StateProviderFactory
+        + BlockReader<Block = reth_primitives::Block, Receipt = reth_primitives::Receipt>
+        + EvmEnvProvider
+        + Clone
+        + Unpin
+        + 'static,
     Pool: Send + Sync + Clone + 'static,
     Network: Clone + 'static,
-    Events: CanonStateSubscriptions + Clone + 'static,
+    Events: CanonStateSubscriptions<Primitives = EthPrimitives> + Clone + 'static,
     EthApi: EthApiTypes + 'static,
 {
     /// Returns a new instance with handlers for `eth` namespace.
@@ -87,7 +90,6 @@ where
             executor,
             events,
             cache,
-            _rpc_ty_builders: PhantomData,
         };
 
         let api = eth_api_builder(&ctx);
@@ -98,6 +100,7 @@ where
             ctx.cache.clone(),
             ctx.config.filter_config(),
             Box::new(ctx.executor.clone()),
+            api.tx_resp_builder().clone(),
         );
 
         let pubsub = EthPubSub::with_spawner(
@@ -106,6 +109,7 @@ where
             ctx.events.clone(),
             ctx.network.clone(),
             Box::new(ctx.executor.clone()),
+            api.tx_resp_builder().clone(),
         );
 
         Self { api, cache: ctx.cache, filter, pubsub }

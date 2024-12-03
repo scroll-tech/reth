@@ -1,16 +1,20 @@
 use alloc::vec::Vec;
-use bytes::BufMut;
 use core::fmt;
+
+use bytes::BufMut;
 use derive_more::Deref;
 use roaring::RoaringTreemap;
-use serde::{
-    de::{SeqAccess, Visitor},
-    ser::SerializeSeq,
-    Deserialize, Deserializer, Serialize, Serializer,
-};
 
-/// Uses Roaring Bitmaps to hold a list of integers. It provides really good compression with the
-/// capability to access its elements without decoding it.
+/// A data structure that uses Roaring Bitmaps to efficiently store a list of integers.
+///
+/// This structure provides excellent compression while allowing direct access to individual
+/// elements without the need for full decompression.
+///
+/// Key features:
+/// - Efficient compression: the underlying Roaring Bitmaps significantly reduce memory usage.
+/// - Direct access: elements can be accessed or queried without needing to decode the entire list.
+/// - [`RoaringTreemap`] backing: internally backed by [`RoaringTreemap`], which supports 64-bit
+///   integers.
 #[derive(Clone, PartialEq, Default, Deref)]
 pub struct IntegerList(pub RoaringTreemap);
 
@@ -22,12 +26,12 @@ impl fmt::Debug for IntegerList {
 }
 
 impl IntegerList {
-    /// Creates a new empty `IntegerList`.
+    /// Creates a new empty [`IntegerList`].
     pub fn empty() -> Self {
         Self(RoaringTreemap::new())
     }
 
-    /// Creates an `IntegerList` from a list of integers.
+    /// Creates an [`IntegerList`] from a list of integers.
     ///
     /// Returns an error if the list is not pre-sorted.
     pub fn new(list: impl IntoIterator<Item = u64>) -> Result<Self, IntegerListError> {
@@ -36,7 +40,7 @@ impl IntegerList {
             .map_err(|_| IntegerListError::UnsortedInput)
     }
 
-    // Creates an IntegerList from a pre-sorted list of integers.
+    /// Creates an [`IntegerList`] from a pre-sorted list of integers.
     ///
     /// # Panics
     ///
@@ -54,11 +58,7 @@ impl IntegerList {
 
     /// Pushes a new integer to the list.
     pub fn push(&mut self, value: u64) -> Result<(), IntegerListError> {
-        if self.0.push(value) {
-            Ok(())
-        } else {
-            Err(IntegerListError::UnsortedInput)
-        }
+        self.0.push(value).then_some(()).ok_or(IntegerListError::UnsortedInput)
     }
 
     /// Clears the list.
@@ -80,18 +80,20 @@ impl IntegerList {
 
     /// Deserializes a sequence of bytes into a proper [`IntegerList`].
     pub fn from_bytes(data: &[u8]) -> Result<Self, IntegerListError> {
-        Ok(Self(
-            RoaringTreemap::deserialize_from(data)
-                .map_err(|_| IntegerListError::FailedToDeserialize)?,
-        ))
+        RoaringTreemap::deserialize_from(data)
+            .map(Self)
+            .map_err(|_| IntegerListError::FailedToDeserialize)
     }
 }
 
-impl Serialize for IntegerList {
+#[cfg(feature = "serde")]
+impl serde::Serialize for IntegerList {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer,
+        S: serde::Serializer,
     {
+        use serde::ser::SerializeSeq;
+
         let mut seq = serializer.serialize_seq(Some(self.len() as usize))?;
         for e in &self.0 {
             seq.serialize_element(&e)?;
@@ -100,8 +102,11 @@ impl Serialize for IntegerList {
     }
 }
 
+#[cfg(feature = "serde")]
 struct IntegerListVisitor;
-impl<'de> Visitor<'de> for IntegerListVisitor {
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for IntegerListVisitor {
     type Value = IntegerList;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -110,7 +115,7 @@ impl<'de> Visitor<'de> for IntegerListVisitor {
 
     fn visit_seq<E>(self, mut seq: E) -> Result<Self::Value, E::Error>
     where
-        E: SeqAccess<'de>,
+        E: serde::de::SeqAccess<'de>,
     {
         let mut list = IntegerList::empty();
         while let Some(item) = seq.next_element()? {
@@ -120,10 +125,11 @@ impl<'de> Visitor<'de> for IntegerListVisitor {
     }
 }
 
-impl<'de> Deserialize<'de> for IntegerList {
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for IntegerList {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>,
+        D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_byte_buf(IntegerListVisitor)
     }

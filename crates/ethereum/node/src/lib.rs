@@ -7,6 +7,9 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use reth_revm as _;
 use revm as _;
@@ -14,7 +17,9 @@ use revm as _;
 pub use reth_ethereum_engine_primitives::EthEngineTypes;
 
 pub mod evm;
-pub use evm::{EthEvmConfig, EthExecutorProvider};
+pub use evm::{
+    BasicBlockExecutorProvider, EthEvmConfig, EthExecutionStrategyFactory, EthExecutorProvider,
+};
 
 pub mod node;
 pub use node::EthereumNode;

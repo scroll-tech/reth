@@ -1,4 +1,7 @@
 #![allow(missing_docs)]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 #[global_allocator]
 static ALLOC: reth_cli_util::allocator::Allocator = reth_cli_util::allocator::new_allocator();
@@ -33,11 +36,11 @@ pub struct EngineArgs {
     pub legacy: bool,
 
     /// Configure persistence threshold for engine experimental.
-    #[arg(long = "engine.persistence-threshold", requires = "experimental", default_value_t = DEFAULT_PERSISTENCE_THRESHOLD)]
+    #[arg(long = "engine.persistence-threshold", conflicts_with = "legacy", default_value_t = DEFAULT_PERSISTENCE_THRESHOLD)]
     pub persistence_threshold: u64,
 
     /// Configure the target number of blocks to keep in memory.
-    #[arg(long = "engine.memory-block-buffer-target", requires = "experimental", default_value_t = DEFAULT_MEMORY_BLOCK_BUFFER_TARGET)]
+    #[arg(long = "engine.memory-block-buffer-target", conflicts_with = "legacy", default_value_t = DEFAULT_MEMORY_BLOCK_BUFFER_TARGET)]
     pub memory_block_buffer_target: u64,
 }
 

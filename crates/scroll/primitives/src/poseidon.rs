@@ -1,5 +1,9 @@
-use alloy_primitives::B256;
+use alloy_primitives::{b256, B256};
 pub use poseidon_bn254::{hash_with_domain, Fr, PrimeField};
+
+/// The Poseidon hash of the empty string `""`.
+pub const POSEIDON_EMPTY: B256 =
+    b256!("2098f5fb9e239eab3ceac3f27b81e481dc3124d55ffed523a839ee8446b64864");
 
 /// Type that is used to represent a field element in binary representation.
 pub type FieldElementBytes = <Fr as PrimeField>::Repr;
@@ -23,6 +27,11 @@ pub const EMPTY_ROOT_HASH: B256 = B256::ZERO;
 /// Hash two field elements using poseidon.
 pub fn hash(element_1: Fr, element_2: Fr) -> Fr {
     hash_with_domain(&[element_1, element_2], DOMAIN_TWO_FIELD_ELEMENTS)
+}
+
+/// Poseidon code hash
+pub fn hash_code(code: &[u8]) -> B256 {
+    poseidon_bn254::hash_code(code).into()
 }
 
 /// Split and transform input be bytes into two field elements and hash using poseidon.

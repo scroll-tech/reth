@@ -4,7 +4,7 @@ footer: |
 base:
   name: reth
   url: https://github.com/paradigmxyz/reth
-  hash: 161605313a567a081ea2eaf23ab1f6eeba29d19f
+  hash: 3f9816e1c4d5302bd5a3f743f4f10ab079c2fd15
 fork:
   name: scroll-reth
   url: https://github.com/scroll-tech/reth
@@ -14,5 +14,29 @@ def:
   description: |
     This is an overview of the changes in [`scroll-reth`](https://github.com/scroll-tech/reth),
     a fork of [`reth`](https://github.com/paradigmxyz/reth).
-  globs:
-    - "*"
+  sub:
+    - title: "crates/scroll"
+      globs:
+        - "crates/scroll/**/*"
+    - title: "crates/ethereum"
+      globs:
+        - "crates/ethereum/**/*"
+    - title: "crates/optimism"
+      globs:
+        - "crates/optimism/**/*"
+    - title: "crates/primitives"
+      globs:
+        - "crates/primitives*/**/*"
+    - title: "crates/stages"
+      globs:
+        - "crates/stages/**/*"
+    - title: "crates/storage"
+      globs:
+        - "crates/storage/**/*"
+    - title: "crates/trie"
+      globs:
+        - "crates/trie/**/*"
+
+ignore:
+  - "fork.yaml"
+  - ".github/**"

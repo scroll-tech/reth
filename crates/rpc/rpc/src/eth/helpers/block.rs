@@ -1,13 +1,13 @@
 //! Contains RPC handler implementations specific to blocks.
 
-use alloy_rpc_types::{AnyTransactionReceipt, BlockId};
+use alloy_rpc_types_eth::{BlockId, TransactionReceipt};
 use reth_primitives::TransactionMeta;
 use reth_provider::{BlockReaderIdExt, HeaderProvider};
 use reth_rpc_eth_api::{
     helpers::{EthBlocks, LoadBlock, LoadPendingBlock, LoadReceipt, SpawnBlocking},
     RpcReceipt,
 };
-use reth_rpc_eth_types::{EthApiError, EthStateCache, ReceiptBuilder};
+use reth_rpc_eth_types::{EthApiError, EthReceiptBuilder};
 
 use crate::EthApi;
 
@@ -15,15 +15,10 @@ impl<Provider, Pool, Network, EvmConfig> EthBlocks for EthApi<Provider, Pool, Ne
 where
     Self: LoadBlock<
         Error = EthApiError,
-        NetworkTypes: alloy_network::Network<ReceiptResponse = AnyTransactionReceipt>,
+        NetworkTypes: alloy_network::Network<ReceiptResponse = TransactionReceipt>,
+        Provider: HeaderProvider,
     >,
-    Provider: HeaderProvider,
 {
-    #[inline]
-    fn provider(&self) -> impl HeaderProvider {
-        self.inner.provider()
-    }
-
     async fn block_receipts(
         &self,
         block_id: BlockId,
@@ -37,7 +32,6 @@ where
             let block_hash = block.hash();
             let excess_blob_gas = block.excess_blob_gas;
             let timestamp = block.timestamp;
-            let block = block.unseal();
 
             return block
                 .body
@@ -47,7 +41,7 @@ where
                 .enumerate()
                 .map(|(idx, (tx, receipt))| {
                     let meta = TransactionMeta {
-                        tx_hash: tx.hash,
+                        tx_hash: tx.hash(),
                         index: idx as u64,
                         block_hash,
                         block_number,
@@ -55,8 +49,7 @@ where
                         excess_blob_gas,
                         timestamp,
                     };
-
-                    ReceiptBuilder::new(&tx, meta, receipt, &receipts)
+                    EthReceiptBuilder::new(&tx, meta, receipt, &receipts)
                         .map(|builder| builder.build())
                 })
                 .collect::<Result<Vec<_>, Self::Error>>()
@@ -72,13 +65,4 @@ where
     Self: LoadPendingBlock + SpawnBlocking,
     Provider: BlockReaderIdExt,
 {
-    #[inline]
-    fn provider(&self) -> impl BlockReaderIdExt {
-        self.inner.provider()
-    }
-
-    #[inline]
-    fn cache(&self) -> &EthStateCache {
-        self.inner.cache()
-    }
 }

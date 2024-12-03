@@ -27,6 +27,9 @@ reth-node-types.workspace = true
 alloy-genesis.workspace = true
 alloy-primitives.workspace = true
 
+# scroll
+reth-scroll-primitives = { workspace = true, optional = true }
+
 # misc
 eyre.workspace = true
 thiserror.workspace = true
@@ -42,6 +45,10 @@ tracing.workspace = true
 [dev-dependencies]
 reth-primitives-traits.workspace = true
 reth-provider = { workspace = true, features = ["test-utils"] }
+alloy-consensus.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+scroll = ["reth-scroll-primitives"]

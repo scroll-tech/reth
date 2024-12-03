@@ -1,12 +1,10 @@
 use crate::EthPooledTransaction;
 use alloy_consensus::{TxEip1559, TxEip4844, TxLegacy};
-use alloy_eips::{eip2718::Encodable2718, eip2930::AccessList};
+use alloy_eips::{eip1559::MIN_PROTOCOL_BASE_FEE, eip2718::Encodable2718, eip2930::AccessList};
 use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
 use rand::Rng;
 use reth_chainspec::MAINNET;
-use reth_primitives::{
-    constants::MIN_PROTOCOL_BASE_FEE, sign_message, Transaction, TransactionSigned,
-};
+use reth_primitives::{sign_message, Transaction, TransactionSigned};
 
 /// A generator for transactions for testing purposes.
 #[derive(Debug)]
@@ -201,7 +199,7 @@ impl TransactionBuilder {
     /// Signs the provided transaction using the specified signer and returns a signed transaction.
     fn signed(transaction: Transaction, signer: B256) -> TransactionSigned {
         let signature = sign_message(signer, transaction.signature_hash()).unwrap();
-        TransactionSigned::from_transaction_and_signature(transaction, signature)
+        TransactionSigned::new_unhashed(transaction, signature)
     }
 
     /// Sets the signer for the transaction builder.

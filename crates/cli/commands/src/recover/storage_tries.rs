@@ -1,4 +1,4 @@
-use crate::common::{AccessRights, Environment, EnvironmentArgs};
+use crate::common::{AccessRights, CliNodeTypes, Environment, EnvironmentArgs};
 use clap::Parser;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_cli::chainspec::ChainSpecParser;
@@ -8,10 +8,10 @@ use reth_db_api::{
     cursor::{DbCursorRO, DbDupCursorRW},
     transaction::DbTx,
 };
-use reth_node_builder::NodeTypesWithEngine;
-use reth_provider::{BlockNumReader, HeaderProvider, ProviderError};
-use reth_trie::StateRoot;
-use reth_trie_db::DatabaseStateRoot;
+use reth_provider::{
+    BlockNumReader, HeaderProvider, LatestStateProviderRef, ProviderError, StateRootProviderExt,
+};
+
 use tracing::*;
 
 /// `reth recover storage-tries` command
@@ -23,7 +23,7 @@ pub struct Command<C: ChainSpecParser> {
 
 impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C> {
     /// Execute `storage-tries` recovery command
-    pub async fn execute<N: NodeTypesWithEngine<ChainSpec = C::ChainSpec>>(
+    pub async fn execute<N: CliNodeTypes<ChainSpec = C::ChainSpec>>(
         self,
         _ctx: CliContext,
     ) -> eyre::Result<()> {
@@ -51,7 +51,7 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> Command<C>
             entry = storage_trie_cursor.next()?;
         }
 
-        let state_root = StateRoot::from_tx(tx_mut).root()?;
+        let state_root = LatestStateProviderRef::new(&provider.0).state_root()?;
         if state_root != best_header.state_root {
             eyre::bail!(
                 "Recovery failed. Incorrect state root. Expected: {:?}. Received: {:?}",

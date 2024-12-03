@@ -8,11 +8,12 @@
 #![cfg_attr(all(not(test), feature = "optimism"), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![allow(clippy::useless_let_if_seq)]
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
 // The `optimism` feature must be enabled to use this crate.
-#![cfg(feature = "optimism")]
+#![cfg(all(feature = "optimism", not(feature = "scroll")))]
 
 pub mod builder;
-pub use builder::OptimismPayloadBuilder;
+pub use builder::OpPayloadBuilder;
 pub mod error;
 pub mod payload;
-pub use payload::{OpPayloadAttributes, OptimismBuiltPayload, OptimismPayloadBuilderAttributes};
+pub use payload::{OpBuiltPayload, OpPayloadAttributes, OpPayloadBuilderAttributes};

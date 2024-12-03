@@ -21,6 +21,40 @@ pub struct ExExNotifications<P, E> {
     inner: ExExNotificationsInner<P, E>,
 }
 
+/// A trait, that represents a stream of [`ExExNotification`]s. The stream will emit notifications
+/// for all blocks. If the stream is configured with a head via [`ExExNotifications::set_with_head`]
+/// or [`ExExNotifications::with_head`], it will run backfill jobs to catch up to the node head.
+pub trait ExExNotificationsStream: Stream<Item = eyre::Result<ExExNotification>> + Unpin {
+    /// Sets [`ExExNotificationsStream`] to a stream of [`ExExNotification`]s without a head.
+    ///
+    /// It's a no-op if the stream has already been configured without a head.
+    ///
+    /// See the documentation of [`ExExNotificationsWithoutHead`] for more details.
+    fn set_without_head(&mut self);
+
+    /// Sets [`ExExNotificationsStream`] to a stream of [`ExExNotification`]s with the provided
+    /// head.
+    ///
+    /// It's a no-op if the stream has already been configured with a head.
+    ///
+    /// See the documentation of [`ExExNotificationsWithHead`] for more details.
+    fn set_with_head(&mut self, exex_head: ExExHead);
+
+    /// Returns a new [`ExExNotificationsStream`] without a head.
+    ///
+    /// See the documentation of [`ExExNotificationsWithoutHead`] for more details.
+    fn without_head(self) -> Self
+    where
+        Self: Sized;
+
+    /// Returns a new [`ExExNotificationsStream`] with the provided head.
+    ///
+    /// See the documentation of [`ExExNotificationsWithHead`] for more details.
+    fn with_head(self, exex_head: ExExHead) -> Self
+    where
+        Self: Sized;
+}
+
 #[derive(Debug)]
 enum ExExNotificationsInner<P, E> {
     /// A stream of [`ExExNotification`]s. The stream will emit notifications for all blocks.
@@ -52,13 +86,19 @@ impl<P, E> ExExNotifications<P, E> {
             )),
         }
     }
+}
 
-    /// Sets [`ExExNotifications`] to a stream of [`ExExNotification`]s without a head.
-    ///
-    /// It's a no-op if the stream has already been configured without a head.
-    ///
-    /// See the documentation of [`ExExNotificationsWithoutHead`] for more details.
-    pub fn set_without_head(&mut self) {
+impl<P, E> ExExNotificationsStream for ExExNotifications<P, E>
+where
+    P: BlockReader<Block = reth_primitives::Block>
+        + HeaderProvider
+        + StateProviderFactory
+        + Clone
+        + Unpin
+        + 'static,
+    E: BlockExecutorProvider + Clone + Unpin + 'static,
+{
+    fn set_without_head(&mut self) {
         let current = std::mem::replace(&mut self.inner, ExExNotificationsInner::Invalid);
         self.inner = ExExNotificationsInner::WithoutHead(match current {
             ExExNotificationsInner::WithoutHead(notifications) => notifications,
@@ -73,20 +113,7 @@ impl<P, E> ExExNotifications<P, E> {
         });
     }
 
-    /// Returns a new [`ExExNotifications`] without a head.
-    ///
-    /// See the documentation of [`ExExNotificationsWithoutHead`] for more details.
-    pub fn without_head(mut self) -> Self {
-        self.set_without_head();
-        self
-    }
-
-    /// Sets [`ExExNotifications`] to a stream of [`ExExNotification`]s with the provided head.
-    ///
-    /// It's a no-op if the stream has already been configured with a head.
-    ///
-    /// See the documentation of [`ExExNotificationsWithHead`] for more details.
-    pub fn set_with_head(&mut self, exex_head: ExExHead) {
+    fn set_with_head(&mut self, exex_head: ExExHead) {
         let current = std::mem::replace(&mut self.inner, ExExNotificationsInner::Invalid);
         self.inner = ExExNotificationsInner::WithHead(match current {
             ExExNotificationsInner::WithoutHead(notifications) => {
@@ -104,10 +131,12 @@ impl<P, E> ExExNotifications<P, E> {
         });
     }
 
-    /// Returns a new [`ExExNotifications`] with the provided head.
-    ///
-    /// See the documentation of [`ExExNotificationsWithHead`] for more details.
-    pub fn with_head(mut self, exex_head: ExExHead) -> Self {
+    fn without_head(mut self) -> Self {
+        self.set_without_head();
+        self
+    }
+
+    fn with_head(mut self, exex_head: ExExHead) -> Self {
         self.set_with_head(exex_head);
         self
     }
@@ -115,7 +144,12 @@ impl<P, E> ExExNotifications<P, E> {
 
 impl<P, E> Stream for ExExNotifications<P, E>
 where
-    P: BlockReader + HeaderProvider + StateProviderFactory + Clone + Unpin + 'static,
+    P: BlockReader<Block = reth_primitives::Block>
+        + HeaderProvider
+        + StateProviderFactory
+        + Clone
+        + Unpin
+        + 'static,
     E: BlockExecutorProvider + Clone + Unpin + 'static,
 {
     type Item = eyre::Result<ExExNotification>;
@@ -238,7 +272,12 @@ impl<P, E> ExExNotificationsWithHead<P, E> {
 
 impl<P, E> ExExNotificationsWithHead<P, E>
 where
-    P: BlockReader + HeaderProvider + StateProviderFactory + Clone + Unpin + 'static,
+    P: BlockReader<Block = reth_primitives::Block>
+        + HeaderProvider
+        + StateProviderFactory
+        + Clone
+        + Unpin
+        + 'static,
     E: BlockExecutorProvider + Clone + Unpin + 'static,
 {
     /// Checks if the ExEx head is on the canonical chain.
@@ -315,7 +354,12 @@ where
 
 impl<P, E> Stream for ExExNotificationsWithHead<P, E>
 where
-    P: BlockReader + HeaderProvider + StateProviderFactory + Clone + Unpin + 'static,
+    P: BlockReader<Block = reth_primitives::Block>
+        + HeaderProvider
+        + StateProviderFactory
+        + Clone
+        + Unpin
+        + 'static,
     E: BlockExecutorProvider + Clone + Unpin + 'static,
 {
     type Item = eyre::Result<ExExNotification>;
@@ -376,10 +420,10 @@ mod tests {
     use futures::StreamExt;
     use reth_db_common::init::init_genesis;
     use reth_evm_ethereum::execute::EthExecutorProvider;
-    use reth_primitives::Block;
+    use reth_primitives::{Block, BlockExt};
     use reth_provider::{
         providers::BlockchainProvider2, test_utils::create_test_provider_factory, BlockWriter,
-        Chain, DatabaseProviderFactory,
+        Chain, DatabaseProviderFactory, StorageLocation,
     };
     use reth_testing_utils::generators::{self, random_block, BlockParams};
     use tokio::sync::mpsc;
@@ -407,6 +451,7 @@ mod tests {
         let provider_rw = provider_factory.provider_rw()?;
         provider_rw.insert_block(
             node_head_block.clone().seal_with_senders().ok_or_eyre("failed to recover senders")?,
+            StorageLocation::Database,
         )?;
         provider_rw.commit()?;
 
@@ -542,7 +587,7 @@ mod tests {
             genesis_block.number + 1,
             BlockParams { parent: Some(genesis_hash), tx_count: Some(0), ..Default::default() },
         )
-        .seal_with_senders()
+        .seal_with_senders::<reth_primitives::Block>()
         .ok_or_eyre("failed to recover senders")?;
         let node_head = Head {
             number: node_head_block.number,
@@ -550,7 +595,7 @@ mod tests {
             ..Default::default()
         };
         let provider_rw = provider.database_provider_rw()?;
-        provider_rw.insert_block(node_head_block)?;
+        provider_rw.insert_block(node_head_block, StorageLocation::Database)?;
         provider_rw.commit()?;
         let node_head_notification = ExExNotification::ChainCommitted {
             new: Arc::new(

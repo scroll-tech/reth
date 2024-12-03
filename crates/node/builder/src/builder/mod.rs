@@ -2,21 +2,15 @@
 
 #![allow(clippy::type_complexity, missing_debug_implementations)]
 
-pub mod add_ons;
-mod states;
-
-pub use states::*;
-
-use std::sync::Arc;
-
 use crate::{
     common::WithConfigs,
     components::NodeComponentsBuilder,
     node::FullNode,
-    rpc::{EthApiBuilderProvider, RethRpcServerHandles, RpcContext},
+    rpc::{RethRpcAddOns, RethRpcServerHandles, RpcContext},
     DefaultNodeLauncher, LaunchNode, Node, NodeHandle,
 };
 use futures::Future;
+use reth_blockchain_tree::externals::NodeTypesForTree;
 use reth_chainspec::{EthChainSpec, EthereumHardforks, Hardforks};
 use reth_cli_util::get_secret_key;
 use reth_db_api::{
@@ -29,22 +23,30 @@ use reth_network::{
     NetworkHandle, NetworkManager,
 };
 use reth_node_api::{
-    FullNodeTypes, FullNodeTypesAdapter, NodeAddOns, NodeTypes, NodeTypesWithDBAdapter,
-    NodeTypesWithEngine,
+    FullNodePrimitives, FullNodeTypes, FullNodeTypesAdapter, NodeAddOns, NodeTypes,
+    NodeTypesWithDBAdapter, NodeTypesWithEngine,
 };
 use reth_node_core::{
     cli::config::{PayloadBuilderConfig, RethTransactionPoolConfig},
     dirs::{ChainPath, DataDirPath},
     node_config::NodeConfig,
     primitives::Head,
-    rpc::eth::{helpers::AddDevSigners, FullEthApiServer},
 };
-use reth_primitives::revm_primitives::EnvKzgSettings;
-use reth_provider::{providers::BlockchainProvider, ChainSpecProvider, FullProvider};
+use reth_provider::{
+    providers::{BlockchainProvider, NodeTypesForProvider},
+    BlockReader, ChainSpecProvider, FullProvider,
+};
 use reth_tasks::TaskExecutor;
 use reth_transaction_pool::{PoolConfig, TransactionPool};
+use revm_primitives::EnvKzgSettings;
 use secp256k1::SecretKey;
+use std::sync::Arc;
 use tracing::{info, trace, warn};
+
+pub mod add_ons;
+
+mod states;
+pub use states::*;
 
 /// The adapter type for a reth node with the builtin provider type
 // Note: we need to hardcode this because custom components might depend on it in associated types.
@@ -80,7 +82,7 @@ pub type RethFullAdapter<DB, Types> = FullNodeTypesAdapter<
 /// configured components and can interact with the node.
 ///
 /// There are convenience functions for networks that come with a preset of types and components via
-/// the [Node] trait, see `reth_node_ethereum::EthereumNode` or `reth_optimism_node::OptimismNode`.
+/// the [`Node`] trait, see `reth_node_ethereum::EthereumNode` or `reth_optimism_node::OpNode`.
 ///
 /// The [`NodeBuilder::node`] function configures the node's types and components in one step.
 ///
@@ -242,7 +244,7 @@ where
     /// Configures the types of the node.
     pub fn with_types<T>(self) -> NodeBuilderWithTypes<RethFullAdapter<DB, T>>
     where
-        T: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+        T: NodeTypesWithEngine<ChainSpec = ChainSpec> + NodeTypesForTree,
     {
         self.with_types_and_provider()
     }
@@ -252,7 +254,7 @@ where
         self,
     ) -> NodeBuilderWithTypes<FullNodeTypesAdapter<NodeTypesWithDBAdapter<T, DB>, P>>
     where
-        T: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+        T: NodeTypesWithEngine<ChainSpec = ChainSpec> + NodeTypesForProvider,
         P: FullProvider<NodeTypesWithDBAdapter<T, DB>>,
     {
         NodeBuilderWithTypes::new(self.config, self.database)
@@ -266,7 +268,7 @@ where
         node: N,
     ) -> NodeBuilderWithComponents<RethFullAdapter<DB, N>, N::ComponentsBuilder, N::AddOns>
     where
-        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec>,
+        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec> + NodeTypesForTree,
     {
         self.with_types().with_components(node.components_builder()).with_add_ons(node.add_ons())
     }
@@ -303,7 +305,7 @@ where
     /// Configures the types of the node.
     pub fn with_types<T>(self) -> WithLaunchContext<NodeBuilderWithTypes<RethFullAdapter<DB, T>>>
     where
-        T: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+        T: NodeTypesWithEngine<ChainSpec = ChainSpec> + NodeTypesForTree,
     {
         WithLaunchContext { builder: self.builder.with_types(), task_executor: self.task_executor }
     }
@@ -315,7 +317,7 @@ where
         NodeBuilderWithTypes<FullNodeTypesAdapter<NodeTypesWithDBAdapter<T, DB>, P>>,
     >
     where
-        T: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+        T: NodeTypesWithEngine<ChainSpec = ChainSpec> + NodeTypesForProvider,
         P: FullProvider<NodeTypesWithDBAdapter<T, DB>>,
     {
         WithLaunchContext {
@@ -334,7 +336,7 @@ where
         NodeBuilderWithComponents<RethFullAdapter<DB, N>, N::ComponentsBuilder, N::AddOns>,
     >
     where
-        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec>,
+        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec> + NodeTypesForTree,
     {
         self.with_types().with_components(node.components_builder()).with_add_ons(node.add_ons())
     }
@@ -357,21 +359,14 @@ where
         >,
     >
     where
-        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec>,
-        N::AddOns: NodeAddOns<
+        N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec> + NodeTypesForTree,
+        N::AddOns: RethRpcAddOns<
             NodeAdapter<
                 RethFullAdapter<DB, N>,
                 <N::ComponentsBuilder as NodeComponentsBuilder<RethFullAdapter<DB, N>>>::Components,
             >,
-            EthApi: EthApiBuilderProvider<
-                        NodeAdapter<
-                            RethFullAdapter<DB, N>,
-                            <N::ComponentsBuilder as NodeComponentsBuilder<RethFullAdapter<DB, N>>>::Components,
-                        >
-                    >
-                        + FullEthApiServer
-                        + AddDevSigners
         >,
+        N::Primitives: FullNodePrimitives<BlockBody = reth_primitives::BlockBody>,
     {
         self.node(node).launch().await
     }
@@ -418,7 +413,7 @@ impl<T, CB, AO> WithLaunchContext<NodeBuilderWithComponents<T, CB, AO>>
 where
     T: FullNodeTypes,
     CB: NodeComponentsBuilder<T>,
-    AO: NodeAddOns<NodeAdapter<T, CB::Components>, EthApi: FullEthApiServer + AddDevSigners>,
+    AO: RethRpcAddOns<NodeAdapter<T, CB::Components>>,
 {
     /// Returns a reference to the node builder's config.
     pub const fn config(&self) -> &NodeConfig<<T::Types as NodeTypes>::ChainSpec> {
@@ -464,6 +459,14 @@ where
             + 'static,
     {
         Self { builder: self.builder.on_node_started(hook), task_executor: self.task_executor }
+    }
+
+    /// Modifies the addons with the given closure.
+    pub fn map_add_ons<F>(self, f: F) -> Self
+    where
+        F: FnOnce(AO) -> AO,
+    {
+        Self { builder: self.builder.map_add_ons(f), task_executor: self.task_executor }
     }
 
     /// Sets the hook that is run once the rpc server is started.
@@ -551,14 +554,9 @@ where
 impl<T, DB, CB, AO> WithLaunchContext<NodeBuilderWithComponents<RethFullAdapter<DB, T>, CB, AO>>
 where
     DB: Database + DatabaseMetrics + DatabaseMetadata + Clone + Unpin + 'static,
-    T: NodeTypesWithEngine<ChainSpec: EthereumHardforks + EthChainSpec>,
+    T: NodeTypesWithEngine + NodeTypesForTree,
     CB: NodeComponentsBuilder<RethFullAdapter<DB, T>>,
-    AO: NodeAddOns<
-        NodeAdapter<RethFullAdapter<DB, T>, CB::Components>,
-        EthApi: EthApiBuilderProvider<NodeAdapter<RethFullAdapter<DB, T>, CB::Components>>
-                    + FullEthApiServer
-                    + AddDevSigners,
-    >,
+    AO: RethRpcAddOns<NodeAdapter<RethFullAdapter<DB, T>, CB::Components>>,
 {
     /// Launches the node with the [`DefaultNodeLauncher`] that sets up engine API consensus and rpc
     pub async fn launch(
@@ -653,6 +651,8 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
     pub fn start_network<Pool>(&self, builder: NetworkBuilder<(), ()>, pool: Pool) -> NetworkHandle
     where
         Pool: TransactionPool + Unpin + 'static,
+        Node::Provider:
+            BlockReader<Block = reth_primitives::Block, Receipt = reth_primitives::Receipt>,
     {
         self.start_network_with(builder, pool, Default::default())
     }
@@ -671,6 +671,8 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
     ) -> NetworkHandle
     where
         Pool: TransactionPool + Unpin + 'static,
+        Node::Provider:
+            BlockReader<Block = reth_primitives::Block, Receipt = reth_primitives::Receipt>,
     {
         let (handle, network, txpool, eth) = builder
             .transactions(pool, tx_config)

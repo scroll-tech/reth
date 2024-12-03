@@ -6,23 +6,23 @@
     issue_tracker_base_url = "https://github.com/paradigmxyz/reth/issues/"
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
 // The `optimism` feature must be enabled to use this crate.
-#![cfg(feature = "optimism")]
+#![cfg(all(feature = "optimism", not(feature = "scroll")))]
 
+use alloy_consensus::{Header, EMPTY_OMMER_ROOT_HASH};
 use alloy_primitives::{B64, U256};
 use reth_chainspec::EthereumHardforks;
-use reth_consensus::{Consensus, ConsensusError, PostExecutionInput};
+use reth_consensus::{Consensus, ConsensusError, HeaderValidator, PostExecutionInput};
 use reth_consensus_common::validation::{
     validate_against_parent_4844, validate_against_parent_eip1559_base_fee,
-    validate_against_parent_hash_number, validate_against_parent_timestamp, validate_cancun_gas,
-    validate_header_base_fee, validate_header_extradata, validate_header_gas,
-    validate_shanghai_withdrawals,
+    validate_against_parent_hash_number, validate_against_parent_timestamp,
+    validate_body_against_header, validate_cancun_gas, validate_header_base_fee,
+    validate_header_extradata, validate_header_gas, validate_shanghai_withdrawals,
 };
 use reth_optimism_chainspec::OpChainSpec;
-use reth_optimism_forks::OptimismHardforks;
-use reth_primitives::{
-    BlockWithSenders, GotExpected, Header, SealedBlock, SealedHeader, EMPTY_OMMER_ROOT_HASH,
-};
+use reth_optimism_forks::OpHardforks;
+use reth_primitives::{BlockBody, BlockWithSenders, GotExpected, SealedBlock, SealedHeader};
 use std::{sync::Arc, time::SystemTime};
 
 mod proof;
@@ -35,22 +35,66 @@ pub use validation::validate_block_post_execution;
 ///
 /// Provides basic checks as outlined in the execution specs.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OptimismBeaconConsensus {
+pub struct OpBeaconConsensus {
     /// Configuration
     chain_spec: Arc<OpChainSpec>,
 }
 
-impl OptimismBeaconConsensus {
-    /// Create a new instance of [`OptimismBeaconConsensus`]
+impl OpBeaconConsensus {
+    /// Create a new instance of [`OpBeaconConsensus`]
     pub const fn new(chain_spec: Arc<OpChainSpec>) -> Self {
         Self { chain_spec }
     }
 }
 
-impl Consensus for OptimismBeaconConsensus {
+impl Consensus for OpBeaconConsensus {
+    fn validate_body_against_header(
+        &self,
+        body: &BlockBody,
+        header: &SealedHeader,
+    ) -> Result<(), ConsensusError> {
+        validate_body_against_header(body, header)
+    }
+
+    fn validate_block_pre_execution(&self, block: &SealedBlock) -> Result<(), ConsensusError> {
+        // Check ommers hash
+        let ommers_hash = reth_primitives::proofs::calculate_ommers_root(&block.body.ommers);
+        if block.header.ommers_hash != ommers_hash {
+            return Err(ConsensusError::BodyOmmersHashDiff(
+                GotExpected { got: ommers_hash, expected: block.header.ommers_hash }.into(),
+            ))
+        }
+
+        // Check transaction root
+        if let Err(error) = block.ensure_transaction_root_valid() {
+            return Err(ConsensusError::BodyTransactionRootDiff(error.into()))
+        }
+
+        // EIP-4895: Beacon chain push withdrawals as operations
+        if self.chain_spec.is_shanghai_active_at_timestamp(block.timestamp) {
+            validate_shanghai_withdrawals(block)?;
+        }
+
+        if self.chain_spec.is_cancun_active_at_timestamp(block.timestamp) {
+            validate_cancun_gas(block)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_block_post_execution(
+        &self,
+        block: &BlockWithSenders,
+        input: PostExecutionInput<'_>,
+    ) -> Result<(), ConsensusError> {
+        validate_block_post_execution(block, &self.chain_spec, input.receipts)
+    }
+}
+
+impl HeaderValidator for OpBeaconConsensus {
     fn validate_header(&self, header: &SealedHeader) -> Result<(), ConsensusError> {
-        validate_header_gas(header)?;
-        validate_header_base_fee(header, &self.chain_spec)
+        validate_header_gas(header.header())?;
+        validate_header_base_fee(header.header(), &self.chain_spec)
     }
 
     fn validate_header_against_parent(
@@ -118,39 +162,5 @@ impl Consensus for OptimismBeaconConsensus {
         }
 
         Ok(())
-    }
-
-    fn validate_block_pre_execution(&self, block: &SealedBlock) -> Result<(), ConsensusError> {
-        // Check ommers hash
-        let ommers_hash = reth_primitives::proofs::calculate_ommers_root(&block.body.ommers);
-        if block.header.ommers_hash != ommers_hash {
-            return Err(ConsensusError::BodyOmmersHashDiff(
-                GotExpected { got: ommers_hash, expected: block.header.ommers_hash }.into(),
-            ))
-        }
-
-        // Check transaction root
-        if let Err(error) = block.ensure_transaction_root_valid() {
-            return Err(ConsensusError::BodyTransactionRootDiff(error.into()))
-        }
-
-        // EIP-4895: Beacon chain push withdrawals as operations
-        if self.chain_spec.is_shanghai_active_at_timestamp(block.timestamp) {
-            validate_shanghai_withdrawals(block)?;
-        }
-
-        if self.chain_spec.is_cancun_active_at_timestamp(block.timestamp) {
-            validate_cancun_gas(block)?;
-        }
-
-        Ok(())
-    }
-
-    fn validate_block_post_execution(
-        &self,
-        block: &BlockWithSenders,
-        input: PostExecutionInput<'_>,
-    ) -> Result<(), ConsensusError> {
-        validate_block_post_execution(block, &self.chain_spec, input.receipts)
     }
 }

@@ -1,11 +1,14 @@
 //! System contract call functions.
 
 use crate::ConfigureEvm;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec};
+use alloy_consensus::Header;
+use alloy_eips::eip7685::Requests;
+use alloy_primitives::Bytes;
 use core::fmt::Display;
 use reth_chainspec::EthereumHardforks;
 use reth_execution_errors::BlockExecutionError;
-use reth_primitives::{Block, Header, Request};
+use reth_primitives::Block;
 use revm::{Database, DatabaseCommit, Evm};
 use revm_primitives::{BlockEnv, CfgEnvWithHandlerCfg, EnvWithHandlerCfg, ResultAndState, B256};
 
@@ -44,7 +47,7 @@ impl OnStateHook for NoopHook {
 #[allow(missing_debug_implementations)]
 pub struct SystemCaller<EvmConfig, Chainspec> {
     evm_config: EvmConfig,
-    chain_spec: Chainspec,
+    chain_spec: Arc<Chainspec>,
     /// Optional hook to be called after each state change.
     hook: Option<Box<dyn OnStateHook>>,
 }
@@ -52,7 +55,7 @@ pub struct SystemCaller<EvmConfig, Chainspec> {
 impl<EvmConfig, Chainspec> SystemCaller<EvmConfig, Chainspec> {
     /// Create a new system caller with the given EVM config, database, and chain spec, and creates
     /// the EVM with the given initialized config and block environment.
-    pub const fn new(evm_config: EvmConfig, chain_spec: Chainspec) -> Self {
+    pub const fn new(evm_config: EvmConfig, chain_spec: Arc<Chainspec>) -> Self {
         Self { evm_config, chain_spec, hook: None }
     }
 
@@ -119,17 +122,18 @@ where
     pub fn apply_post_execution_changes<DB, Ext>(
         &mut self,
         evm: &mut Evm<'_, Ext, DB>,
-    ) -> Result<Vec<Request>, BlockExecutionError>
+    ) -> Result<Requests, BlockExecutionError>
     where
         DB: Database + DatabaseCommit,
         DB::Error: Display,
     {
+        // todo
         // Collect all EIP-7685 requests
         let withdrawal_requests = self.apply_withdrawal_requests_contract_call(evm)?;
 
         // Collect all EIP-7251 requests
         let consolidation_requests = self.apply_consolidation_requests_contract_call(evm)?;
-        Ok([withdrawal_requests, consolidation_requests].concat())
+        Ok(Requests::new(vec![withdrawal_requests, consolidation_requests]))
     }
 
     /// Applies the pre-block call to the EIP-2935 blockhashes contract.
@@ -168,7 +172,7 @@ where
         DB::Error: Display,
     {
         let result_and_state = eip2935::transact_blockhashes_contract_call(
-            &self.evm_config.clone(),
+            &self.evm_config,
             &self.chain_spec,
             timestamp,
             block_number,
@@ -223,7 +227,7 @@ where
         DB::Error: Display,
     {
         let result_and_state = eip4788::transact_beacon_root_contract_call(
-            &self.evm_config.clone(),
+            &self.evm_config,
             &self.chain_spec,
             timestamp,
             block_number,
@@ -247,7 +251,7 @@ where
         db: &mut DB,
         initialized_cfg: &CfgEnvWithHandlerCfg,
         initialized_block_env: &BlockEnv,
-    ) -> Result<Vec<Request>, BlockExecutionError>
+    ) -> Result<Bytes, BlockExecutionError>
     where
         DB: Database + DatabaseCommit,
         DB::Error: Display,
@@ -263,7 +267,7 @@ where
     pub fn apply_withdrawal_requests_contract_call<DB, Ext>(
         &mut self,
         evm: &mut Evm<'_, Ext, DB>,
-    ) -> Result<Vec<Request>, BlockExecutionError>
+    ) -> Result<Bytes, BlockExecutionError>
     where
         DB: Database + DatabaseCommit,
         DB::Error: Display,
@@ -285,7 +289,7 @@ where
         db: &mut DB,
         initialized_cfg: &CfgEnvWithHandlerCfg,
         initialized_block_env: &BlockEnv,
-    ) -> Result<Vec<Request>, BlockExecutionError>
+    ) -> Result<Bytes, BlockExecutionError>
     where
         DB: Database + DatabaseCommit,
         DB::Error: Display,
@@ -301,7 +305,7 @@ where
     pub fn apply_consolidation_requests_contract_call<DB, Ext>(
         &mut self,
         evm: &mut Evm<'_, Ext, DB>,
-    ) -> Result<Vec<Request>, BlockExecutionError>
+    ) -> Result<Bytes, BlockExecutionError>
     where
         DB: Database + DatabaseCommit,
         DB::Error: Display,

@@ -1,12 +1,16 @@
 //! This example shows how to configure custom components for a reth node.
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use reth::{
     api::NodeTypes,
     builder::{components::PoolBuilder, BuilderContext, FullNodeTypes},
     chainspec::ChainSpec,
     cli::Cli,
+    primitives::EthPrimitives,
     providers::CanonStateSubscriptions,
     transaction_pool::{
         blobstore::InMemoryBlobStore, EthTransactionPool, TransactionValidationTaskExecutor,
@@ -47,7 +51,7 @@ pub struct CustomPoolBuilder {
 /// This will be used to build the transaction pool and its maintenance tasks during launch.
 impl<Node> PoolBuilder<Node> for CustomPoolBuilder
 where
-    Node: FullNodeTypes<Types: NodeTypes<ChainSpec = ChainSpec>>,
+    Node: FullNodeTypes<Types: NodeTypes<ChainSpec = ChainSpec, Primitives = EthPrimitives>>,
 {
     type Pool = EthTransactionPool<Node::Provider, InMemoryBlobStore>;
 

@@ -15,7 +15,7 @@
 //! - `min-error-logs`: Disables all logs below `error` level.
 //! - `min-warn-logs`: Disables all logs below `warn` level.
 //! - `min-info-logs`: Disables all logs below `info` level. This can speed up the node, since fewer
-//!   calls to the logging component is made.
+//!   calls to the logging component are made.
 //! - `min-debug-logs`: Disables all logs below `debug` level.
 //! - `min-trace-logs`: Disables all logs below `trace` level.
 
@@ -26,6 +26,9 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 pub mod cli;
 pub mod commands;
