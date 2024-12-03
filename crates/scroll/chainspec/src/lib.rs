@@ -116,7 +116,7 @@ impl ScrollChainSpecBuilder {
         self
     }
 
-    /// Enable DarwinV2 at genesis
+    /// Enable `DarwinV2` at genesis
     pub fn darwin_v2_activated(mut self) -> Self {
         self = self.darwin_activated();
         self.inner = self
@@ -318,12 +318,10 @@ struct ScrollGenesisInfo {
 
 impl ScrollGenesisInfo {
     fn extract_from(genesis: &Genesis) -> Self {
-        let info = Self {
+        Self {
             scroll_chain_info: ScrollChainInfo::extract_from(&genesis.config.extra_fields)
                 .unwrap_or_default(),
-            ..Default::default()
-        };
-        info
+        }
     }
 }
 
