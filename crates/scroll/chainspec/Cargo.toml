@@ -27,11 +27,11 @@ alloy-genesis.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
-alloy-serde = { workspace = true, features = ["std"] }
+alloy-serde.workspace = true
 
 # io
 serde_json.workspace = true
-serde = { workspace = true, features = ["derive", "std"] }
+serde = { workspace = true, features = ["derive"] }
 
 # misc
 derive_more.workspace = true
@@ -48,10 +48,12 @@ std = [
     "alloy-genesis/std",
     "alloy-primitives/std",
     "alloy-eips/std",
+    "alloy-serde/std",
     "reth-chainspec/std",
     "reth-ethereum-forks/std",
     "reth-primitives-traits/std",
     "reth-scroll-forks/std",
     "alloy-consensus/std",
     "once_cell/std",
+    "serde/std"
 ]
