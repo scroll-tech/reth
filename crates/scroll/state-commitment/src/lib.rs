@@ -1,5 +1,11 @@
 //! The implementation of scrolls binary Merkle Patricia Trie used a cryptographic state commitment.
 
+mod account;
+pub use account::ScrollTrieAccount;
+
+mod commitment;
+pub use commitment::BinaryMerklePatriciaTrie;
+
 mod root;
 pub use root::{StateRoot, StorageRoot};
 

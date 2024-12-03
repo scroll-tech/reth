@@ -22,7 +22,6 @@ alloy-serde.workspace = true
 # reth
 reth-codecs = { workspace = true, optional = true }
 reth-codecs-derive = { workspace = true, optional = true }
-reth-trie.workspace = true
 
 # scroll
 poseidon-bn254 = { workspace = true, features = ["bn254"] }

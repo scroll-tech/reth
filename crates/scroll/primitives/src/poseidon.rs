@@ -5,6 +5,9 @@ pub use poseidon_bn254::{hash_with_domain, Fr, PrimeField};
 pub const POSEIDON_EMPTY: B256 =
     b256!("2098f5fb9e239eab3ceac3f27b81e481dc3124d55ffed523a839ee8446b64864");
 
+/// The root hash of an empty binary Merle Patricia trie.
+pub const EMPTY_ROOT_HASH: B256 = B256::ZERO;
+
 /// Type that is used to represent a field element in binary representation.
 pub type FieldElementBytes = <Fr as PrimeField>::Repr;
 
@@ -20,9 +23,6 @@ pub const DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT: u64 = 256;
 /// The domain for hashing two field elements.
 pub const DOMAIN_TWO_FIELD_ELEMENTS: Fr =
     Fr::from_raw([DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT * 2, 0, 0, 0]);
-
-/// The root hash of an empty binary Merle Patricia trie.
-pub const EMPTY_ROOT_HASH: B256 = B256::ZERO;
 
 /// Hash two field elements using poseidon.
 pub fn hash(element_1: Fr, element_2: Fr) -> Fr {

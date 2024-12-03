@@ -5,7 +5,7 @@ use super::{
 use alloy_primitives::{hex, B256};
 use alloy_trie::TrieMask;
 use core::{fmt, ops::Range, slice::Iter};
-use scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
+use reth_scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
 
 #[allow(unused_imports)]
 use alloc::vec::Vec;
@@ -16,14 +16,14 @@ pub(crate) const CHILD_INDEX_RANGE: Range<u8> = 0..2;
 /// A trie mask to extract the two child indexes from a branch node.
 pub(crate) const CHILD_INDEX_MASK: TrieMask = TrieMask::new(0b11);
 
-/// A reference to [BranchNode] and its state mask.
+/// A reference to branch node and its state mask.
 /// NOTE: The stack may contain more items that specified in the state mask.
 #[derive(Clone)]
 pub(crate) struct BranchNodeRef<'a> {
     /// Reference to the collection of hash nodes.
     /// NOTE: The referenced stack might have more items than the number of children
     /// for this node. We should only ever access items starting from
-    /// [BranchNodeRef::first_child_index].
+    /// [`BranchNodeRef::first_child_index`].
     pub stack: &'a [B256],
     /// Reference to bitmask indicating the presence of children at
     /// the respective nibble positions.
@@ -131,13 +131,10 @@ impl<'a> Iterator for BranchChildrenIter<'a> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.range.next()?;
-        let value = if self.state_mask.is_bit_set(i) {
-            // SAFETY: `first_child_index` guarantees that `stack` is exactly
-            // `state_mask.count_ones()` long.
-            Some(unsafe { self.stack_iter.next().unwrap_unchecked() })
-        } else {
-            None
-        };
+        let value = self
+            .state_mask
+            .is_bit_set(i)
+            .then(|| unsafe { self.stack_iter.next().unwrap_unchecked() });
         Some((i, value))
     }
 

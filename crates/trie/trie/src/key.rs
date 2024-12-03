@@ -43,11 +43,10 @@ impl BitsCompatibility for Nibbles {
             }
         }
 
-        Nibbles::from_vec_unchecked(bits)
+        Self::from_vec_unchecked(bits)
     }
 
     fn pack_bits(&self) -> SmallVec<[u8; 32]> {
-        println!("bits {:?}", self);
         let mut result = SmallVec::with_capacity((self.len() + 7) / 8);
 
         for bits in self.as_slice().chunks(8) {
@@ -57,8 +56,6 @@ impl BitsCompatibility for Nibbles {
             }
             result.push(byte);
         }
-
-        println!("result: {:?}", result);
 
         result
     }
@@ -82,9 +79,9 @@ impl BitsCompatibility for Nibbles {
             if *nibble < 1 {
                 *nibble += 1;
                 return Some(incremented);
-            } else {
-                *nibble = 0;
             }
+
+            *nibble = 0;
         }
 
         None

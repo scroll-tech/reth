@@ -1877,8 +1877,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24f165e7b643266ea80cb858aed492ad9280e3e05ce24d4a99d7d7b889b6a4d9"
 dependencies = [
  "crossterm",
- "strum",
- "strum_macros",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
  "unicode-width 0.2.0",
 ]
 
@@ -2657,7 +2657,7 @@ dependencies = [
  "base16ct",
  "crypto-bigint",
  "digest 0.10.7",
- "ff 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ff",
  "generic-array",
  "group",
  "pkcs8",
@@ -3513,7 +3513,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
 dependencies = [
- "ff 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ff",
  "rand_core 0.6.4",
  "subtle",
 ]
@@ -8145,7 +8145,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "shellexpand",
- "strum",
+ "strum 0.26.3",
  "thiserror 1.0.69",
  "tokio",
  "toml",
@@ -8746,7 +8746,7 @@ dependencies = [
  "reth-testing-utils",
  "reth-trie",
  "reth-trie-db",
- "strum",
+ "strum 0.26.3",
  "tempfile",
  "tokio",
  "tracing",
@@ -9205,6 +9205,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-state-commitment"
+version = "1.1.2"
+dependencies = [
+ "alloy-consensus",
+ "alloy-primitives",
+ "alloy-rlp",
+ "metrics",
+ "poseidon-bn254",
+ "proptest",
+ "proptest-arbitrary-interop",
+ "reth-db",
+ "reth-db-api",
+ "reth-execution-errors",
+ "reth-metrics",
+ "reth-primitives",
+ "reth-primitives-traits",
+ "reth-provider",
+ "reth-scroll-execution",
+ "reth-scroll-primitives",
+ "reth-scroll-state-commitment",
+ "reth-scroll-trie",
+ "reth-trie",
+ "reth-trie-common",
+ "reth-trie-db",
+ "tracing",
+ "tracing-subscriber",
+ "zktrie",
+ "zktrie_rust",
+]
+
+[[package]]
 name = "reth-scroll-storage"
 version = "1.1.2"
 dependencies = [
@@ -9216,6 +9247,20 @@ dependencies = [
  "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-storage-errors",
+]
+
+[[package]]
+name = "reth-scroll-trie"
+version = "1.1.2"
+dependencies = [
+ "alloy-primitives",
+ "alloy-trie",
+ "hex-literal",
+ "proptest-arbitrary-interop",
+ "reth-scroll-primitives",
+ "reth-trie",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -9512,6 +9557,7 @@ dependencies = [
  "reth-storage-errors",
  "reth-trie-common",
  "serde_json",
+ "smallvec",
  "tracing",
  "triehash",
 ]
@@ -10119,58 +10165,6 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
-
-[[package]]
-name = "scroll-primitives"
-version = "1.1.0"
-dependencies = [
- "alloy-primitives",
- "poseidon-bn254",
- "reth-trie",
-]
-
-[[package]]
-name = "scroll-state-commitment"
-version = "1.1.0"
-dependencies = [
- "alloy-consensus",
- "alloy-primitives",
- "alloy-rlp",
- "metrics",
- "poseidon-bn254",
- "proptest",
- "proptest-arbitrary-interop",
- "reth-db",
- "reth-db-api",
- "reth-execution-errors",
- "reth-metrics",
- "reth-primitives",
- "reth-provider",
- "reth-trie",
- "reth-trie-common",
- "reth-trie-db",
- "scroll-primitives",
- "scroll-state-commitment",
- "scroll-trie",
- "tracing",
- "tracing-subscriber",
- "zktrie",
- "zktrie_rust",
-]
-
-[[package]]
-name = "scroll-trie"
-version = "1.1.0"
-dependencies = [
- "alloy-primitives",
- "alloy-trie",
- "hex-literal",
- "proptest-arbitrary-interop",
- "reth-trie",
- "scroll-primitives",
- "tracing",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "sdd"
@@ -12403,6 +12397,28 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.89",
+]
+
+[[package]]
+name = "zktrie"
+version = "0.3.0"
+dependencies = [
+ "gobuild",
+ "zktrie_rust",
+]
+
+[[package]]
+name = "zktrie_rust"
+version = "0.3.0"
+dependencies = [
+ "hex",
+ "lazy_static",
+ "log",
+ "num",
+ "num-derive",
+ "num-traits",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
 ]
 
 [[package]]

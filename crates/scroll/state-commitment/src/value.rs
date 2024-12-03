@@ -1,10 +1,8 @@
+use crate::ScrollTrieAccount;
 use alloy_primitives::{B256, U256};
-use scroll_primitives::{
-    poseidon::{
-        field_element_from_be_bytes, hash_with_domain, split_and_hash_be_bytes, FieldElementBytes,
-        Fr, PrimeField, DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT,
-    },
-    ScrollTrieAccount,
+use reth_scroll_primitives::poseidon::{
+    field_element_from_be_bytes, hash_with_domain, split_and_hash_be_bytes, FieldElementBytes, Fr,
+    PrimeField, DOMAIN_MULTIPLIER_PER_FIELD_ELEMENT,
 };
 
 /// An implementation of a value hasher that uses Poseidon.

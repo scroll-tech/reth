@@ -11,7 +11,7 @@ use alloy_trie::{
     BranchNodeCompact, Nibbles, TrieMask,
 };
 use core::cmp;
-use scroll_primitives::poseidon::EMPTY_ROOT_HASH;
+use reth_scroll_primitives::poseidon::EMPTY_ROOT_HASH;
 use tracing::trace;
 
 #[derive(Debug, Default)]
@@ -35,7 +35,7 @@ pub struct HashBuilder {
 impl HashBuilder {
     /// Enables the Hash Builder to store updated branch nodes.
     ///
-    /// Call [HashBuilder::split] to get the updates to branch nodes.
+    /// Call [`HashBuilder::split`] to get the updates to branch nodes.
     pub fn with_updates(mut self, retain_updates: bool) -> Self {
         self.set_updates(retain_updates);
         self
@@ -49,14 +49,14 @@ impl HashBuilder {
 
     /// Enables the Hash Builder to store updated branch nodes.
     ///
-    /// Call [HashBuilder::split] to get the updates to branch nodes.
+    /// Call [`HashBuilder::split`] to get the updates to branch nodes.
     pub fn set_updates(&mut self, retain_updates: bool) {
         if retain_updates {
             self.updated_branch_nodes = Some(HashMap::default());
         }
     }
 
-    /// Splits the [HashBuilder] into a [HashBuilder] and hash builder updates.
+    /// Splits the [`HashBuilder`] into a [`HashBuilder`] and hash builder updates.
     pub fn split(mut self) -> (Self, HashMap<Nibbles, BranchNodeCompact>) {
         let updates = self.updated_branch_nodes.take();
         (self, updates.unwrap_or_default())
@@ -68,7 +68,7 @@ impl HashBuilder {
     }
 
     /// The number of total updates accrued.
-    /// Returns `0` if [Self::with_updates] was not called.
+    /// Returns `0` if [`Self::with_updates`] was not called.
     pub fn updates_len(&self) -> usize {
         self.updated_branch_nodes.as_ref().map(|u| u.len()).unwrap_or(0)
     }
@@ -221,7 +221,6 @@ impl HashBuilder {
                         self.state_masks[len] |= TrieMask::new(0b100 << extra_digit);
                         let leaf_node = LeafNodeRef::new(&current, leaf_value);
                         let leaf_hash = leaf_node.hash_leaf();
-                        println!("leaf hash: {:?}", leaf_hash.0);
                         trace!(
                             target: "trie::hash_builder",
                             ?leaf_node,
@@ -409,7 +408,7 @@ impl HashBuilder {
 // TODO(frisitano): Introduce generic for the HashBuilder.
 impl From<reth_trie::HashBuilder> for HashBuilder {
     fn from(hash_builder: reth_trie::HashBuilder) -> Self {
-        HashBuilder {
+        Self {
             key: hash_builder.key,
             value: hash_builder.value,
             stack: hash_builder
@@ -429,7 +428,7 @@ impl From<reth_trie::HashBuilder> for HashBuilder {
 
 impl From<HashBuilder> for reth_trie::HashBuilder {
     fn from(value: HashBuilder) -> Self {
-        reth_trie::HashBuilder {
+        Self {
             key: value.key,
             value: value.value,
             stack: value
@@ -455,8 +454,8 @@ mod test {
     use super::*;
     use alloc::collections::BTreeMap;
     use hex_literal::hex;
+    use reth_scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
     use reth_trie::key::BitsCompatibility;
-    use scroll_primitives::poseidon::{hash_with_domain, Fr, PrimeField};
 
     #[test]
     fn test_convert_to_bit_representation() {
@@ -535,9 +534,9 @@ mod test {
 
         let mut hb = HashBuilder::default().with_updates(true);
 
-        leaf_values.iter().for_each(|(key, val)| {
+        for (key, val) in &leaf_values {
             hb.add_leaf(key.clone(), val);
-        });
+        }
 
         let root = hb.root();
 
@@ -566,7 +565,10 @@ mod test {
             let node_11 = hash_with_domain(&[Fr::zero(), node_111], crate::BRANCH_NODE_LTRB_DOMAIN);
             let node_1 = hash_with_domain(&[Fr::zero(), node_11], crate::BRANCH_NODE_LTRB_DOMAIN);
 
-            hash_with_domain(&[node_0, node_1], crate::BRANCH_NODE_LBRB_DOMAIN).to_repr().into()
+            let mut root =
+                hash_with_domain(&[node_0, node_1], crate::BRANCH_NODE_LBRB_DOMAIN).to_repr();
+            root.reverse();
+            root.into()
         };
 
         assert_eq!(expected, root);

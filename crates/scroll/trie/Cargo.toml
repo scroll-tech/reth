@@ -1,5 +1,5 @@
 [package]
-name = "scroll-trie"
+name = "reth-scroll-trie"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,10 +8,13 @@ homepage.workspace = true
 repository.workspace = true
 exclude.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 alloy-trie = { workspace = true, features = ["serde"] }
 alloy-primitives.workspace = true
-scroll-primitives.workspace = true
+reth-scroll-primitives.workspace = true
 tracing.workspace = true
 reth-trie.workspace = true
 
@@ -20,5 +23,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["e
 hex-literal = "0.4"
 proptest-arbitrary-interop.workspace = true
 
-[lints]
-workspace = true
+[features]
+scroll = [
+    "reth-trie/scroll"
+]

@@ -9,7 +9,7 @@ mod hash_builder;
 pub use hash_builder::HashBuilder;
 mod leaf;
 mod sub_tree;
-use scroll_primitives::poseidon::Fr;
+use reth_scroll_primitives::poseidon::Fr;
 
 /// The hashing domain for leaf nodes.
 pub const LEAF_NODE_DOMAIN: Fr = Fr::from_raw([4, 0, 0, 0]);

@@ -1,7 +1,9 @@
-use super::{PoseidonKeyHasher, PosiedonValueHasher};
+use super::{PoseidonKeyHasher, PosiedonValueHasher, ScrollTrieAccount};
 use alloy_primitives::{Address, BlockNumber, B256};
 use reth_db::transaction::DbTx;
 use reth_execution_errors::{StateRootError, StorageRootError};
+use reth_scroll_primitives::poseidon::EMPTY_ROOT_HASH;
+use reth_scroll_trie::HashBuilder;
 use reth_trie::{
     hashed_cursor::{HashedCursorFactory, HashedPostStateCursorFactory, HashedStorageCursor},
     key::BitsCompatibility,
@@ -11,15 +13,13 @@ use reth_trie::{
     trie_cursor::{InMemoryTrieCursorFactory, TrieCursorFactory},
     updates::{StorageTrieUpdates, TrieUpdates},
     walker::TrieWalker,
-    HashedPostState, HashedStorage, IntermediateStateRootState, Nibbles, StateRootProgress,
-    TrieAccount, TrieInput,
+    HashedPostState, HashedStorage, IntermediateStateRootState, KeyHasher, Nibbles,
+    StateRootProgress, TrieInput,
 };
-use scroll_primitives::{poseidon::EMPTY_ROOT_HASH, ScrollTrieAccount};
-use scroll_trie::HashBuilder;
 use tracing::{debug, trace};
 
 #[cfg(feature = "metrics")]
-use crate::metrics::{StateRootMetrics, TrieRootMetrics};
+use reth_trie::metrics::{StateRootMetrics, TrieRootMetrics, TrieType};
 
 // TODO(frisitano): Instead of introducing this new type we should make StateRoot generic over
 // the [`HashBuilder`] and key traversal types
@@ -231,8 +231,7 @@ where
                         storage_root_calculator.root()?
                     };
 
-                    let account: ScrollTrieAccount =
-                        TrieAccount::from((account, storage_root)).into();
+                    let account = ScrollTrieAccount::from((account, storage_root));
                     let account_hash = PosiedonValueHasher::hash_account(account);
                     hash_builder.add_leaf(
                         Nibbles::unpack_and_truncate_bits(hashed_address),
@@ -267,9 +266,10 @@ where
 
         let root = hash_builder.root();
 
+        let removed_keys = account_node_iter.walker.take_removed_keys();
         trie_updates.finalize(
-            account_node_iter.walker,
             hash_builder.into(),
+            removed_keys,
             self.prefix_sets.destroyed_accounts,
         );
 
@@ -444,7 +444,8 @@ where
         let root = hash_builder.root();
 
         let mut trie_updates = StorageTrieUpdates::default();
-        trie_updates.finalize(storage_node_iter.walker, hash_builder.into());
+        let removed_keys = storage_node_iter.walker.take_removed_keys();
+        trie_updates.finalize(hash_builder.into(), removed_keys);
 
         let stats = tracker.finish();
 
@@ -483,7 +484,7 @@ impl<'a, TX: DbTx> DatabaseStateRoot<'a, TX>
         tx: &'a TX,
         range: RangeInclusive<BlockNumber>,
     ) -> Result<Self, StateRootError> {
-        let loaded_prefix_sets = PrefixSetLoader::new(tx).load(range)?;
+        let loaded_prefix_sets = PrefixSetLoader::<_, PoseidonKeyHasher>::new(tx).load(range)?;
         Ok(Self::from_tx(tx).with_prefix_sets(loaded_prefix_sets))
     }
 
@@ -559,6 +560,28 @@ impl<'a, TX: DbTx> DatabaseStateRoot<'a, TX>
         )
         .with_prefix_sets(input.prefix_sets.freeze())
         .root_with_updates()
+    }
+
+    fn root(tx: &'a TX) -> Result<B256, StateRootError> {
+        Self::from_tx(tx).root()
+    }
+
+    fn root_with_updates(tx: &'a TX) -> Result<(B256, TrieUpdates), StateRootError> {
+        Self::from_tx(tx).root_with_updates()
+    }
+
+    fn root_from_prefix_sets_with_updates(
+        tx: &'a TX,
+        prefix_sets: TriePrefixSets,
+    ) -> Result<(B256, TrieUpdates), StateRootError> {
+        Self::from_tx(tx).with_prefix_sets(prefix_sets).root_with_updates()
+    }
+
+    fn root_with_progress(
+        tx: &'a TX,
+        state: Option<IntermediateStateRootState>,
+    ) -> Result<StateRootProgress, StateRootError> {
+        Self::from_tx(tx).with_intermediate_state(state).root_with_progress()
     }
 }
 

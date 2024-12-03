@@ -1,5 +1,5 @@
 [package]
-name = "scroll-state-commitment"
+name = "reth-scroll-state-commitment"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,14 +13,16 @@ alloy-consensus = { workspace = true, optional = true}
 alloy-primitives.workspace = true
 alloy-rlp.workspace = true
 reth-execution-errors.workspace = true
-reth-trie = { workspace = true, features = ["scroll"]}
+reth-trie = { workspace = true }
+reth-scroll-execution.workspace = true
 reth-primitives.workspace = true
 tracing.workspace = true
-scroll-trie.workspace = true
-scroll-primitives.workspace = true
-poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", branch = "master" }
+reth-scroll-trie.workspace = true
+reth-scroll-primitives.workspace = true
+poseidon-bn254.workspace = true
 reth-trie-db.workspace = true
 reth-db = { workspace = true, features = ["test-utils"] }
+reth-primitives-traits = { workspace = true }
 
 # `metrics` feature
 reth-metrics = { workspace = true, optional = true }
@@ -31,12 +33,12 @@ zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie", optional = true }
 zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"], optional = true }
 
 [dev-dependencies]
-scroll-state-commitment = { workspace = true, features = ["test-utils"]}
+reth-scroll-state-commitment = { workspace = true, features = ["test-utils"]}
 alloy-consensus.workspace = true
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
-reth-trie = { workspace = true, features = ["test-utils", "scroll"] }
+reth-trie = { workspace = true, features = ["test-utils" ] }
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
-reth-provider = { workspace = true, features = ["test-utils"] }
+reth-provider = { workspace = true, features = ["test-utils" ] }
 proptest.workspace = true
 proptest-arbitrary-interop.workspace = true
 zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie" }
@@ -48,7 +50,27 @@ reth-db-api.workspace = true
 workspace = true
 
 [features]
-test-utils = ["dep:zktrie_rust", "dep:zktrie", "dep:alloy-consensus"]
+scroll = [
+    "reth-trie/scroll",
+    "reth-primitives-traits/scroll",
+    "reth-provider/scroll",
+    "reth-trie/scroll"
+]
+test-utils = [
+    "dep:zktrie_rust", 
+    "dep:zktrie", 
+    "dep:alloy-consensus",
+    "reth-db/test-utils",
+    "reth-db-api/test-utils",
+    "reth-primitives/test-utils",
+    "reth-primitives-traits/test-utils",
+    "reth-provider/test-utils",
+    "reth-scroll-execution/test-utils",
+    "reth-scroll-state-commitment/test-utils",
+    "reth-trie/test-utils",
+    "reth-trie-common/test-utils",
+    "reth-trie-db/test-utils"
+    ]
 metrics = ["reth-metrics", "dep:metrics"]
 
 
