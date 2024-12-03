@@ -53,7 +53,7 @@ pub fn scroll_nodes() -> Vec<NodeRecord> {
 
 /// Returns parsed scroll seplo nodes
 pub fn scroll_sepolia_nodes() -> Vec<NodeRecord> {
-    parse_nodes(SEPOLIA_BOOTNODES)
+    parse_nodes(SCROLL_SEPOLIA_BOOTNODES)
 }
 
 /// Parses all the nodes
