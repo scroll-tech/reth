@@ -7,7 +7,7 @@ use core::{
     str::FromStr,
 };
 
-use alloy_chains::Chain;
+use alloy_chains::{Chain, NamedChain};
 use reth_ethereum_forks::{hardfork, ChainHardforks, EthereumHardfork, ForkCondition, Hardfork};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -32,11 +32,12 @@ hardfork!(
 impl ScrollHardFork {
     /// Retrieves the activation block for the specified hardfork on the given chain.
     pub fn activation_block<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
-        if chain == Chain::base_sepolia() {
-            return Self::base_sepolia_activation_block(fork);
+        // will replace scroll_sepolia after alloy-chains release new tag
+        if chain == Chain::from_named(NamedChain::ScrollSepolia) {
+            return Self::scroll_sepolia_activation_block(fork);
         }
-        if chain == Chain::base_mainnet() {
-            return Self::base_mainnet_activation_block(fork);
+        if chain == Chain::from_named(NamedChain::Scroll) {
+            return Self::scroll_mainnet_activation_block(fork);
         }
 
         None
@@ -44,18 +45,18 @@ impl ScrollHardFork {
 
     /// Retrieves the activation timestamp for the specified hardfork on the given chain.
     pub fn activation_timestamp<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
-        if chain == Chain::base_sepolia() {
-            return Self::base_sepolia_activation_timestamp(fork);
+        if chain == Chain::from_named(NamedChain::ScrollSepolia) {
+            return Self::scroll_sepolia_activation_timestamp(fork);
         }
-        if chain == Chain::base_mainnet() {
-            return Self::base_mainnet_activation_timestamp(fork);
+        if chain == Chain::from_named(NamedChain::Scroll) {
+            return Self::scroll_mainnet_activation_timestamp(fork);
         }
 
         None
     }
 
-    /// Retrieves the activation block for the specified hardfork on the Base Sepolia testnet.
-    pub fn base_sepolia_activation_block<H: Hardfork>(fork: H) -> Option<u64> {
+    /// Retrieves the activation block for the specified hardfork on the Scroll Sepolia testnet.
+    pub fn scroll_sepolia_activation_block<H: Hardfork>(fork: H) -> Option<u64> {
         match_hardfork(
             fork,
             |fork| match fork {
@@ -83,13 +84,12 @@ impl ScrollHardFork {
                 Self::Curie => Some(4740239),
                 Self::Darwin => Some(6075509),
                 Self::DarwinV2 => Some(6375501),
-                _ => None,
             },
         )
     }
 
-    /// Retrieves the activation block for the specified hardfork on the Base mainnet.
-    pub fn base_mainnet_activation_block<H: Hardfork>(fork: H) -> Option<u64> {
+    /// Retrieves the activation block for the specified hardfork on the Scroll mainnet.
+    pub fn scroll_mainnet_activation_block<H: Hardfork>(fork: H) -> Option<u64> {
         match_hardfork(
             fork,
             |fork| match fork {
@@ -117,13 +117,12 @@ impl ScrollHardFork {
                 Self::Curie => Some(7096836),
                 Self::Darwin => Some(8568134),
                 Self::DarwinV2 => Some(8923772),
-                _ => None,
             },
         )
     }
 
-    /// Retrieves the activation timestamp for the specified hardfork on the Base Sepolia testnet.
-    pub fn base_sepolia_activation_timestamp<H: Hardfork>(fork: H) -> Option<u64> {
+    /// Retrieves the activation timestamp for the specified hardfork on the Scroll Sepolia testnet.
+    pub fn scroll_sepolia_activation_timestamp<H: Hardfork>(fork: H) -> Option<u64> {
         match_hardfork(
             fork,
             |fork| match fork {
@@ -151,13 +150,12 @@ impl ScrollHardFork {
                 Self::Curie => Some(1718616171),
                 Self::Darwin => Some(1723622400),
                 Self::DarwinV2 => Some(1724832000),
-                _ => None,
             },
         )
     }
 
-    /// Retrieves the activation timestamp for the specified hardfork on the Base mainnet.
-    pub fn base_mainnet_activation_timestamp<H: Hardfork>(fork: H) -> Option<u64> {
+    /// Retrieves the activation timestamp for the specified hardfork on the Scroll mainnet.
+    pub fn scroll_mainnet_activation_timestamp<H: Hardfork>(fork: H) -> Option<u64> {
         match_hardfork(
             fork,
             |fork| match fork {
@@ -185,7 +183,6 @@ impl ScrollHardFork {
                 Self::Curie => Some(1719994277),
                 Self::Darwin => Some(1724227200),
                 Self::DarwinV2 => Some(1725264000),
-                _ => None,
             },
         )
     }
@@ -264,11 +261,11 @@ mod tests {
     #[test]
     fn test_match_hardfork() {
         assert_eq!(
-            ScrollHardFork::base_mainnet_activation_block(ScrollHardFork::Bernoulli),
+            ScrollHardFork::scroll_mainnet_activation_block(ScrollHardFork::Bernoulli),
             Some(5220340)
         );
         assert_eq!(
-            ScrollHardFork::base_mainnet_activation_block(ScrollHardFork::Curie),
+            ScrollHardFork::scroll_mainnet_activation_block(ScrollHardFork::Curie),
             Some(7096836)
         );
     }
