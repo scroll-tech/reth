@@ -67,7 +67,7 @@ impl TryFrom<&OtherFields> for ScrollGenesisInfo {
 #[serde(rename_all = "camelCase")]
 pub struct L1Config {
     /// l1 chain id
-    pub l1_chainId: Option<u64>,
+    pub l1_chain_id: Option<u64>,
     /// the l1 message queue address
     pub l1_message_queue_address: Option<Address>,
     // the l1 scroll proxy address
@@ -169,12 +169,12 @@ mod tests {
                 scroll_special_info: Some(ScrollSpecialChainInfo {
                     fee_vault_address: Some(address!("d8da6bf26964af9d7eed9e03e53415d37aa96045")),
                     l1_config: Some(L1Config {
-                        l1_chainId: Some(1),
+                        l1_chain_id: Some(1),
                         l1_message_queue_address: Some(address!(
-                            "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"
+                            "0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"
                         )),
                         scroll_chain_address: Some(address!(
-                            "0xa13BAF47339d63B743e7Da8741db5456DAc1E556"
+                            "a13BAF47339d63B743e7Da8741db5456DAc1E556"
                         )),
                         num_l1_messages_per_block: Some(10),
                     })
