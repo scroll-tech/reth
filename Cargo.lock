@@ -9112,7 +9112,6 @@ dependencies = [
  "alloy-serde",
  "derive_more 1.0.0",
  "once_cell",
- "op-alloy-rpc-types",
  "reth-chainspec",
  "reth-ethereum-forks",
  "reth-network-peers",
