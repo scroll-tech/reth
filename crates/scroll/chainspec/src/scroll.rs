@@ -5,7 +5,7 @@ use alloc::sync::Arc;
 use alloy_chains::{Chain, NamedChain};
 use alloy_primitives::{b256, U256};
 use reth_chainspec::{once_cell_set, ChainSpec};
-use reth_scroll_forks::ScrollHardFork;
+use reth_scroll_forks::ScrollHardfork;
 
 use crate::{constants::SCROLL_L2_GAS_LIMIT, LazyLock, ScrollChainSpec};
 
@@ -22,7 +22,7 @@ pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
                 "bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"
             )),
             paris_block_and_final_difficulty: Some((0, U256::from(0))),
-            hardforks: ScrollHardFork::scroll_mainnet(),
+            hardforks: ScrollHardfork::scroll_mainnet(),
             max_gas_limit: SCROLL_L2_GAS_LIMIT,
             prune_delete_limit: 10000,
             ..Default::default()

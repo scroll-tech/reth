@@ -14,30 +14,30 @@ pub mod hardfork;
 mod dev;
 
 pub use dev::DEV_HARDFORKS;
-pub use hardfork::ScrollHardFork;
+pub use hardfork::ScrollHardfork;
 
 use reth_ethereum_forks::EthereumHardforks;
 
 /// Extends [`EthereumHardforks`] with scroll helper methods.
 pub trait ScrollHardforks: EthereumHardforks {
-    /// Convenience method to check if [`Bernoulli`](ScrollHardFork::Bernoulli) is active at a given
+    /// Convenience method to check if [`Bernoulli`](ScrollHardfork::Bernoulli) is active at a given
     /// block number.
     fn is_bernoulli_active_at_block(&self, block_number: u64) -> bool {
-        self.fork(ScrollHardFork::Bernoulli).active_at_block(block_number)
+        self.fork(ScrollHardfork::Bernoulli).active_at_block(block_number)
     }
 
-    /// Returns `true` if [`Curie`](ScrollHardFork::Curie) is active at given block block number.
+    /// Returns `true` if [`Curie`](ScrollHardfork::Curie) is active at given block block number.
     fn is_curie_active_at_block(&self, block_number: u64) -> bool {
-        self.fork(ScrollHardFork::Curie).active_at_block(block_number)
+        self.fork(ScrollHardfork::Curie).active_at_block(block_number)
     }
 
-    /// Returns `true` if [`Darwin`](ScrollHardFork::Darwin) is active at given block timestamp.
+    /// Returns `true` if [`Darwin`](ScrollHardfork::Darwin) is active at given block timestamp.
     fn is_darwin_active_at_timestamp(&self, timestamp: u64) -> bool {
-        self.fork(ScrollHardFork::Darwin).active_at_timestamp(timestamp)
+        self.fork(ScrollHardfork::Darwin).active_at_timestamp(timestamp)
     }
 
-    /// Returns `true` if [`DarwinV2`](ScrollHardFork::DarwinV2) is active at given block timestamp.
+    /// Returns `true` if [`DarwinV2`](ScrollHardfork::DarwinV2) is active at given block timestamp.
     fn is_darwin_v2_active_at_timestamp(&self, timestamp: u64) -> bool {
-        self.fork(ScrollHardFork::DarwinV2).active_at_timestamp(timestamp)
+        self.fork(ScrollHardfork::DarwinV2).active_at_timestamp(timestamp)
     }
 }

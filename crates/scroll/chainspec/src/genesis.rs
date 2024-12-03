@@ -65,13 +65,13 @@ impl TryFrom<&OtherFields> for ScrollGenesisInfo {
 /// The Scroll l1 special config
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ScrollL1Config {
+pub struct L1Config {
     /// l1 chain id
     pub l1_chainId: Option<u64>,
     /// the l1 message queue address
     pub l1_message_queue_address: Option<Address>,
     // the l1 scroll proxy address
-    pub l1_chain_proxy_address: Option<Address>,
+    pub scroll_chain_address: Option<Address>,
     // the l1 message numbers of per block
     pub num_l1_messages_per_block: Option<u64>,
 }
@@ -83,7 +83,7 @@ pub struct ScrollSpecialChainInfo {
     /// the L2 tx fee vault address
     pub fee_vault_address: Option<Address>,
     /// the L1 special config
-    pub scroll_l1_config: Option<ScrollL1Config>,
+    pub l1_config: Option<L1Config>,
 }
 
 impl ScrollSpecialChainInfo {
@@ -103,5 +103,110 @@ impl TryFrom<&OtherFields> for ScrollSpecialChainInfo {
         } else {
             Err(serde_json::Error::missing_field("scroll"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::address;
+
+    #[test]
+    fn test_extract_scroll_genesis_info() {
+        let genesis_info = r#"
+        {
+          "bernoulliBlock": 10,
+          "curieBlock": 12,
+          "darwinTime": 0
+        }
+        "#;
+
+        let others: OtherFields = serde_json::from_str(genesis_info).unwrap();
+        let genesis_info = ScrollGenesisInfo::extract_from(&others).unwrap();
+
+        assert_eq!(
+            genesis_info,
+            ScrollGenesisInfo {
+                bernoulli_block: Some(10),
+                curie_block: Some(12),
+                darwin_time: Some(0),
+                darwin_v2_time: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_extract_scroll_chain_info() {
+        let chain_info = r#"
+        {
+          "bernoulliBlock": 10,
+          "curieBlock": 12,
+          "darwinTime": 0,
+          "scroll": {
+            "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+            "l1Config": {
+                "l1ChainId": "1",
+                "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                "numL1MessagesPerBlock": "10"
+            }
+          }
+        }
+        "#;
+
+        let others: OtherFields = serde_json::from_str(chain_info).unwrap();
+        let chain_info = ScrollChainInfo::extract_from(&others).unwrap();
+
+        assert_eq!(
+            chain_info,
+            ScrollChainInfo {
+                genesis_info: Some(ScrollGenesisInfo {
+                    bernoulli_block: Some(10),
+                    curie_block: Some(12),
+                    darwin_time: Some(0),
+                    darwin_v2_time: None,
+                }),
+                scroll_special_info: Some(ScrollSpecialChainInfo {
+                    fee_vault_address: Some(address!("d8da6bf26964af9d7eed9e03e53415d37aa96045")),
+                    l1_config: Some(L1Config {
+                        l1_chainId: Some(1),
+                        l1_message_queue_address: Some(address!(
+                            "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"
+                        )),
+                        scroll_chain_address: Some(address!(
+                            "0xa13BAF47339d63B743e7Da8741db5456DAc1E556"
+                        )),
+                        num_l1_messages_per_block: Some(10),
+                    })
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn test_extract_scroll_chain_info_no_special_info() {
+        let chain_info = r#"
+        {
+          "bernoulliBlock": 10,
+          "curieBlock": 12,
+          "darwinTime": 0
+        }
+        "#;
+
+        let others: OtherFields = serde_json::from_str(chain_info).unwrap();
+        let chain_info = ScrollChainInfo::extract_from(&others).unwrap();
+
+        assert_eq!(
+            chain_info,
+            ScrollChainInfo {
+                genesis_info: Some(ScrollGenesisInfo {
+                    bernoulli_block: Some(10),
+                    curie_block: Some(12),
+                    darwin_time: Some(0),
+                    darwin_v2_time: None,
+                }),
+                scroll_special_info: None,
+            }
+        );
     }
 }

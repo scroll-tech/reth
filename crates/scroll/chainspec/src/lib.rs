@@ -16,7 +16,6 @@ mod genesis;
 mod scroll;
 mod scroll_sepolia;
 
-use crate::genesis::ScrollChainInfo;
 use alloc::{boxed::Box, vec::Vec};
 use alloy_chains::Chain;
 use alloy_consensus::Header;
@@ -24,6 +23,7 @@ use alloy_genesis::Genesis;
 use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, Display, From, Into};
 pub use dev::SCROLL_DEV;
+pub use genesis::ScrollChainInfo;
 #[cfg(not(feature = "std"))]
 pub(crate) use once_cell::sync::Lazy as LazyLock;
 use reth_chainspec::{
@@ -84,7 +84,7 @@ impl ScrollChainSpecBuilder {
     }
 
     /// Remove the given fork from the spec.
-    pub fn without_fork(mut self, fork: reth_scroll_forks::ScrollHardFork) -> Self {
+    pub fn without_fork(mut self, fork: reth_scroll_forks::ScrollHardfork) -> Self {
         self.inner = self.inner.without_fork(fork);
         self
     }
@@ -94,7 +94,7 @@ impl ScrollChainSpecBuilder {
         self.inner = self.inner.cancun_activated();
         self.inner = self
             .inner
-            .with_fork(reth_scroll_forks::ScrollHardFork::Bernoulli, ForkCondition::Block(0));
+            .with_fork(reth_scroll_forks::ScrollHardfork::Bernoulli, ForkCondition::Block(0));
         self
     }
 
@@ -103,7 +103,7 @@ impl ScrollChainSpecBuilder {
         self = self.bernoulli_activated();
         self.inner = self
             .inner
-            .with_fork(reth_scroll_forks::ScrollHardFork::Curie, ForkCondition::Timestamp(0));
+            .with_fork(reth_scroll_forks::ScrollHardfork::Curie, ForkCondition::Timestamp(0));
         self
     }
 
@@ -112,7 +112,7 @@ impl ScrollChainSpecBuilder {
         self = self.curie_activated();
         self.inner = self
             .inner
-            .with_fork(reth_scroll_forks::ScrollHardFork::Darwin, ForkCondition::Timestamp(0));
+            .with_fork(reth_scroll_forks::ScrollHardfork::Darwin, ForkCondition::Timestamp(0));
         self
     }
 
@@ -121,7 +121,7 @@ impl ScrollChainSpecBuilder {
         self = self.darwin_activated();
         self.inner = self
             .inner
-            .with_fork(reth_scroll_forks::ScrollHardFork::DarwinV2, ForkCondition::Timestamp(0));
+            .with_fork(reth_scroll_forks::ScrollHardfork::DarwinV2, ForkCondition::Timestamp(0));
         self
     }
 
@@ -141,39 +141,6 @@ impl ScrollChainSpecBuilder {
 pub struct ScrollChainSpec {
     /// [`ChainSpec`].
     pub inner: ChainSpec,
-}
-
-// // TODO fulfill here when L2 base fee implemented
-// impl ScrollChainSpec {
-//     /// Read from parent to determine the base fee for the next block
-//     pub fn next_block_base_fee(
-//         &self,
-//         parent: &Header,
-//         timestamp: u64,
-//     ) -> Result<U256, DecodeError> {
-//         Ok(U256::try_from(0).unwrap())
-//     }
-// }
-
-#[derive(Clone, Debug, Display, Eq, PartialEq)]
-/// Error type for decoding Holocene 1559 parameters
-pub enum DecodeError {
-    #[display("Insufficient data to decode")]
-    /// Insufficient data to decode
-    InsufficientData,
-    #[display("Invalid denominator parameter")]
-    /// Invalid denominator parameter
-    InvalidDenominator,
-    #[display("Invalid elasticity parameter")]
-    /// Invalid elasticity parameter
-    InvalidElasticity,
-}
-
-impl core::error::Error for DecodeError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        // None of the errors have sub-errors
-        None
-    }
 }
 
 impl EthChainSpec for ScrollChainSpec {
@@ -260,7 +227,7 @@ impl ScrollHardforks for ScrollChainSpec {}
 
 impl From<Genesis> for ScrollChainSpec {
     fn from(genesis: Genesis) -> Self {
-        use reth_scroll_forks::ScrollHardFork;
+        use reth_scroll_forks::ScrollHardfork;
         let scroll_genesis_info = ScrollGenesisInfo::extract_from(&genesis);
         let genesis_info = scroll_genesis_info.scroll_chain_info.genesis_info.unwrap_or_default();
 
@@ -278,8 +245,8 @@ impl From<Genesis> for ScrollChainSpec {
             (EthereumHardfork::London.boxed(), genesis.config.london_block),
             (EthereumHardfork::ArrowGlacier.boxed(), genesis.config.arrow_glacier_block),
             (EthereumHardfork::GrayGlacier.boxed(), genesis.config.gray_glacier_block),
-            (ScrollHardFork::Bernoulli.boxed(), genesis_info.bernoulli_block),
-            (ScrollHardFork::Curie.boxed(), genesis_info.curie_block),
+            (ScrollHardfork::Bernoulli.boxed(), genesis_info.bernoulli_block),
+            (ScrollHardfork::Curie.boxed(), genesis_info.curie_block),
         ];
         let mut block_hardforks = hardfork_opts
             .into_iter()
@@ -305,8 +272,8 @@ impl From<Genesis> for ScrollChainSpec {
         // Time-based hardforks
         let time_hardfork_opts = [
             (EthereumHardfork::Shanghai.boxed(), genesis.config.shanghai_time),
-            (ScrollHardFork::Darwin.boxed(), genesis_info.darwin_time),
-            (ScrollHardFork::DarwinV2.boxed(), genesis_info.darwin_v2_time),
+            (ScrollHardfork::Darwin.boxed(), genesis_info.darwin_time),
+            (ScrollHardfork::DarwinV2.boxed(), genesis_info.darwin_v2_time),
         ];
 
         let mut time_hardforks = time_hardfork_opts
@@ -319,7 +286,7 @@ impl From<Genesis> for ScrollChainSpec {
         block_hardforks.append(&mut time_hardforks);
 
         // Ordered Hardforks
-        let mainnet_hardforks = ScrollHardFork::scroll_mainnet();
+        let mainnet_hardforks = ScrollHardfork::scroll_mainnet();
         let mainnet_order = mainnet_hardforks.forks_iter();
 
         let mut ordered_hardforks = Vec::with_capacity(block_hardforks.len());
@@ -357,5 +324,284 @@ impl ScrollGenesisInfo {
             ..Default::default()
         };
         info
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+    use alloy_genesis::{ChainConfig, Genesis};
+    use alloy_primitives::b256;
+    use reth_chainspec::test_fork_ids;
+    use reth_ethereum_forks::{EthereumHardfork, ForkHash, ForkId, Head};
+    use reth_scroll_forks::ScrollHardfork;
+
+    #[test]
+    fn scroll_mainnet_forkids() {
+        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        let _ =
+            scroll_mainnet.genesis_hash.set(SCROLL_MAINNET.genesis_hash.get().copied().unwrap());
+        test_fork_ids(
+            &SCROLL_MAINNET,
+            &[
+                (
+                    Head { number: 0, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1704992400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1704992401, ..Default::default() },
+                    ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1710374400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1710374401, ..Default::default() },
+                    ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1720627200, ..Default::default() },
+                    ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1720627201, ..Default::default() },
+                    ForkId { hash: ForkHash([0xe4, 0x01, 0x0e, 0xb9]), next: 1726070401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1726070401, ..Default::default() },
+                    ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+                ),
+            ],
+        );
+    }
+
+    #[test]
+    fn scroll_sepolia_forkids() {
+        test_fork_ids(
+            &SCROLL_SEPOLIA,
+            &[
+                (
+                    Head { number: 0, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1699981199, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1699981200, ..Default::default() },
+                    ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1708534799, ..Default::default() },
+                    ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1708534800, ..Default::default() },
+                    ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1716998399, ..Default::default() },
+                    ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1716998400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1723478399, ..Default::default() },
+                    ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1723478400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x75, 0xde, 0xa4, 0x1e]), next: 1732633200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1732633200, ..Default::default() },
+                    ForkId { hash: ForkHash([0x4a, 0x1c, 0x79, 0x2e]), next: 0 },
+                ),
+            ],
+        );
+    }
+
+    #[test]
+    fn scroll_mainnet_genesis() {
+        let genesis = SCROLL_MAINNET.genesis_header();
+        assert_eq!(
+            genesis.hash_slow(),
+            b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80")
+        );
+        let base_fee = genesis
+            .next_block_base_fee(SCROLL_MAINNET.base_fee_params_at_timestamp(genesis.timestamp))
+            .unwrap();
+        // <https://scrollscan.com/block/1>
+        assert_eq!(base_fee, 980000000);
+    }
+
+    #[test]
+    fn scroll_sepolia_genesis() {
+        let genesis = SCROLL_SEPOLIA.genesis_header();
+        assert_eq!(
+            genesis.hash_slow(),
+            b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c")
+        );
+        let base_fee = genesis
+            .next_block_base_fee(SCROLL_SEPOLIA.base_fee_params_at_timestamp(genesis.timestamp))
+            .unwrap();
+        // <https://base-sepolia.blockscout.com/block/1>
+        assert_eq!(base_fee, 980000000);
+    }
+
+    #[test]
+    fn latest_scroll_mainnet_fork_id() {
+        assert_eq!(
+            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+            SCROLL_MAINNET.latest_fork_id()
+        )
+    }
+
+    #[test]
+    fn latest_scroll_mainnet_fork_id_with_builder() {
+        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        assert_eq!(
+            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+            scroll_mainnet.latest_fork_id()
+        )
+    }
+
+    #[test]
+    fn is_bernoulli_active() {
+        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        assert!(!scroll_mainnet.is_bernoulli_active_at_block(1))
+    }
+
+    #[test]
+    fn parse_scroll_hardforks() {
+        let geth_genesis = r#"
+    {
+      "config": {
+        "bernoulliBlock": 10,
+        "curieBlock": 20,
+        "darwinTime": 30,
+        "darwinV2Time": 31,
+        "scroll": {
+            "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+            "l1Config": {
+                "l1ChainId": "1",
+                "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                "numL1MessagesPerBlock": "10"
+            }
+        }
+      }
+    }
+    "#;
+        let genesis: Genesis = serde_json::from_str(geth_genesis).unwrap();
+
+        let actual_bernoulli_block = genesis.config.extra_fields.get("bernoulliBlock");
+        assert_eq!(actual_bernoulli_block, Some(serde_json::Value::from(10)).as_ref());
+        let actual_curie_block = genesis.config.extra_fields.get("curieBlock");
+        assert_eq!(actual_curie_block, Some(serde_json::Value::from(20)).as_ref());
+        let actual_darwin_timestamp = genesis.config.extra_fields.get("darwinTime");
+        assert_eq!(actual_darwin_timestamp, Some(serde_json::Value::from(30)).as_ref());
+        let actual_darwin_v2_timestamp = genesis.config.extra_fields.get("darwinV2Time");
+        assert_eq!(actual_darwin_v2_timestamp, Some(serde_json::Value::from(31)).as_ref());
+        let scroll_object = genesis.config.extra_fields.get("scroll").unwrap();
+        assert_eq!(
+            scroll_object,
+            &serde_json::json!({
+                "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                "l1Config": {
+                    "l1ChainId": "1",
+                    "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                    "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                    "numL1MessagesPerBlock": "10"
+                }
+            })
+        );
+
+        let chain_spec: ScrollChainSpec = genesis.into();
+
+        assert!(!chain_spec.is_fork_active_at_block(ScrollHardfork::Bernoulli, 0));
+        assert!(!chain_spec.is_fork_active_at_block(ScrollHardfork::Curie, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Darwin, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::DarwinV2, 0));
+
+        assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Bernoulli, 10));
+        assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Curie, 20));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Darwin, 30));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::DarwinV2, 31));
+    }
+
+    #[test]
+    fn test_fork_order_scroll_mainnet() {
+        let genesis = Genesis {
+            config: ChainConfig {
+                chain_id: 0,
+                homestead_block: Some(0),
+                dao_fork_block: Some(0),
+                dao_fork_support: false,
+                eip150_block: Some(0),
+                eip155_block: Some(0),
+                eip158_block: Some(0),
+                byzantium_block: Some(0),
+                constantinople_block: Some(0),
+                petersburg_block: Some(0),
+                istanbul_block: Some(0),
+                muir_glacier_block: Some(0),
+                berlin_block: Some(0),
+                london_block: Some(0),
+                arrow_glacier_block: Some(0),
+                gray_glacier_block: Some(0),
+                merge_netsplit_block: Some(0),
+                shanghai_time: Some(0),
+                terminal_total_difficulty: Some(U256::ZERO),
+                extra_fields: [
+                    (String::from("bernoulliBlock"), 0.into()),
+                    (String::from("curieBlock"), 0.into()),
+                    (String::from("darwinTime"), 0.into()),
+                    (String::from("darwinV2Time"), 0.into()),
+                ]
+                .into_iter()
+                .collect(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let chain_spec: ScrollChainSpec = genesis.into();
+
+        let hardforks: Vec<_> = chain_spec.hardforks.forks_iter().map(|(h, _)| h).collect();
+        let expected_hardforks = vec![
+            EthereumHardfork::Homestead.boxed(),
+            EthereumHardfork::Tangerine.boxed(),
+            EthereumHardfork::SpuriousDragon.boxed(),
+            EthereumHardfork::Byzantium.boxed(),
+            EthereumHardfork::Constantinople.boxed(),
+            EthereumHardfork::Petersburg.boxed(),
+            EthereumHardfork::Istanbul.boxed(),
+            EthereumHardfork::MuirGlacier.boxed(),
+            EthereumHardfork::Berlin.boxed(),
+            EthereumHardfork::London.boxed(),
+            EthereumHardfork::ArrowGlacier.boxed(),
+            EthereumHardfork::GrayGlacier.boxed(),
+            EthereumHardfork::Paris.boxed(),
+            EthereumHardfork::Shanghai.boxed(),
+            ScrollHardfork::Bernoulli.boxed(),
+            ScrollHardfork::Curie.boxed(),
+            ScrollHardfork::Darwin.boxed(),
+            ScrollHardfork::DarwinV2.boxed(),
+        ];
+
+        assert!(expected_hardforks
+            .iter()
+            .zip(hardforks.iter())
+            .all(|(expected, actual)| &**expected == *actual));
+        assert_eq!(expected_hardforks.len(), hardforks.len());
     }
 }

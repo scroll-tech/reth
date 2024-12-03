@@ -17,7 +17,7 @@ hardfork!(
     ///
     /// When building a list of hardforks for a chain, it's still expected to mix with
     /// [`EthereumHardfork`].
-    ScrollHardFork {
+    ScrollHardfork {
         /// Bernoulli: <https://scroll.io/blog/blobs-are-here-scrolls-bernoulli-upgrade>.
         Bernoulli,
         /// Curie: <https://scroll.io/blog/compressing-the-gas-scrolls-curie-upgrade>.
@@ -29,7 +29,7 @@ hardfork!(
     }
 );
 
-impl ScrollHardFork {
+impl ScrollHardfork {
     /// Retrieves the activation block for the specified hardfork on the given chain.
     pub fn activation_block<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
         // will replace scroll_sepolia after alloy-chains release new tag
@@ -245,13 +245,13 @@ fn match_hardfork<H, HF, SHF>(fork: H, hardfork_fn: HF, scroll_hardfork_fn: SHF)
 where
     H: Hardfork,
     HF: Fn(&EthereumHardfork) -> Option<u64>,
-    SHF: Fn(&ScrollHardFork) -> Option<u64>,
+    SHF: Fn(&ScrollHardfork) -> Option<u64>,
 {
     let fork: &dyn Any = &fork;
     if let Some(fork) = fork.downcast_ref::<EthereumHardfork>() {
         return hardfork_fn(fork);
     }
-    fork.downcast_ref::<ScrollHardFork>().and_then(scroll_hardfork_fn)
+    fork.downcast_ref::<ScrollHardfork>().and_then(scroll_hardfork_fn)
 }
 
 #[cfg(test)]
@@ -261,11 +261,11 @@ mod tests {
     #[test]
     fn test_match_hardfork() {
         assert_eq!(
-            ScrollHardFork::scroll_mainnet_activation_block(ScrollHardFork::Bernoulli),
+            ScrollHardfork::scroll_mainnet_activation_block(ScrollHardfork::Bernoulli),
             Some(5220340)
         );
         assert_eq!(
-            ScrollHardFork::scroll_mainnet_activation_block(ScrollHardFork::Curie),
+            ScrollHardfork::scroll_mainnet_activation_block(ScrollHardfork::Curie),
             Some(7096836)
         );
     }
@@ -274,20 +274,20 @@ mod tests {
     fn check_scroll_hardfork_from_str() {
         let hardfork_str = ["BernOulLi", "CrUie", "DaRwIn", "DaRwInV2"];
         let expected_hardforks = [
-            ScrollHardFork::Bernoulli,
-            ScrollHardFork::Curie,
-            ScrollHardFork::Darwin,
-            ScrollHardFork::DarwinV2,
+            ScrollHardfork::Bernoulli,
+            ScrollHardfork::Curie,
+            ScrollHardfork::Darwin,
+            ScrollHardfork::DarwinV2,
         ];
 
-        let hardforks: Vec<ScrollHardFork> =
-            hardfork_str.iter().map(|h| ScrollHardFork::from_str(h).unwrap()).collect();
+        let hardforks: Vec<ScrollHardfork> =
+            hardfork_str.iter().map(|h| ScrollHardfork::from_str(h).unwrap()).collect();
 
         assert_eq!(hardforks, expected_hardforks);
     }
 
     #[test]
     fn check_nonexistent_hardfork_from_str() {
-        assert!(ScrollHardFork::from_str("not a hardfork").is_err());
+        assert!(ScrollHardfork::from_str("not a hardfork").is_err());
     }
 }

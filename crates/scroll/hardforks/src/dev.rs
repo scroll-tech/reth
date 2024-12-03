@@ -22,9 +22,9 @@ pub static DEV_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(|| {
         (EthereumHardfork::Paris.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Shanghai.boxed(), ForkCondition::Timestamp(0)),
         (EthereumHardfork::Cancun.boxed(), ForkCondition::Timestamp(0)),
-        (crate::ScrollHardFork::Bernoulli.boxed(), ForkCondition::Block(0)),
-        (crate::ScrollHardFork::Curie.boxed(), ForkCondition::Block(0)),
-        (crate::ScrollHardFork::Darwin.boxed(), ForkCondition::Timestamp(0)),
-        (crate::ScrollHardFork::DarwinV2.boxed(), ForkCondition::Timestamp(0)),
+        (crate::ScrollHardfork::Bernoulli.boxed(), ForkCondition::Block(0)),
+        (crate::ScrollHardfork::Curie.boxed(), ForkCondition::Block(0)),
+        (crate::ScrollHardfork::Darwin.boxed(), ForkCondition::Timestamp(0)),
+        (crate::ScrollHardfork::DarwinV2.boxed(), ForkCondition::Timestamp(0)),
     ])
 });
