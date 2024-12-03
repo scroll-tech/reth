@@ -19,7 +19,7 @@ pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             genesis: serde_json::from_str(include_str!("../res/genesis/scroll.json"))
                 .expect("Can't deserialize Scroll Mainnet genesis json"),
             genesis_hash: once_cell_set(b256!(
-                "0xbbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"
+                "bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"
             )),
             paris_block_and_final_difficulty: Some((0, U256::from(0))),
             hardforks: ScrollHardFork::scroll_mainnet(),
