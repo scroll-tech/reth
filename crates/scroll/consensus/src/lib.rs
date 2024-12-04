@@ -1,5 +1,7 @@
 //! Scroll consensus implementation.
 
+#![cfg(feature = "scroll")]
+
 pub use curie::{
     apply_curie_hard_fork, BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT,
     CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT,

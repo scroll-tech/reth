@@ -353,6 +353,7 @@ impl HashedStorageSorted {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::needless_update)]
     use super::*;
     use alloy_primitives::{Address, Bytes};
     use revm::{
@@ -497,6 +498,7 @@ mod tests {
             nonce: 5,
             code_hash: B256::random(),
             code: None,
+            ..Default::default()
         };
 
         let mut storage = PlainStorage::default();

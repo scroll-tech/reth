@@ -536,6 +536,7 @@ fn update_sparse_trie(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::needless_update)]
     use super::*;
     use reth_primitives::{Account as RethAccount, StorageEntry};
     use reth_provider::{
@@ -594,6 +595,7 @@ mod tests {
                         nonce: rng.gen::<u64>(),
                         code_hash: KECCAK_EMPTY,
                         code: Some(Default::default()),
+                        ..Default::default()
                     },
                     storage,
                     status: AccountStatus::Touched,

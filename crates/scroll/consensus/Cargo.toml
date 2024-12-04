@@ -13,7 +13,10 @@ workspace = true
 
 [dependencies]
 # revm
-revm = { workspace = true, features = ["scroll"] }
+revm.workspace = true
 
 [dev-dependencies]
 eyre.workspace = true
+
+[features]
+scroll = ["revm/scroll"]

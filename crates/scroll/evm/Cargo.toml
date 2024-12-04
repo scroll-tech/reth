@@ -13,16 +13,16 @@ workspace = true
 
 [dependencies]
 # reth
-reth-chainspec = { workspace = true, features = ["scroll"] }
+reth-chainspec.workspace = true
 reth-consensus.workspace = true
 reth-ethereum-consensus.workspace = true
-reth-evm = { workspace = true, features = ["scroll"] }
-reth-primitives = { workspace = true, features = ["scroll"] }
-reth-primitives-traits = { workspace = true, features = ["scroll"] }
-reth-revm = { workspace = true, features = ["scroll"] }
+reth-evm.workspace = true
+reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
+reth-revm.workspace = true
 
 # revm
-revm = { workspace = true, features = ["scroll", "optional_no_base_fee"] }
+revm = { workspace = true, features = ["optional_no_base_fee"] }
 
 # alloy
 alloy-consensus.workspace = true
@@ -30,7 +30,7 @@ alloy-eips.workspace = true
 
 # scroll
 reth-scroll-consensus.workspace = true
-reth-scroll-execution = { workspace = true, features = ["scroll"] }
+reth-scroll-execution.workspace = true
 
 # misc
 auto_impl.workspace = true
@@ -40,8 +40,21 @@ tracing.workspace = true
 
 [dev-dependencies]
 eyre.workspace = true
-reth-scroll-execution = { workspace = true, features = ["scroll", "test-utils"] }
+reth-scroll-execution = { workspace = true, features = ["test-utils"] }
 reth-scroll-primitives.workspace = true
 
 [features]
-optimism = []
+optimism = [
+	"reth-primitives/optimism",
+	"revm/optimism"
+]
+scroll = [
+	"reth-chainspec/scroll",
+	"reth-evm/scroll",
+	"reth-primitives/scroll",
+	"reth-primitives-traits/scroll",
+	"reth-revm/scroll",
+	"reth-scroll-consensus/scroll",
+	"reth-scroll-execution/scroll",
+	"revm/scroll"
+]
