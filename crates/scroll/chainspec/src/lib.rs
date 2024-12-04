@@ -240,11 +240,9 @@ impl From<Genesis> for ScrollChainSpec {
             (EthereumHardfork::Constantinople.boxed(), genesis.config.constantinople_block),
             (EthereumHardfork::Petersburg.boxed(), genesis.config.petersburg_block),
             (EthereumHardfork::Istanbul.boxed(), genesis.config.istanbul_block),
-            (EthereumHardfork::MuirGlacier.boxed(), genesis.config.muir_glacier_block),
             (EthereumHardfork::Berlin.boxed(), genesis.config.berlin_block),
             (EthereumHardfork::London.boxed(), genesis.config.london_block),
-            (EthereumHardfork::ArrowGlacier.boxed(), genesis.config.arrow_glacier_block),
-            (EthereumHardfork::GrayGlacier.boxed(), genesis.config.gray_glacier_block),
+            (ScrollHardfork::Archimedes.boxed(), genesis_info.archimedes_block),
             (ScrollHardfork::Bernoulli.boxed(), genesis_info.bernoulli_block),
             (ScrollHardfork::Curie.boxed(), genesis_info.curie_block),
         ];
@@ -252,22 +250,6 @@ impl From<Genesis> for ScrollChainSpec {
             .into_iter()
             .filter_map(|(hardfork, opt)| opt.map(|block| (hardfork, ForkCondition::Block(block))))
             .collect::<Vec<_>>();
-
-        // Paris
-        let paris_block_and_final_difficulty =
-            if let Some(ttd) = genesis.config.terminal_total_difficulty {
-                block_hardforks.push((
-                    EthereumHardfork::Paris.boxed(),
-                    ForkCondition::TTD {
-                        total_difficulty: ttd,
-                        fork_block: genesis.config.merge_netsplit_block,
-                    },
-                ));
-
-                genesis.config.merge_netsplit_block.map(|block| (block, ttd))
-            } else {
-                None
-            };
 
         // Time-based hardforks
         let time_hardfork_opts = [
@@ -304,7 +286,6 @@ impl From<Genesis> for ScrollChainSpec {
                 chain: genesis.config.chain_id.into(),
                 genesis,
                 hardforks: ChainHardforks::new(ordered_hardforks),
-                paris_block_and_final_difficulty,
                 ..Default::default()
             },
         }
@@ -549,15 +530,11 @@ mod tests {
                 constantinople_block: Some(0),
                 petersburg_block: Some(0),
                 istanbul_block: Some(0),
-                muir_glacier_block: Some(0),
                 berlin_block: Some(0),
                 london_block: Some(0),
-                arrow_glacier_block: Some(0),
-                gray_glacier_block: Some(0),
-                merge_netsplit_block: Some(0),
                 shanghai_time: Some(0),
-                terminal_total_difficulty: Some(U256::ZERO),
                 extra_fields: [
+                    (String::from("archimedesBlock"), 0.into()),
                     (String::from("bernoulliBlock"), 0.into()),
                     (String::from("curieBlock"), 0.into()),
                     (String::from("darwinTime"), 0.into()),
@@ -581,12 +558,9 @@ mod tests {
             EthereumHardfork::Constantinople.boxed(),
             EthereumHardfork::Petersburg.boxed(),
             EthereumHardfork::Istanbul.boxed(),
-            EthereumHardfork::MuirGlacier.boxed(),
             EthereumHardfork::Berlin.boxed(),
             EthereumHardfork::London.boxed(),
-            EthereumHardfork::ArrowGlacier.boxed(),
-            EthereumHardfork::GrayGlacier.boxed(),
-            EthereumHardfork::Paris.boxed(),
+            ScrollHardfork::Archimedes.boxed(),
             EthereumHardfork::Shanghai.boxed(),
             ScrollHardfork::Bernoulli.boxed(),
             ScrollHardfork::Curie.boxed(),
@@ -598,6 +572,7 @@ mod tests {
             .iter()
             .zip(hardforks.iter())
             .all(|(expected, actual)| &**expected == *actual));
+
         assert_eq!(expected_hardforks.len(), hardforks.len());
     }
 }

@@ -37,6 +37,8 @@ impl TryFrom<&OtherFields> for ScrollChainInfo {
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScrollGenesisInfo {
+    /// archimedes block number
+    pub archimedes_block: Option<u64>,
     /// bernoulli block number
     pub bernoulli_block: Option<u64>,
     /// curie block number
@@ -115,6 +117,7 @@ mod tests {
     fn test_extract_scroll_genesis_info() {
         let genesis_info = r#"
         {
+          "archimedesBlock": 0,
           "bernoulliBlock": 10,
           "curieBlock": 12,
           "darwinTime": 0
@@ -127,6 +130,7 @@ mod tests {
         assert_eq!(
             genesis_info,
             ScrollGenesisInfo {
+                archimedes_block: Some(0),
                 bernoulli_block: Some(10),
                 curie_block: Some(12),
                 darwin_time: Some(0),
@@ -139,6 +143,7 @@ mod tests {
     fn test_extract_scroll_chain_info() {
         let chain_info_str = r#"
         {
+          "archimedesBlock": 0,
           "bernoulliBlock": 10,
           "curieBlock": 12,
           "darwinTime": 0,
@@ -159,6 +164,7 @@ mod tests {
 
         let expected = ScrollChainInfo {
             genesis_info: Some(ScrollGenesisInfo {
+                archimedes_block: Some(0),
                 bernoulli_block: Some(10),
                 curie_block: Some(12),
                 darwin_time: Some(0),
@@ -181,6 +187,7 @@ mod tests {
     fn test_extract_scroll_chain_info_no_special_info() {
         let chain_info = r#"
         {
+          "archimedesBlock": 0,
           "bernoulliBlock": 10,
           "curieBlock": 12,
           "darwinTime": 0
@@ -194,6 +201,7 @@ mod tests {
             chain_info,
             ScrollChainInfo {
                 genesis_info: Some(ScrollGenesisInfo {
+                    archimedes_block: Some(0),
                     bernoulli_block: Some(10),
                     curie_block: Some(12),
                     darwin_time: Some(0),
