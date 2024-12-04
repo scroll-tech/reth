@@ -9,42 +9,45 @@ repository.workspace = true
 exclude.workspace = true
 
 [dependencies]
+reth-db = { workspace = true, features = ["test-utils"] }
+reth-execution-errors.workspace = true
+reth-primitives.workspace = true
+reth-primitives-traits = { workspace = true }
+reth-scroll-execution.workspace = true
+reth-scroll-primitives.workspace = true
+reth-scroll-trie.workspace = true
+reth-trie = { workspace = true }
+reth-trie-db.workspace = true
+
+# alloy
 alloy-consensus = { workspace = true, optional = true}
 alloy-primitives.workspace = true
 alloy-rlp.workspace = true
-reth-execution-errors.workspace = true
-reth-trie = { workspace = true }
-reth-scroll-execution.workspace = true
-reth-primitives.workspace = true
-tracing.workspace = true
-reth-scroll-trie.workspace = true
-reth-scroll-primitives.workspace = true
-poseidon-bn254.workspace = true
-reth-trie-db.workspace = true
-reth-db = { workspace = true, features = ["test-utils"] }
-reth-primitives-traits = { workspace = true }
 
 # `metrics` feature
 reth-metrics = { workspace = true, optional = true }
 metrics = { workspace = true, optional = true }
 
 # zktrie
+poseidon-bn254.workspace = true
 zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie", optional = true }
 zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"], optional = true }
 
+# misc
+tracing.workspace = true
+
 [dev-dependencies]
-reth-scroll-state-commitment = { workspace = true, features = ["test-utils"]}
-alloy-consensus.workspace = true
+reth-db-api.workspace = true
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
+reth-scroll-state-commitment = { workspace = true, features = ["test-utils"]}
 reth-trie = { workspace = true, features = ["test-utils" ] }
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
 reth-provider = { workspace = true, features = ["test-utils" ] }
-proptest.workspace = true
-proptest-arbitrary-interop.workspace = true
+alloy-consensus.workspace = true
 zktrie_rust = { path = "/Users/f/dev/scroll/zktrie/rs_zktrie" }
 zktrie = { path = "/Users/f/dev/scroll/zktrie", features = ["rs_zktrie"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json"] }
-reth-db-api.workspace = true
+proptest.workspace = true
+proptest-arbitrary-interop.workspace = true
 
 [lints]
 workspace = true

@@ -12,14 +12,13 @@ exclude.workspace = true
 workspace = true
 
 [dependencies]
+reth-scroll-primitives.workspace = true
+reth-trie.workspace = true
 alloy-trie = { workspace = true, features = ["serde"] }
 alloy-primitives.workspace = true
-reth-scroll-primitives.workspace = true
 tracing.workspace = true
-reth-trie.workspace = true
 
 [dev-dependencies]
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "json"] }
 hex-literal = "0.4"
 proptest-arbitrary-interop.workspace = true
 

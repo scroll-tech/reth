@@ -20,23 +20,10 @@ use reth_trie::{
     KeyHasher,
 };
 use reth_trie_db::{DatabaseStateRoot, DatabaseStorageRoot, DatabaseTrieCursorFactory};
-use std::{collections::BTreeMap, sync::Once};
-use tracing_subscriber::{self, fmt::format::FmtSpan};
+use std::collections::BTreeMap;
 
 #[cfg(feature = "scroll")]
 use reth_scroll_state_commitment::test_utils::b256_clear_first_byte;
-
-static INIT: Once = Once::new();
-
-pub fn init_test_logger() {
-    INIT.call_once(|| {
-        tracing_subscriber::fmt()
-            .with_test_writer() // Capture logs for test output
-            .with_span_events(FmtSpan::CLOSE) // Optional: Add span events
-            .with_env_filter("trace") // Set log level as needed
-            .init();
-    });
-}
 
 proptest! {
     #![proptest_config(ProptestConfig {

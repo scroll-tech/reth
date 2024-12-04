@@ -9230,7 +9230,6 @@ dependencies = [
  "reth-trie-common",
  "reth-trie-db",
  "tracing",
- "tracing-subscriber",
  "zktrie",
  "zktrie_rust",
 ]
@@ -9260,7 +9259,6 @@ dependencies = [
  "reth-scroll-primitives",
  "reth-trie",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
