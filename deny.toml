@@ -100,5 +100,8 @@ allow-git = [
     "https://github.com/paradigmxyz/revm-inspectors",
     "https://github.com/scroll-tech/bn254",
     "https://github.com/scroll-tech/sp1-intrinsics",
-    "https://github.com/scroll-tech/poseidon-bn254"
+    "https://github.com/scroll-tech/poseidon-bn254",
+    "https://github.com/scroll-tech/alloy-eips",
+    "https://github.com/scroll-tech/ff",
+    "https://github.com/scroll-tech/revm.git"
 ]
