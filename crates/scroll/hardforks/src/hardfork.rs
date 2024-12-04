@@ -18,6 +18,14 @@ hardfork!(
     /// When building a list of hardforks for a chain, it's still expected to mix with
     /// [`EthereumHardfork`].
     ScrollHardfork {
+        /// EIP150 HF block (nil = no fork)
+        EIP150Block,
+        /// EIP155 HF block
+        EIP155Block,
+        /// EIP158 HF block
+        EIP158Block,
+        /// Archimedes switch block (nil = no fork, 0 = already on archimedes)
+        Archimedes,
         /// Bernoulli: <https://scroll.io/blog/blobs-are-here-scrolls-bernoulli-upgrade>.
         Bernoulli,
         /// Curie: <https://scroll.io/blog/compressing-the-gas-scrolls-curie-upgrade>.
@@ -60,26 +68,20 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Frontier |
                 EthereumHardfork::Homestead |
-                EthereumHardfork::Dao |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
                 EthereumHardfork::Istanbul |
-                EthereumHardfork::MuirGlacier |
                 EthereumHardfork::Berlin |
                 EthereumHardfork::London |
-                EthereumHardfork::ArrowGlacier |
-                EthereumHardfork::GrayGlacier |
-                EthereumHardfork::Paris |
-                EthereumHardfork::Shanghai |
-                EthereumHardfork::Cancun => Some(0),
+                EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
+                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
+                    Some(0)
+                }
                 Self::Bernoulli => Some(3747132),
                 Self::Curie => Some(4740239),
                 Self::Darwin => Some(6075509),
@@ -93,30 +95,24 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Frontier |
                 EthereumHardfork::Homestead |
-                EthereumHardfork::Dao |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
                 EthereumHardfork::Istanbul |
-                EthereumHardfork::MuirGlacier |
                 EthereumHardfork::Berlin |
                 EthereumHardfork::London |
-                EthereumHardfork::ArrowGlacier |
-                EthereumHardfork::GrayGlacier |
-                EthereumHardfork::Paris |
-                EthereumHardfork::Shanghai |
-                EthereumHardfork::Cancun => Some(0),
+                EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
-                Self::Bernoulli => Some(5220340),
-                Self::Curie => Some(7096836),
-                Self::Darwin => Some(8568134),
-                Self::DarwinV2 => Some(8923772),
+                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
+                    Some(0)
+                }
+                Self::Bernoulli => Some(3747132),
+                Self::Curie => Some(4740239),
+                Self::Darwin => Some(6075509),
+                Self::DarwinV2 => Some(6375501),
             },
         )
     }
@@ -126,26 +122,20 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Frontier |
                 EthereumHardfork::Homestead |
-                EthereumHardfork::Dao |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
                 EthereumHardfork::Istanbul |
-                EthereumHardfork::MuirGlacier |
                 EthereumHardfork::Berlin |
                 EthereumHardfork::London |
-                EthereumHardfork::ArrowGlacier |
-                EthereumHardfork::GrayGlacier |
-                EthereumHardfork::Paris |
-                EthereumHardfork::Shanghai |
-                EthereumHardfork::Cancun => Some(0),
+                EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
+                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
+                    Some(0)
+                }
                 Self::Bernoulli => Some(1713175866),
                 Self::Curie => Some(1718616171),
                 Self::Darwin => Some(1723622400),
@@ -159,26 +149,20 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Frontier |
                 EthereumHardfork::Homestead |
-                EthereumHardfork::Dao |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
                 EthereumHardfork::Istanbul |
-                EthereumHardfork::MuirGlacier |
                 EthereumHardfork::Berlin |
                 EthereumHardfork::London |
-                EthereumHardfork::ArrowGlacier |
-                EthereumHardfork::GrayGlacier |
-                EthereumHardfork::Paris |
-                EthereumHardfork::Shanghai |
-                EthereumHardfork::Cancun => Some(0),
+                EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
+                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
+                    Some(0)
+                }
                 Self::Bernoulli => Some(1714358352),
                 Self::Curie => Some(1719994277),
                 Self::Darwin => Some(1724227200),
@@ -190,22 +174,21 @@ impl ScrollHardfork {
     /// Scroll mainnet list of hardforks.
     pub fn scroll_mainnet() -> ChainHardforks {
         ChainHardforks::new(vec![
-            (EthereumHardfork::Frontier.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Homestead.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Tangerine.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::SpuriousDragon.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Dao.boxed(), ForkCondition::Never),
+            (Self::EIP150Block.boxed(), ForkCondition::Block(0)),
+            (Self::EIP155Block.boxed(), ForkCondition::Block(0)),
+            (Self::EIP158Block.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Byzantium.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Constantinople.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::MuirGlacier.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::MuirGlacier.boxed(), ForkCondition::Never),
             (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::London.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::ArrowGlacier.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::GrayGlacier.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Paris.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Shanghai.boxed(), ForkCondition::Timestamp(0)),
-            (EthereumHardfork::Cancun.boxed(), ForkCondition::Timestamp(0)),
+            (EthereumHardfork::London.boxed(), ForkCondition::Never),
+            (EthereumHardfork::ArrowGlacier.boxed(), ForkCondition::Never),
+            (Self::Archimedes.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Shanghai.boxed(), ForkCondition::Block(0)),
             (Self::Bernoulli.boxed(), ForkCondition::Block(5220340)),
             (Self::Curie.boxed(), ForkCondition::Block(7096836)),
             (Self::Darwin.boxed(), ForkCondition::Timestamp(1724227200)),
@@ -216,22 +199,18 @@ impl ScrollHardfork {
     /// Scroll sepolia list of hardforks.
     pub fn scroll_sepolia() -> ChainHardforks {
         ChainHardforks::new(vec![
-            (EthereumHardfork::Frontier.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Homestead.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Tangerine.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::SpuriousDragon.boxed(), ForkCondition::Block(0)),
+            (Self::EIP150Block.boxed(), ForkCondition::Block(0)),
+            (Self::EIP155Block.boxed(), ForkCondition::Block(0)),
+            (Self::EIP158Block.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Byzantium.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Constantinople.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::MuirGlacier.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::London.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::ArrowGlacier.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::GrayGlacier.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Paris.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::Shanghai.boxed(), ForkCondition::Timestamp(0)),
-            (EthereumHardfork::Cancun.boxed(), ForkCondition::Timestamp(0)),
+            (Self::Archimedes.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Shanghai.boxed(), ForkCondition::Block(0)),
             (Self::Bernoulli.boxed(), ForkCondition::Block(3747132)),
             (Self::Curie.boxed(), ForkCondition::Block(4740239)),
             (Self::Darwin.boxed(), ForkCondition::Timestamp(1723622400)),
