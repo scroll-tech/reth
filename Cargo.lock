@@ -170,8 +170,7 @@ dependencies = [
 [[package]]
 name = "alloy-eip2930"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0069cf0642457f87a01a014f6dc29d5d893cd4fd8fddf0c3cdfad1bb3ebafc41"
+source = "git+https://github.com/scroll-tech/alloy-eips?branch=v0.3.2#8d5fc83fc257b09510dc8d76561188218d9c0c32"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -3173,8 +3172,7 @@ dependencies = [
 [[package]]
 name = "ff"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
+source = "git+https://github.com/scroll-tech/ff?branch=feat/sp1#244b1098f6be1d19c5fd3f0ec60117ac2940e6ca"
 dependencies = [
  "bitvec",
  "rand_core 0.6.4",
@@ -9664,7 +9662,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "git+https://github.com/greged93/revm.git?branch=scroll-evm-executor/update/v50#5bb5e1caab6b652b07ccfb2efae0cde9f87ed200"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -9697,7 +9695,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "git+https://github.com/greged93/revm.git?branch=scroll-evm-executor/update/v50#5bb5e1caab6b652b07ccfb2efae0cde9f87ed200"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "cfg-if",
  "revm-primitives",
@@ -9707,7 +9705,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "git+https://github.com/greged93/revm.git?branch=scroll-evm-executor/update/v50#5bb5e1caab6b652b07ccfb2efae0cde9f87ed200"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -9726,7 +9724,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "git+https://github.com/greged93/revm.git?branch=scroll-evm-executor/update/v50#5bb5e1caab6b652b07ccfb2efae0cde9f87ed200"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
