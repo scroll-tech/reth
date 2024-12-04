@@ -69,7 +69,7 @@ use reth_trie::{
     updates::{StorageTrieUpdates, TrieUpdates},
     HashedPostStateSorted, KeyHasher, Nibbles, StoredNibbles,
 };
-use reth_trie_db::{DatabaseStorageTrieCursor, StateCommitment};
+use reth_trie_db::{DatabaseStateRoot, DatabaseStorageTrieCursor, StateCommitment};
 use revm::{
     db::states::{PlainStateReverts, PlainStorageChangeset, PlainStorageRevert, StateChangeset},
     primitives::{BlockEnv, CfgEnvWithHandlerCfg},

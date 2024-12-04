@@ -259,8 +259,7 @@ impl<C: ChainSpecParser<ChainSpec = ChainSpec>> Command<C> {
                 let block_with_senders =
                     SealedBlockWithSenders::<BlockTy<N>>::new(block.clone(), senders).unwrap();
 
-                let state_provider = blockchain_db.latest()?;
-                let db = StateProviderDatabase::new(&state_provider);
+                let db = StateProviderDatabase::new(blockchain_db.latest()?);
                 let executor =
                     EthExecutorProvider::ethereum(provider_factory.chain_spec()).executor(db);
 
