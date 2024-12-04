@@ -1,18 +1,20 @@
 use super::ExecutedBlock;
+use alloy_consensus::BlockHeader;
 use alloy_primitives::{
-    keccak256,
     map::{HashMap, HashSet},
     Address, BlockNumber, Bytes, StorageKey, StorageValue, B256,
 };
 use reth_errors::ProviderResult;
 use reth_primitives::{Account, Bytecode, NodePrimitives};
 use reth_storage_api::{
-    AccountReader, BlockHashReader, StateProofProvider, StateProvider, StateRootProvider,
-    StorageRootProvider,
+    AccountReader, BlockHashReader, HashedPostStateProvider, HashedStorageProvider,
+    KeyHasherProvider, StateProofProvider, StateProvider, StateRootProvider, StorageRootProvider,
 };
 use reth_trie::{
-    updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, MultiProof, TrieInput,
+    updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, MultiProof,
+    StorageMultiProof, TrieInput,
 };
+use revm::db::{BundleAccount, BundleState};
 use std::sync::OnceLock;
 
 /// A state provider that stores references to in-memory blocks along with their state as well as a
@@ -74,7 +76,7 @@ macro_rules! impl_state_provider {
         impl $($tokens)* BlockHashReader for $type {
             fn block_hash(&self, number: BlockNumber) -> ProviderResult<Option<B256>> {
                 for block in &self.in_memory {
-                    if block.block.number == number {
+                    if block.block.number() == number {
                         return Ok(Some(block.block.hash()))
                     }
                 }
@@ -91,9 +93,9 @@ macro_rules! impl_state_provider {
                 let mut earliest_block_number = None;
                 let mut in_memory_hashes = Vec::new();
                 for block in &self.in_memory {
-                    if range.contains(&block.block.number) {
+                    if range.contains(&block.block.number()) {
                         in_memory_hashes.insert(0, block.block.hash());
-                        earliest_block_number = Some(block.block.number);
+                        earliest_block_number = Some(block.block.number());
                     }
                 }
 
@@ -149,7 +151,7 @@ macro_rules! impl_state_provider {
             fn storage_root(&self, address: Address, storage: HashedStorage) -> ProviderResult<B256> {
                 let state = &self.trie_state().state;
                 let mut hashed_storage =
-                    state.storages.get(&keccak256(address)).cloned().unwrap_or_default();
+                    state.storages.get(&self.hash_key(address.as_ref())).cloned().unwrap_or_default();
                 hashed_storage.extend(&storage);
                 self.historical.storage_root(address, hashed_storage)
             }
@@ -163,9 +165,23 @@ macro_rules! impl_state_provider {
             ) -> ProviderResult<reth_trie::StorageProof> {
                 let state = &self.trie_state().state;
                 let mut hashed_storage =
-                    state.storages.get(&keccak256(address)).cloned().unwrap_or_default();
+                    state.storages.get(&self.hash_key(address.as_ref())).cloned().unwrap_or_default();
                 hashed_storage.extend(&storage);
                 self.historical.storage_proof(address, slot, hashed_storage)
+            }
+
+             // TODO: Currently this does not reuse available in-memory trie nodes.
+             fn storage_multiproof(
+                &self,
+                address: Address,
+                slots: &[B256],
+                storage: HashedStorage,
+            ) -> ProviderResult<StorageMultiProof> {
+                let state = &self.trie_state().state;
+                let mut hashed_storage =
+                    state.storages.get(&self.hash_key(address.as_ref())).cloned().unwrap_or_default();
+                hashed_storage.extend(&storage);
+                self.historical.storage_multiproof(address, slots, hashed_storage)
             }
         }
 
@@ -199,6 +215,24 @@ macro_rules! impl_state_provider {
                 let MemoryOverlayTrieState { nodes, state } = self.trie_state().clone();
                 input.prepend_cached(nodes, state);
                 self.historical.witness(input, target)
+            }
+        }
+
+        impl $($tokens)* HashedPostStateProvider for $type {
+            fn hashed_post_state(&self, bundle_state: &BundleState) -> HashedPostState {
+                self.historical.hashed_post_state(bundle_state)
+            }
+        }
+
+        impl $($tokens)* HashedStorageProvider for $type {
+            fn hashed_storage(&self, account: &BundleAccount) -> HashedStorage {
+                self.historical.hashed_storage(account)
+            }
+        }
+
+        impl $($tokens)* KeyHasherProvider for $type {
+            fn hash_key(&self, bytes: &[u8]) -> B256 {
+                self.historical.hash_key(bytes)
             }
         }
 

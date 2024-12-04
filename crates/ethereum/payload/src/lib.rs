@@ -8,6 +8,9 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![allow(clippy::useless_let_if_seq)]
+// Don't use the crate if `scroll` feature is used.
+#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
+#![cfg(not(feature = "scroll"))]
 
 use alloy_consensus::{Header, EMPTY_OMMER_ROOT_HASH};
 use alloy_eips::{eip4844::MAX_DATA_GAS_PER_BLOCK, eip7685::Requests, merge::BEACON_NONCE};
@@ -27,15 +30,14 @@ use reth_payload_builder_primitives::PayloadBuilderError;
 use reth_payload_primitives::PayloadBuilderAttributes;
 use reth_primitives::{
     proofs::{self},
-    Block, BlockBody, EthereumHardforks, Receipt,
+    Block, BlockBody, BlockExt, EthereumHardforks, InvalidTransactionError, Receipt,
 };
 use reth_provider::{ChainSpecProvider, StateProviderFactory};
 use reth_revm::database::StateProviderDatabase;
 use reth_transaction_pool::{
-    noop::NoopTransactionPool, BestTransactions, BestTransactionsAttributes, TransactionPool,
-    ValidPoolTransaction,
+    error::InvalidPoolTransactionError, noop::NoopTransactionPool, BestTransactions,
+    BestTransactionsAttributes, TransactionPool, ValidPoolTransaction,
 };
-use reth_trie::HashedPostState;
 use revm::{
     db::{states::bundle_state::BundleRetention, State},
     primitives::{
@@ -228,7 +230,10 @@ where
             // we can't fit this transaction into the block, so we need to mark it as invalid
             // which also removes all dependent transaction from the iterator before we can
             // continue
-            best_txs.mark_invalid(&pool_tx);
+            best_txs.mark_invalid(
+                &pool_tx,
+                InvalidPoolTransactionError::ExceedsGasLimit(pool_tx.gas_limit(), block_gas_limit),
+            );
             continue
         }
 
@@ -250,7 +255,13 @@ where
                 // the iterator. This is similar to the gas limit condition
                 // for regular transactions above.
                 trace!(target: "payload_builder", tx=?tx.hash, ?sum_blob_gas_used, ?tx_blob_gas, "skipping blob transaction because it would exceed the max data gas per block");
-                best_txs.mark_invalid(&pool_tx);
+                best_txs.mark_invalid(
+                    &pool_tx,
+                    InvalidPoolTransactionError::ExceedsGasLimit(
+                        tx_blob_gas,
+                        MAX_DATA_GAS_PER_BLOCK,
+                    ),
+                );
                 continue
             }
         }
@@ -270,7 +281,12 @@ where
                             // if the transaction is invalid, we can skip it and all of its
                             // descendants
                             trace!(target: "payload_builder", %err, ?tx, "skipping invalid transaction and its descendants");
-                            best_txs.mark_invalid(&pool_tx);
+                            best_txs.mark_invalid(
+                                &pool_tx,
+                                InvalidPoolTransactionError::Consensus(
+                                    InvalidTransactionError::TxTypeNotSupported,
+                                ),
+                            );
                         }
 
                         continue
@@ -375,7 +391,7 @@ where
     let logs_bloom = execution_outcome.block_logs_bloom(block_number).expect("Number is in range");
 
     // calculate the state root
-    let hashed_state = HashedPostState::from_bundle_state(&execution_outcome.state().state);
+    let hashed_state = db.database.db.hashed_post_state(execution_outcome.state());
     let (state_root, trie_output) = {
         db.database.inner().state_root_with_updates(hashed_state.clone()).inspect_err(|err| {
             warn!(target: "payload_builder",

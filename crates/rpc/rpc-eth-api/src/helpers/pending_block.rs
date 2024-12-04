@@ -17,23 +17,22 @@ use reth_evm::{
 };
 use reth_execution_types::ExecutionOutcome;
 use reth_primitives::{
-    proofs::calculate_transaction_root, Block, BlockBody, Receipt, SealedBlockWithSenders,
-    SealedHeader, TransactionSignedEcRecovered,
+    proofs::calculate_transaction_root, Block, BlockBody, BlockExt, InvalidTransactionError,
+    Receipt, SealedBlockWithSenders, SealedHeader, TransactionSignedEcRecovered,
 };
 use reth_provider::{
     BlockReader, BlockReaderIdExt, ChainSpecProvider, EvmEnvProvider, ProviderError,
-    ReceiptProvider, StateProviderFactory,
+    ProviderReceipt, ReceiptProvider, StateProviderFactory,
 };
-use reth_revm::{
-    database::StateProviderDatabase,
-    primitives::{
-        BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, EVMError, Env, ExecutionResult, InvalidTransaction,
-        ResultAndState, SpecId,
-    },
+use reth_revm::primitives::{
+    BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, EVMError, Env, ExecutionResult, InvalidTransaction,
+    ResultAndState, SpecId,
 };
 use reth_rpc_eth_types::{EthApiError, PendingBlock, PendingBlockEnv, PendingBlockEnvOrigin};
-use reth_transaction_pool::{BestTransactionsAttributes, TransactionPool};
-use reth_trie::HashedPostState;
+use reth_scroll_execution::FinalizeExecution;
+use reth_transaction_pool::{
+    error::InvalidPoolTransactionError, BestTransactionsAttributes, TransactionPool,
+};
 use revm::{db::states::bundle_state::BundleRetention, DatabaseCommit, State};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
@@ -45,8 +44,10 @@ use tracing::debug;
 pub trait LoadPendingBlock:
     EthApiTypes
     + RpcNodeCore<
-        Provider: BlockReaderIdExt
-                      + EvmEnvProvider
+        Provider: BlockReaderIdExt<
+            Block = reth_primitives::Block,
+            Receipt = reth_primitives::Receipt,
+        > + EvmEnvProvider
                       + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
                       + StateProviderFactory,
         Pool: TransactionPool,
@@ -114,9 +115,18 @@ pub trait LoadPendingBlock:
     }
 
     /// Returns the locally built pending block
+    #[expect(clippy::type_complexity)]
     fn local_pending_block(
         &self,
-    ) -> impl Future<Output = Result<Option<(SealedBlockWithSenders, Vec<Receipt>)>, Self::Error>> + Send
+    ) -> impl Future<
+        Output = Result<
+            Option<(
+                SealedBlockWithSenders<<Self::Provider as BlockReader>::Block>,
+                Vec<ProviderReceipt<Self::Provider>>,
+            )>,
+            Self::Error,
+        >,
+    > + Send
     where
         Self: SpawnBlocking,
     {
@@ -226,7 +236,10 @@ pub trait LoadPendingBlock:
             .provider()
             .history_by_block_hash(parent_hash)
             .map_err(Self::Error::from_eth_err)?;
-        let state = StateProviderDatabase::new(state_provider);
+        #[cfg(not(feature = "scroll"))]
+        let state = reth_revm::database::StateProviderDatabase::new(state_provider);
+        #[cfg(feature = "scroll")]
+        let state = reth_scroll_storage::ScrollStateProviderDatabase::new(state_provider);
         let mut db = State::builder().with_database(state).with_bundle_update().build();
 
         let mut cumulative_gas_used = 0;
@@ -281,7 +294,13 @@ pub trait LoadPendingBlock:
                 // we can't fit this transaction into the block, so we need to mark it as invalid
                 // which also removes all dependent transaction from the iterator before we can
                 // continue
-                best_txs.mark_invalid(&pool_tx);
+                best_txs.mark_invalid(
+                    &pool_tx,
+                    InvalidPoolTransactionError::ExceedsGasLimit(
+                        pool_tx.gas_limit(),
+                        block_gas_limit,
+                    ),
+                );
                 continue
             }
 
@@ -289,7 +308,12 @@ pub trait LoadPendingBlock:
                 // we don't want to leak any state changes made by private transactions, so we mark
                 // them as invalid here which removes all dependent transactions from the iterator
                 // before we can continue
-                best_txs.mark_invalid(&pool_tx);
+                best_txs.mark_invalid(
+                    &pool_tx,
+                    InvalidPoolTransactionError::Consensus(
+                        InvalidTransactionError::TxTypeNotSupported,
+                    ),
+                );
                 continue
             }
 
@@ -305,7 +329,13 @@ pub trait LoadPendingBlock:
                     // invalid, which removes its dependent transactions from
                     // the iterator. This is similar to the gas limit condition
                     // for regular transactions above.
-                    best_txs.mark_invalid(&pool_tx);
+                    best_txs.mark_invalid(
+                        &pool_tx,
+                        InvalidPoolTransactionError::ExceedsGasLimit(
+                            tx_blob_gas,
+                            MAX_DATA_GAS_PER_BLOCK,
+                        ),
+                    );
                     continue
                 }
             }
@@ -329,7 +359,12 @@ pub trait LoadPendingBlock:
                             } else {
                                 // if the transaction is invalid, we can skip it and all of its
                                 // descendants
-                                best_txs.mark_invalid(&pool_tx);
+                                best_txs.mark_invalid(
+                                    &pool_tx,
+                                    InvalidPoolTransactionError::Consensus(
+                                        InvalidTransactionError::TxTypeNotSupported,
+                                    ),
+                                );
                             }
                             continue
                         }
@@ -384,12 +419,12 @@ pub trait LoadPendingBlock:
         db.merge_transitions(BundleRetention::PlainState);
 
         let execution_outcome = ExecutionOutcome::new(
-            db.take_bundle(),
+            db.finalize(),
             vec![receipts.clone()].into(),
             block_number,
             Vec::new(),
         );
-        let hashed_state = HashedPostState::from_bundle_state(&execution_outcome.state().state);
+        let hashed_state = db.database.hashed_post_state(execution_outcome.state());
 
         let receipts_root = self.receipts_root(&block_env, &execution_outcome, block_number);
 

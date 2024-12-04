@@ -4,7 +4,7 @@ use alloy_eips::eip7685::Requests;
 use alloy_primitives::{Address, BlockNumber, Bloom, Log, B256, U256};
 use reth_primitives::{logs_bloom, Account, Bytecode, Receipts, StorageEntry};
 use reth_primitives_traits::{receipt::ReceiptExt, Receipt};
-use reth_trie::HashedPostState;
+use reth_trie::{HashedPostState, KeyHasher};
 use revm::{
     db::{states::BundleState, BundleAccount},
     primitives::AccountInfo,
@@ -166,8 +166,8 @@ impl<T> ExecutionOutcome<T> {
 
     /// Returns [`HashedPostState`] for this execution outcome.
     /// See [`HashedPostState::from_bundle_state`] for more info.
-    pub fn hash_state_slow(&self) -> HashedPostState {
-        HashedPostState::from_bundle_state(&self.bundle.state)
+    pub fn hash_state_slow<KH: KeyHasher>(&self) -> HashedPostState {
+        HashedPostState::from_bundle_state::<KH>(&self.bundle.state)
     }
 
     /// Transform block number to the index of block.
@@ -398,6 +398,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]],
         };
 
@@ -460,6 +462,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]],
         };
 
@@ -495,6 +499,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![Log::<LogData>::default()],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]],
         };
 
@@ -527,6 +533,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![Log::<LogData>::default()],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]],
         };
 
@@ -553,6 +561,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![Log::<LogData>::default()],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]
         );
     }
@@ -567,6 +577,8 @@ mod tests {
                 cumulative_gas_used: 46913,
                 logs: vec![Log::<LogData>::default()],
                 success: true,
+                #[cfg(feature = "scroll")]
+                l1_fee: U256::ZERO,
             })]],
         };
 
@@ -615,6 +627,8 @@ mod tests {
             cumulative_gas_used: 46913,
             logs: vec![],
             success: true,
+            #[cfg(feature = "scroll")]
+            l1_fee: U256::ZERO,
         };
 
         // Create a Receipts object with a vector of receipt vectors
@@ -664,6 +678,8 @@ mod tests {
             cumulative_gas_used: 46913,
             logs: vec![],
             success: true,
+            #[cfg(feature = "scroll")]
+            l1_fee: U256::ZERO,
         };
 
         // Create a Receipts object containing the receipt.
@@ -708,6 +724,8 @@ mod tests {
             cumulative_gas_used: 46913,
             logs: vec![],
             success: true,
+            #[cfg(feature = "scroll")]
+            l1_fee: U256::ZERO,
         };
 
         // Create a Receipts object with a vector of receipt vectors
@@ -774,10 +792,26 @@ mod tests {
         let address3 = Address::random();
 
         // Set up account info with some changes
-        let account_info1 =
-            AccountInfo { nonce: 1, balance: U256::from(100), code_hash: B256::ZERO, code: None };
-        let account_info2 =
-            AccountInfo { nonce: 2, balance: U256::from(200), code_hash: B256::ZERO, code: None };
+        let account_info1 = AccountInfo {
+            nonce: 1,
+            balance: U256::from(100),
+            code_hash: B256::ZERO,
+            code: None,
+            #[cfg(feature = "scroll")]
+            code_size: 0,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: B256::ZERO,
+        };
+        let account_info2 = AccountInfo {
+            nonce: 2,
+            balance: U256::from(200),
+            code_hash: B256::ZERO,
+            code: None,
+            #[cfg(feature = "scroll")]
+            code_size: 0,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: B256::ZERO,
+        };
 
         // Set up the bundle state with these accounts
         let mut bundle_state = BundleState::default();
