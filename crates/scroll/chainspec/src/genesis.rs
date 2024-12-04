@@ -83,9 +83,9 @@ pub struct L1Config {
 #[serde(rename_all = "camelCase")]
 pub struct ScrollSpecialChainInfo {
     /// the L2 tx fee vault address
-    pub fee_vault_address: Address,
+    pub fee_vault_address: Option<Address>,
     /// the L1 special config
-    pub l1_config: L1Config,
+    pub l1_config: Option<L1Config>,
 }
 
 impl ScrollSpecialChainInfo {
@@ -171,13 +171,13 @@ mod tests {
                 darwin_v2_time: None,
             }),
             scroll_special_info: Some(ScrollSpecialChainInfo {
-                fee_vault_address: address!("5300000000000000000000000000000000000005"),
-                l1_config: L1Config {
+                fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),
+                l1_config: Some(L1Config {
                     l1_chain_id: 1,
                     l1_message_queue_address: address!("0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"),
                     scroll_chain_address: address!("a13BAF47339d63B743e7Da8741db5456DAc1E556"),
                     num_l1_messages_per_block: 10,
-                },
+                }),
             }),
         };
         assert_eq!(chain_info, expected);
