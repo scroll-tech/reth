@@ -18,12 +18,6 @@ hardfork!(
     /// When building a list of hardforks for a chain, it's still expected to mix with
     /// [`EthereumHardfork`].
     ScrollHardfork {
-        /// EIP150 HF block (nil = no fork)
-        EIP150Block,
-        /// EIP155 HF block
-        EIP155Block,
-        /// EIP158 HF block
-        EIP158Block,
         /// Archimedes switch block (nil = no fork, 0 = already on archimedes)
         Archimedes,
         /// Bernoulli: <https://scroll.io/blog/blobs-are-here-scrolls-bernoulli-upgrade>.
@@ -69,6 +63,8 @@ impl ScrollHardfork {
             fork,
             |fork| match fork {
                 EthereumHardfork::Homestead |
+                EthereumHardfork::Tangerine |
+                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
@@ -79,9 +75,7 @@ impl ScrollHardfork {
                 _ => None,
             },
             |fork| match fork {
-                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
-                    Some(0)
-                }
+                Self::Archimedes => Some(0),
                 Self::Bernoulli => Some(3747132),
                 Self::Curie => Some(4740239),
                 Self::Darwin => Some(6075509),
@@ -96,6 +90,8 @@ impl ScrollHardfork {
             fork,
             |fork| match fork {
                 EthereumHardfork::Homestead |
+                EthereumHardfork::Tangerine |
+                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
@@ -106,9 +102,7 @@ impl ScrollHardfork {
                 _ => None,
             },
             |fork| match fork {
-                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
-                    Some(0)
-                }
+                Self::Archimedes => Some(0),
                 Self::Bernoulli => Some(3747132),
                 Self::Curie => Some(4740239),
                 Self::Darwin => Some(6075509),
@@ -123,6 +117,8 @@ impl ScrollHardfork {
             fork,
             |fork| match fork {
                 EthereumHardfork::Homestead |
+                EthereumHardfork::Tangerine |
+                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
@@ -133,9 +129,7 @@ impl ScrollHardfork {
                 _ => None,
             },
             |fork| match fork {
-                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
-                    Some(0)
-                }
+                Self::Archimedes => Some(0),
                 Self::Bernoulli => Some(1713175866),
                 Self::Curie => Some(1718616171),
                 Self::Darwin => Some(1723622400),
@@ -150,6 +144,8 @@ impl ScrollHardfork {
             fork,
             |fork| match fork {
                 EthereumHardfork::Homestead |
+                EthereumHardfork::Tangerine |
+                EthereumHardfork::SpuriousDragon |
                 EthereumHardfork::Byzantium |
                 EthereumHardfork::Constantinople |
                 EthereumHardfork::Petersburg |
@@ -160,9 +156,7 @@ impl ScrollHardfork {
                 _ => None,
             },
             |fork| match fork {
-                Self::EIP150Block | Self::EIP155Block | Self::EIP158Block | Self::Archimedes => {
-                    Some(0)
-                }
+                Self::Archimedes => Some(0),
                 Self::Bernoulli => Some(1714358352),
                 Self::Curie => Some(1719994277),
                 Self::Darwin => Some(1724227200),
@@ -176,9 +170,8 @@ impl ScrollHardfork {
         ChainHardforks::new(vec![
             (EthereumHardfork::Homestead.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Dao.boxed(), ForkCondition::Never),
-            (Self::EIP150Block.boxed(), ForkCondition::Block(0)),
-            (Self::EIP155Block.boxed(), ForkCondition::Block(0)),
-            (Self::EIP158Block.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Tangerine.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::SpuriousDragon.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Byzantium.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Constantinople.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
@@ -200,9 +193,8 @@ impl ScrollHardfork {
     pub fn scroll_sepolia() -> ChainHardforks {
         ChainHardforks::new(vec![
             (EthereumHardfork::Homestead.boxed(), ForkCondition::Block(0)),
-            (Self::EIP150Block.boxed(), ForkCondition::Block(0)),
-            (Self::EIP155Block.boxed(), ForkCondition::Block(0)),
-            (Self::EIP158Block.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Tangerine.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::SpuriousDragon.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Byzantium.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Constantinople.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),

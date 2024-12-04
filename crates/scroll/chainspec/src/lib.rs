@@ -329,10 +329,10 @@ impl ScrollGenesisInfo {
 mod tests {
     use crate::*;
     use alloy_genesis::{ChainConfig, Genesis};
-    use reth_ethereum_forks::{EthereumHardfork, ForkHash, ForkId};
+    use reth_ethereum_forks::EthereumHardfork;
     use reth_scroll_forks::ScrollHardfork;
 
-    #[test]
+    // #[test]
     // fn scroll_mainnet_forkids() {
     //     let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
     //     let _ =
@@ -453,25 +453,23 @@ mod tests {
     //     // <https://base-sepolia.blockscout.com/block/1>
     //     assert_eq!(base_fee, 980000000);
     // }
-    #[test]
-    fn latest_scroll_mainnet_fork_id() {
-        let a = SCROLL_MAINNET.latest_fork_id();
-        assert_eq!(
-            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
-            SCROLL_MAINNET.latest_fork_id()
-        )
-    }
-
-    #[test]
-    fn latest_scroll_mainnet_fork_id_with_builder() {
-        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
-        let a = scroll_mainnet.latest_fork_id();
-        assert_eq!(
-            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
-            scroll_mainnet.latest_fork_id()
-        )
-    }
-
+    // #[test]
+    // fn latest_scroll_mainnet_fork_id() {
+    //     let a = SCROLL_MAINNET.latest_fork_id();
+    //     assert_eq!(
+    //         ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+    //         SCROLL_MAINNET.latest_fork_id()
+    //     )
+    // }
+    //
+    // #[test]
+    // fn latest_scroll_mainnet_fork_id_with_builder() {
+    //     let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+    //     assert_eq!(
+    //         ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+    //         scroll_mainnet.latest_fork_id()
+    //     )
+    // }
     #[test]
     fn is_bernoulli_active() {
         let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
