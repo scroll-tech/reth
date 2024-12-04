@@ -10,7 +10,6 @@
 
 extern crate alloc;
 
-pub mod constants;
 mod dev;
 mod genesis;
 mod scroll;
