@@ -228,7 +228,8 @@ impl From<Genesis> for ScrollChainSpec {
     fn from(genesis: Genesis) -> Self {
         use reth_scroll_forks::ScrollHardfork;
         let scroll_genesis_info = ScrollGenesisInfo::extract_from(&genesis);
-        let genesis_info = scroll_genesis_info.scroll_chain_info.genesis_info.unwrap_or_default();
+        let genesis_info =
+            scroll_genesis_info.scroll_chain_info.genesis_info.expect("load scroll genesis info");
 
         // Block-based hardforks
         let hardfork_opts = [

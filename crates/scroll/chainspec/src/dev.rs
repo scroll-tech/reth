@@ -24,7 +24,6 @@ pub static SCROLL_DEV: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             paris_block_and_final_difficulty: Some((0, U256::from(0))),
             hardforks: DEV_HARDFORKS.clone(),
             base_fee_params: BaseFeeParamsKind::Constant(BaseFeeParams::ethereum()),
-            deposit_contract: None, // TODO: do we even have?
             ..Default::default()
         },
     }
