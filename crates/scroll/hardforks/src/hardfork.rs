@@ -103,10 +103,10 @@ impl ScrollHardfork {
             },
             |fork| match fork {
                 Self::Archimedes => Some(0),
-                Self::Bernoulli => Some(3747132),
-                Self::Curie => Some(4740239),
-                Self::Darwin => Some(6075509),
-                Self::DarwinV2 => Some(6375501),
+                Self::Bernoulli => Some(5220340),
+                Self::Curie => Some(7096836),
+                Self::Darwin => Some(8568134),
+                Self::DarwinV2 => Some(8923772),
             },
         )
     }
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn check_scroll_hardfork_from_str() {
-        let hardfork_str = ["BernOulLi", "CrUie", "DaRwIn", "DaRwInV2"];
+        let hardfork_str = ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2"];
         let expected_hardforks = [
             ScrollHardfork::Bernoulli,
             ScrollHardfork::Curie,
