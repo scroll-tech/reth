@@ -48,7 +48,7 @@ pub struct ScrollGenesisInfo {
 }
 
 impl ScrollGenesisInfo {
-    /// Extract the Optimism-specific genesis info from a genesis file.
+    /// Extract the Scroll-specific genesis info from a genesis file.
     pub fn extract_from(others: &OtherFields) -> Option<Self> {
         Self::try_from(others).ok()
     }
