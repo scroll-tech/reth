@@ -10,9 +10,9 @@ use reth_execution_errors::StateRootError;
 use reth_storage_errors::db::DatabaseError;
 use reth_trie::{
     hashed_cursor::HashedPostStateCursorFactory, prefix_set::TriePrefixSets,
-    trie_cursor::InMemoryTrieCursorFactory, updates::TrieUpdates, HashedPostState, HashedStorage,
-    IntermediateStateRootState, KeccakKeyHasher, KeyHasher, StateRoot, StateRootProgress,
-    TrieInput,
+    trie_cursor::InMemoryTrieCursorFactory, updates::TrieUpdates, HashedPostState,
+    HashedPostStateSorted, HashedStorage, IntermediateStateRootState, KeccakKeyHasher, KeyHasher,
+    StateRoot, StateRootProgress, TrieInput,
 };
 use std::{collections::HashMap, ops::RangeInclusive};
 use tracing::debug;
@@ -113,7 +113,7 @@ pub trait DatabaseStateRoot<'a, TX>: Sized {
     fn overlay_root_with_updates(
         tx: &'a TX,
         post_state: HashedPostState,
-    ) -> Result<(B256, TrieUpdates), StateRootError>;
+    ) -> Result<(B256, TrieUpdates, HashedPostStateSorted), StateRootError>;
 
     /// Calculates the state root for provided [`HashedPostState`] using cached intermediate nodes.
     fn overlay_root_from_nodes(tx: &'a TX, input: TrieInput) -> Result<B256, StateRootError>;
@@ -207,15 +207,16 @@ impl<'a, TX: DbTx> DatabaseStateRoot<'a, TX>
     fn overlay_root_with_updates(
         tx: &'a TX,
         post_state: HashedPostState,
-    ) -> Result<(B256, TrieUpdates), StateRootError> {
+    ) -> Result<(B256, TrieUpdates, HashedPostStateSorted), StateRootError> {
         let prefix_sets = post_state.construct_prefix_sets().freeze();
         let state_sorted = post_state.into_sorted();
-        StateRoot::new(
+        let (root, updates) = StateRoot::new(
             DatabaseTrieCursorFactory::new(tx),
             HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
         )
         .with_prefix_sets(prefix_sets)
-        .root_with_updates()
+        .root_with_updates()?;
+        Ok((root, updates, state_sorted))
     }
 
     fn overlay_root_from_nodes(tx: &'a TX, input: TrieInput) -> Result<B256, StateRootError> {

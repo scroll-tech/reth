@@ -13,8 +13,8 @@ use reth_trie::{
     trie_cursor::{InMemoryTrieCursorFactory, TrieCursorFactory},
     updates::{StorageTrieUpdates, TrieUpdates},
     walker::TrieWalker,
-    HashedPostState, HashedStorage, IntermediateStateRootState, KeyHasher, Nibbles,
-    StateRootProgress, TrieInput,
+    HashedPostState, HashedPostStateSorted, HashedStorage, IntermediateStateRootState, KeyHasher,
+    Nibbles, StateRootProgress, TrieInput,
 };
 use tracing::{debug, trace};
 
@@ -526,15 +526,16 @@ impl<'a, TX: DbTx> DatabaseStateRoot<'a, TX>
     fn overlay_root_with_updates(
         tx: &'a TX,
         post_state: HashedPostState,
-    ) -> Result<(B256, TrieUpdates), StateRootError> {
+    ) -> Result<(B256, TrieUpdates, HashedPostStateSorted), StateRootError> {
         let prefix_sets = post_state.construct_prefix_sets().freeze();
         let state_sorted = post_state.into_sorted();
-        StateRoot::new(
+        let (root, updates) = StateRoot::new(
             DatabaseTrieCursorFactory::new(tx),
             HashedPostStateCursorFactory::new(DatabaseHashedCursorFactory::new(tx), &state_sorted),
         )
         .with_prefix_sets(prefix_sets)
-        .root_with_updates()
+        .root_with_updates()?;
+        Ok((root, updates, state_sorted))
     }
 
     fn overlay_root_from_nodes(tx: &'a TX, input: TrieInput) -> Result<B256, StateRootError> {

@@ -322,11 +322,13 @@ impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> StateRootP
     ) -> ProviderResult<(B256, TrieUpdates)> {
         let mut revert_state = self.revert_state()?;
         revert_state.extend(hashed_state);
-        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
-            self.tx(),
-            revert_state,
-        )
-        .map_err(|err| ProviderError::Database(err.into()))
+        let (root, updates, _state_sorted) =
+            <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
+                self.tx(),
+                revert_state,
+            )
+            .map_err(|err| ProviderError::Database(err.into()))?;
+        Ok((root, updates))
     }
 
     fn state_root_from_nodes_with_updates(

@@ -6,8 +6,9 @@ use reth_storage_errors::provider::ProviderResult;
 use reth_trie::{
     prefix_set::TriePrefixSets,
     updates::{StorageTrieUpdates, TrieUpdates},
-    AccountProof, HashedPostState, HashedStorage, IntermediateStateRootState, MultiProof,
-    StateRootProgress, StorageMultiProof, StorageProof, TrieInput,
+    AccountProof, HashedPostState, HashedPostStateSorted, HashedStorage,
+    IntermediateStateRootState, MultiProof, StateRootProgress, StorageMultiProof, StorageProof,
+    TrieInput,
 };
 
 /// A type that can compute the state root of a given post state.
@@ -67,6 +68,13 @@ pub trait StateRootProviderExt: Send + Sync {
         &self,
         prefix_set: TriePrefixSets,
     ) -> ProviderResult<(B256, TrieUpdates)>;
+
+    /// Returns the state root of the [`HashedPostState`] on top of the current, the trie updates
+    /// and the sorted hashed post state ([`HashedPostStateSorted`]).
+    fn state_root_from_state_with_updates_and_sorted_state(
+        &self,
+        hashed_state: HashedPostState,
+    ) -> ProviderResult<(B256, TrieUpdates, HashedPostStateSorted)>;
 }
 
 /// A type that can compute the storage root for a given account.

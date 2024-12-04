@@ -25,7 +25,7 @@ use reth_provider::{
     BlockExecutionWriter, BlockNumReader, BlockWriter, CanonStateNotification,
     CanonStateNotificationSender, CanonStateNotifications, ChainSpecProvider, ChainSplit,
     ChainSplitTarget, DBProvider, DisplayBlocksChain, HashedPostStateProvider, HeaderProvider,
-    LatestStateProviderRef, ProviderError, StateRootProvider, StaticFileProviderFactory,
+    LatestStateProviderRef, ProviderError, StateRootProviderExt, StaticFileProviderFactory,
     StorageLocation,
 };
 use reth_stages_api::{MetricEvent, MetricEventsSender};
@@ -1219,11 +1219,11 @@ where
         // Compute state root or retrieve cached trie updates before opening write transaction.
         let block_hash_numbers =
             blocks.iter().map(|(number, b)| (number, b.hash())).collect::<Vec<_>>();
-        let trie_updates = match chain_trie_updates {
+        let (trie_updates, hashed_state_sorted) = match chain_trie_updates {
             Some(updates) => {
                 debug!(target: "blockchain_tree", blocks = ?block_hash_numbers, "Using cached trie updates");
                 self.metrics.trie_updates_insert_cached.increment(1);
-                updates
+                (updates, hashed_state.into_sorted())
             }
             None => {
                 debug!(target: "blockchain_tree", blocks = ?block_hash_numbers, "Recomputing state root for insert");
@@ -1234,8 +1234,9 @@ where
                     // State root calculation can take a while, and we're sure no write transaction
                     // will be open in parallel. See https://github.com/paradigmxyz/reth/issues/6168.
                     .disable_long_read_transaction_safety();
-                let (state_root, trie_updates) = LatestStateProviderRef::new(&provider)
-                    .state_root_from_state_with_updates(hashed_state.clone())?;
+                let (state_root, trie_updates, hashed_state_sorted) =
+                    LatestStateProviderRef::new(&provider)
+                        .state_root_from_state_with_updates_and_sorted_state(hashed_state)?;
                 let tip = blocks.tip();
                 if state_root != tip.state_root {
                     return Err(ProviderError::StateRootMismatch(Box::new(RootMismatch {
@@ -1246,7 +1247,7 @@ where
                     .into())
                 }
                 self.metrics.trie_updates_insert_recomputed.increment(1);
-                trie_updates
+                (trie_updates, hashed_state_sorted)
             }
         };
         recorder.record_relative(MakeCanonicalAction::RetrieveStateTrieUpdates);
@@ -1256,7 +1257,7 @@ where
             .append_blocks_with_state(
                 blocks.into_blocks().collect(),
                 state,
-                hashed_state.into_sorted(),
+                hashed_state_sorted,
                 trie_updates,
             )
             .map_err(|e| CanonicalError::CanonicalCommit(e.to_string()))?;
