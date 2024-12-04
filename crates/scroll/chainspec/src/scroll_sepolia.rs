@@ -3,8 +3,7 @@
 use alloc::sync::Arc;
 
 use alloy_chains::{Chain, NamedChain};
-use alloy_eips::eip1559::ETHEREUM_BLOCK_GAS_LIMIT;
-use alloy_primitives::{b256, U256};
+use alloy_primitives::b256;
 use reth_chainspec::{once_cell_set, ChainSpec};
 use reth_scroll_forks::ScrollHardfork;
 
@@ -20,10 +19,7 @@ pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             genesis_hash: once_cell_set(b256!(
                 "aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c"
             )),
-            paris_block_and_final_difficulty: Some((0, U256::from(0))),
             hardforks: ScrollHardfork::scroll_sepolia(),
-            max_gas_limit: ETHEREUM_BLOCK_GAS_LIMIT,
-            prune_delete_limit: 10000,
             ..Default::default()
         },
     }
