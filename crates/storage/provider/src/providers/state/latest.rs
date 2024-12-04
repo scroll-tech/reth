@@ -88,11 +88,13 @@ impl<Provider: DBProvider + StateCommitmentProvider> StateRootProvider
         &self,
         hashed_state: HashedPostState,
     ) -> ProviderResult<(B256, TrieUpdates)> {
-        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
-            self.tx(),
-            hashed_state,
-        )
-        .map_err(|err| ProviderError::Database(err.into()))
+        let (root, updates, _state_sorted) =
+            <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
+                self.tx(),
+                hashed_state,
+            )
+            .map_err(|err| ProviderError::Database(err.into()))?;
+        Ok((root, updates))
     }
 
     fn state_root_from_nodes_with_updates(
@@ -146,6 +148,17 @@ impl<Provider: DBProvider + StateCommitmentProvider> StateRootProviderExt
         <Provider::StateCommitment as StateCommitment>::StateRoot::root_with_progress(
             self.tx(),
             state,
+        )
+        .map_err(|err| ProviderError::Database(err.into()))
+    }
+
+    fn state_root_from_state_with_updates_and_sorted_state(
+        &self,
+        hashed_state: HashedPostState,
+    ) -> ProviderResult<(B256, TrieUpdates, reth_trie::HashedPostStateSorted)> {
+        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
+            self.tx(),
+            hashed_state,
         )
         .map_err(|err| ProviderError::Database(err.into()))
     }
