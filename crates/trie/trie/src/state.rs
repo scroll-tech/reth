@@ -3,13 +3,13 @@ use crate::{
     Nibbles,
 };
 use alloy_primitives::{
-    keccak256,
     map::{hash_map, HashMap, HashSet},
     Address, B256, U256,
 };
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use reth_primitives::Account;
+use reth_trie_common::KeyHasher;
 use revm::db::{states::CacheAccount, AccountStatus, BundleAccount};
 use std::borrow::Cow;
 
@@ -26,15 +26,15 @@ impl HashedPostState {
     /// Initialize [`HashedPostState`] from bundle state.
     /// Hashes all changed accounts and storage entries that are currently stored in the bundle
     /// state.
-    pub fn from_bundle_state<'a>(
+    pub fn from_bundle_state<'a, KH: KeyHasher>(
         state: impl IntoParallelIterator<Item = (&'a Address, &'a BundleAccount)>,
     ) -> Self {
         let hashed = state
             .into_par_iter()
             .map(|(address, account)| {
-                let hashed_address = keccak256(address);
+                let hashed_address = KH::hash_key(address);
                 let hashed_account = account.info.clone().map(Into::into);
-                let hashed_storage = HashedStorage::from_plain_storage(
+                let hashed_storage = HashedStorage::from_plain_storage::<KH>(
                     account.status,
                     account.storage.iter().map(|(slot, value)| (slot, &value.present_value)),
                 );
@@ -53,16 +53,16 @@ impl HashedPostState {
 
     /// Initialize [`HashedPostState`] from cached state.
     /// Hashes all changed accounts and storage entries that are currently stored in cache.
-    pub fn from_cache_state<'a>(
+    pub fn from_cache_state<'a, KH: KeyHasher>(
         state: impl IntoParallelIterator<Item = (&'a Address, &'a CacheAccount)>,
     ) -> Self {
         let hashed = state
             .into_par_iter()
             .map(|(address, account)| {
-                let hashed_address = keccak256(address);
+                let hashed_address = KH::hash_key(address);
                 let hashed_account =
                     account.account.as_ref().map(|a| Account::from_account_info(a.info.clone()));
-                let hashed_storage = HashedStorage::from_plain_storage(
+                let hashed_storage = HashedStorage::from_plain_storage::<KH>(
                     account.status,
                     account.account.as_ref().map(|a| a.storage.iter()).into_iter().flatten(),
                 );
@@ -224,14 +224,25 @@ impl HashedStorage {
         Self { wiped, storage: HashMap::from_iter(iter) }
     }
 
+    /// Create a new hashed storage from the provided [`BundleAccount`]
+    ///
+    /// This function will use the present value of the storage slots in the account to create the
+    /// hashed storage.
+    pub fn from_bundle_account<KH: KeyHasher>(account: &BundleAccount) -> Self {
+        Self::from_plain_storage::<KH>(
+            account.status,
+            account.storage.iter().map(|(slot, value)| (slot, &value.present_value)),
+        )
+    }
+
     /// Create new hashed storage from account status and plain storage.
-    pub fn from_plain_storage<'a>(
+    pub fn from_plain_storage<'a, KH: KeyHasher>(
         status: AccountStatus,
         storage: impl IntoIterator<Item = (&'a U256, &'a U256)>,
     ) -> Self {
         Self::from_iter(
             status.was_destroyed(),
-            storage.into_iter().map(|(key, value)| (keccak256(B256::from(*key)), *value)),
+            storage.into_iter().map(|(key, value)| (KH::hash_key(B256::from(*key)), *value)),
         )
     }
 
@@ -354,7 +365,8 @@ impl HashedStorageSorted {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{Address, Bytes};
+    use alloy_primitives::{keccak256, Address, Bytes};
+    use reth_trie_common::KeccakKeyHasher;
     use revm::{
         db::{
             states::{plain_account::PlainStorage, CacheAccount, StorageSlot},
@@ -473,7 +485,7 @@ mod tests {
         let state = vec![(&address, &account)];
 
         // Convert the bundle state into a hashed post state.
-        let hashed_state = HashedPostState::from_bundle_state(state);
+        let hashed_state = HashedPostState::from_bundle_state::<KeccakKeyHasher>(state);
 
         // Validate the hashed post state.
         assert_eq!(hashed_state.accounts.len(), 1);
@@ -512,7 +524,7 @@ mod tests {
         let state = vec![(&address, &account)];
 
         // Convert the cache state into a hashed post state.
-        let hashed_state = HashedPostState::from_cache_state(state);
+        let hashed_state = HashedPostState::from_cache_state::<KeccakKeyHasher>(state);
 
         // Validate the hashed post state.
         assert_eq!(hashed_state.accounts.len(), 1);

@@ -4619,9 +4619,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.165"
+version = "0.2.167"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcb4d3d38eab6c5239a362fa8bae48c03baf980a6e7079f063942d563ef3533e"
+checksum = "09d6582e104315a817dff97f75133544b2e094ee22447d2acf4a74e189ba06fc"
 
 [[package]]
 name = "libloading"
@@ -6463,8 +6463,6 @@ dependencies = [
  "reth-tasks",
  "reth-tracing",
  "reth-transaction-pool",
- "reth-trie",
- "reth-trie-db",
  "serde_json",
  "similar-asserts",
  "tempfile",
@@ -6767,7 +6765,6 @@ dependencies = [
  "reth-static-file-types",
  "reth-trie",
  "reth-trie-common",
- "reth-trie-db",
  "secp256k1",
  "serde",
  "serde_json",
@@ -7547,7 +7544,6 @@ dependencies = [
  "reth-revm",
  "reth-scroll-revm",
  "reth-transaction-pool",
- "reth-trie",
  "tracing",
 ]
 
@@ -8474,7 +8470,6 @@ dependencies = [
  "reth-rpc-types-compat",
  "reth-scroll-revm",
  "reth-transaction-pool",
- "reth-trie",
  "sha2 0.10.8",
  "thiserror 1.0.69",
  "tracing",
@@ -8887,7 +8882,6 @@ dependencies = [
  "reth-tasks",
  "reth-testing-utils",
  "reth-transaction-pool",
- "reth-trie",
  "revm-inspectors",
  "revm-primitives",
  "serde",
@@ -9069,7 +9063,6 @@ dependencies = [
  "reth-scroll-storage",
  "reth-tasks",
  "reth-transaction-pool",
- "reth-trie",
  "revm-inspectors",
  "revm-primitives",
  "tokio",
@@ -9405,6 +9398,7 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-prune-types",
+ "reth-scroll-revm",
  "reth-stages-types",
  "reth-storage-errors",
  "reth-trie",
