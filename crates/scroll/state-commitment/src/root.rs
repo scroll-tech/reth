@@ -615,9 +615,8 @@ impl<'a, TX: DbTx> DatabaseStorageRoot<'a, TX>
         hashed_storage: HashedStorage,
     ) -> Result<B256, StorageRootError> {
         let prefix_set = hashed_storage.construct_prefix_set().freeze();
-        // TODO: replace keccak with KH: KeyHasher when integrating with upstream
         let state_sorted = HashedPostState::from_hashed_storage(
-            alloy_primitives::keccak256(address),
+            PoseidonKeyHasher::hash_key(address),
             hashed_storage,
         )
         .into_sorted();

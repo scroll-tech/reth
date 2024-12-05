@@ -3,7 +3,7 @@ use smallvec::SmallVec;
 use crate::Nibbles;
 
 /// The maximum number of bits a key can contain.
-const MAX_BITS: usize = 248;
+pub const MAX_BITS: usize = 248;
 
 /// The maximum number of bytes a key can contain.
 const MAX_BYTES: usize = 31;

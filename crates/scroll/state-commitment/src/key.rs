@@ -4,9 +4,6 @@ use reth_scroll_primitives::poseidon::{
 };
 use reth_trie::KeyHasher;
 
-// TODO(frisitano): Implement `KeyHasher` trait from upstream. Also consider introducing a
-// `HashingScheme` trait that combines both `KeyHasher` and `ValueHasher` traits via GATs.
-
 /// An implementation of a key hasher that uses Poseidon.
 #[derive(Clone, Debug, Default)]
 pub struct PoseidonKeyHasher;
