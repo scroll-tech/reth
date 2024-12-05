@@ -41,6 +41,10 @@ jobs:
             args: --features "asm-keccak optimism" --locked --exclude reth --exclude reth-bench --exclude "example-*" --exclude "reth-ethereum-*" --exclude "*-ethereum"
             partition: 2
             total_partitions: 2
+          - type: scroll
+            args: -p reth-scroll-state-commitment --locked --features "scroll"
+            partition: 1
+            total_partitions: 1
           - type: book
             args: --manifest-path book/sources/Cargo.toml
             partition: 1
@@ -64,7 +68,7 @@ jobs:
           cargo nextest run \
             ${{ matrix.args }} --workspace \
             --exclude ef-tests --no-tests=warn \
-            --partition hash:${{ matrix.partition }}/2 \
+            --partition hash:${{ matrix.partition }}/{{ matrix.total_partitions }} \
             -E "!kind(test)"
 
   state:
