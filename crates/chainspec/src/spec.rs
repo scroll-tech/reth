@@ -318,7 +318,7 @@ impl ChainSpec {
     /// Get the initial base fee of the genesis block.
     pub fn initial_base_fee(&self) -> Option<u64> {
         if self.chain == Chain::scroll_mainnet() || self.chain == Chain::scroll_sepolia() {
-            return Some(0)
+            return None
         }
 
         // If the base fee is set in the genesis block, we use that instead of the default.

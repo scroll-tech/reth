@@ -303,7 +303,7 @@ impl ScrollConfigInfo {
     fn extract_from(genesis: &Genesis) -> Self {
         Self {
             scroll_chain_info: ScrollChainInfo::extract_from(&genesis.config.extra_fields)
-                .unwrap_or_default(),
+                .expect("extract scroll extra fields failed"),
         }
     }
 }
@@ -541,6 +541,15 @@ mod tests {
                     (String::from("curieBlock"), 0.into()),
                     (String::from("darwinTime"), 0.into()),
                     (String::from("darwinV2Time"), 0.into()),
+                    (String::from("scroll"), json!({
+                "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                "l1Config": {
+                    "l1ChainId": "1",
+                    "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                    "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                    "numL1MessagesPerBlock": "10"
+                }
+            })),
                 ]
                 .into_iter()
                 .collect(),
