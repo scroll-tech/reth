@@ -88,9 +88,19 @@ impl ScrollChainSpecBuilder {
         self
     }
 
+    /// Enable Archimedes at genesis
+    pub fn archimedes_activated(mut self) -> Self {
+        self.inner = self.inner.london_activated();
+        self.inner = self
+            .inner
+            .with_fork(reth_scroll_forks::ScrollHardfork::Archimedes, ForkCondition::Block(0));
+        self
+    }
+
     /// Enable Bernoulli at genesis
     pub fn bernoulli_activated(mut self) -> Self {
-        self.inner = self.inner.cancun_activated();
+        self = self.archimedes_activated();
+        self.inner = self.inner.with_fork(EthereumHardfork::Shanghai, ForkCondition::Timestamp(0));
         self.inner = self
             .inner
             .with_fork(reth_scroll_forks::ScrollHardfork::Bernoulli, ForkCondition::Block(0));
@@ -100,9 +110,8 @@ impl ScrollChainSpecBuilder {
     /// Enable Curie at genesis
     pub fn curie_activated(mut self) -> Self {
         self = self.bernoulli_activated();
-        self.inner = self
-            .inner
-            .with_fork(reth_scroll_forks::ScrollHardfork::Curie, ForkCondition::Timestamp(0));
+        self.inner =
+            self.inner.with_fork(reth_scroll_forks::ScrollHardfork::Curie, ForkCondition::Block(0));
         self
     }
 
@@ -312,147 +321,156 @@ impl ScrollConfigInfo {
 mod tests {
     use crate::*;
     use alloy_genesis::{ChainConfig, Genesis};
-    use reth_ethereum_forks::EthereumHardfork;
+    use alloy_primitives::b256;
+    use reth_chainspec::test_fork_ids;
+    use reth_ethereum_forks::{EthereumHardfork, ForkHash};
     use reth_scroll_forks::ScrollHardfork;
 
-    // #[test]
-    // fn scroll_mainnet_forkids() {
-    //     let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
-    //     let _ =
-    //         scroll_mainnet.genesis_hash.set(SCROLL_MAINNET.genesis_hash.get().copied().unwrap());
-    //     test_fork_ids(
-    //         &SCROLL_MAINNET,
-    //         &[
-    //             (
-    //                 Head { number: 0, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1704992400, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1704992401, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1710374400, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1710374401, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1720627200, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1720627201, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xe4, 0x01, 0x0e, 0xb9]), next: 1726070401 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1726070401, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
-    //             ),
-    //         ],
-    //     );
-    // }
-    //
-    // #[test]
-    // fn scroll_sepolia_forkids() {
-    //     test_fork_ids(
-    //         &SCROLL_SEPOLIA,
-    //         &[
-    //             (
-    //                 Head { number: 0, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1699981199, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1699981200, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1708534799, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1708534800, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1716998399, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1716998400, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1723478399, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1723478400, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x75, 0xde, 0xa4, 0x1e]), next: 1732633200 },
-    //             ),
-    //             (
-    //                 Head { number: 0, timestamp: 1732633200, ..Default::default() },
-    //                 ForkId { hash: ForkHash([0x4a, 0x1c, 0x79, 0x2e]), next: 0 },
-    //             ),
-    //         ],
-    //     );
-    // }
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn scroll_mainnet_forkids() {
+        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        let _ =
+            scroll_mainnet.genesis_hash.set(SCROLL_MAINNET.genesis_hash.get().copied().unwrap());
+        test_fork_ids(
+            &SCROLL_MAINNET,
+            &[
+                (
+                    Head { number: 0, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1704992400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xda, 0x02, 0x60]), next: 1704992401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1704992401, ..Default::default() },
+                    ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1710374400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x3c, 0x28, 0x3c, 0xb3]), next: 1710374401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1710374401, ..Default::default() },
+                    ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1720627200, ..Default::default() },
+                    ForkId { hash: ForkHash([0x51, 0xcc, 0x98, 0xb3]), next: 1720627201 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1720627201, ..Default::default() },
+                    ForkId { hash: ForkHash([0xe4, 0x01, 0x0e, 0xb9]), next: 1726070401 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1726070401, ..Default::default() },
+                    ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+                ),
+            ],
+        );
+    }
 
-    // #[test]
-    // fn scroll_mainnet_genesis() {
-    //     let genesis = SCROLL_MAINNET.genesis_header();
-    //     println!("{:?}", genesis);
-    //     assert_eq!(
-    //         genesis.hash_slow(),
-    //         b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80")
-    //     );
-    //     let base_fee = genesis
-    //         .next_block_base_fee(SCROLL_MAINNET.base_fee_params_at_timestamp(genesis.timestamp))
-    //         .unwrap();
-    //     // <https://scrollscan.com/block/1>
-    //     assert_eq!(base_fee, 980000000);
-    // }
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn scroll_sepolia_forkids() {
+        test_fork_ids(
+            &SCROLL_SEPOLIA,
+            &[
+                (
+                    Head { number: 0, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1699981199, ..Default::default() },
+                    ForkId { hash: ForkHash([0x67, 0xa4, 0x03, 0x28]), next: 1699981200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1699981200, ..Default::default() },
+                    ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1708534799, ..Default::default() },
+                    ForkId { hash: ForkHash([0xa4, 0x8d, 0x6a, 0x00]), next: 1708534800 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1708534800, ..Default::default() },
+                    ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1716998399, ..Default::default() },
+                    ForkId { hash: ForkHash([0xcc, 0x17, 0xc7, 0xeb]), next: 1716998400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1716998400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1723478399, ..Default::default() },
+                    ForkId { hash: ForkHash([0x54, 0x0a, 0x8c, 0x5d]), next: 1723478400 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1723478400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x75, 0xde, 0xa4, 0x1e]), next: 1732633200 },
+                ),
+                (
+                    Head { number: 0, timestamp: 1732633200, ..Default::default() },
+                    ForkId { hash: ForkHash([0x4a, 0x1c, 0x79, 0x2e]), next: 0 },
+                ),
+            ],
+        );
+    }
 
-    // #[test]
-    // fn scroll_sepolia_genesis() {
-    //     let genesis = SCROLL_SEPOLIA.genesis_header();
-    //     assert_eq!(
-    //         genesis.hash_slow(),
-    //         b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c")
-    //     );
-    //     let base_fee = genesis
-    //         .next_block_base_fee(SCROLL_SEPOLIA.base_fee_params_at_timestamp(genesis.timestamp))
-    //         .unwrap();
-    //     // <https://base-sepolia.blockscout.com/block/1>
-    //     assert_eq!(base_fee, 980000000);
-    // }
-    // #[test]
-    // fn latest_scroll_mainnet_fork_id() {
-    //     let a = SCROLL_MAINNET.latest_fork_id();
-    //     assert_eq!(
-    //         ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
-    //         SCROLL_MAINNET.latest_fork_id()
-    //     )
-    // }
-    //
-    // #[test]
-    // fn latest_scroll_mainnet_fork_id_with_builder() {
-    //     let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
-    //     assert_eq!(
-    //         ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
-    //         scroll_mainnet.latest_fork_id()
-    //     )
-    // }
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn scroll_mainnet_genesis() {
+        let genesis = SCROLL_MAINNET.genesis_header();
+        println!("{:?}", genesis);
+        assert_eq!(
+            genesis.hash_slow(),
+            b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80")
+        );
+        let base_fee = genesis
+            .next_block_base_fee(SCROLL_MAINNET.base_fee_params_at_timestamp(genesis.timestamp))
+            .unwrap();
+        // <https://scrollscan.com/block/1>
+        assert_eq!(base_fee, 980000000);
+    }
+
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn scroll_sepolia_genesis() {
+        let genesis = SCROLL_SEPOLIA.genesis_header();
+        assert_eq!(
+            genesis.hash_slow(),
+            b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c")
+        );
+        let base_fee = genesis
+            .next_block_base_fee(SCROLL_SEPOLIA.base_fee_params_at_timestamp(genesis.timestamp))
+            .unwrap();
+        // <https://base-sepolia.blockscout.com/block/1>
+        assert_eq!(base_fee, 980000000);
+    }
+
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn latest_scroll_mainnet_fork_id() {
+        assert_eq!(
+            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+            SCROLL_MAINNET.latest_fork_id()
+        )
+    }
+
+    #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
+    #[test]
+    fn latest_scroll_mainnet_fork_id_with_builder() {
+        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        assert_eq!(
+            ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
+            scroll_mainnet.latest_fork_id()
+        )
+    }
+
     #[test]
     fn is_bernoulli_active() {
         let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
