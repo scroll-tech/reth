@@ -121,7 +121,6 @@ impl TryFrom<&OtherFields> for ScrollChainConfig {
     type Error = serde_json::Error;
 
     fn try_from(others: &OtherFields) -> Result<Self, Self::Error> {
-        let a = others.get_deserialized::<Self>("scroll");
         if let Some(Ok(scroll_chain_config)) = others.get_deserialized::<Self>("scroll") {
             Ok(scroll_chain_config)
         } else {
