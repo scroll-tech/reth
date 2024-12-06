@@ -317,7 +317,10 @@ impl ChainSpec {
 
     /// Get the initial base fee of the genesis block.
     pub fn initial_base_fee(&self) -> Option<u64> {
-        if self.chain == Chain::scroll_mainnet() || self.chain == Chain::scroll_sepolia() {
+        // TODO(scroll): migrate to Chain::scroll() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
+        if self.chain == Chain::from_named(NamedChain::Scroll) ||
+            self.chain == Chain::from_named(NamedChain::ScrollSepolia)
+        {
             return None
         }
 

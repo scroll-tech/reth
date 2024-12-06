@@ -31,10 +31,12 @@ hardfork!(
 impl ScrollHardfork {
     /// Retrieves the activation block for the specified hardfork on the given chain.
     pub fn activation_block<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
-        if chain == Chain::scroll_mainnet() {
+        // TODO(scroll): migrate to Chain::scroll() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
+        if chain == Chain::from_named(NamedChain::Scroll) {
             return Self::scroll_sepolia_activation_block(fork);
         }
-        if chain == Chain::scroll_sepolia() {
+        // TODO(scroll): migrate to Chain::scroll_sepolia() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
+        if chain == Chain::from_named(NamedChain::ScrollSepolia) {
             return Self::scroll_mainnet_activation_block(fork);
         }
 
@@ -43,9 +45,11 @@ impl ScrollHardfork {
 
     /// Retrieves the activation timestamp for the specified hardfork on the given chain.
     pub fn activation_timestamp<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
+        // TODO(scroll): migrate to Chain::scroll_sepolia() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
         if chain == Chain::from_named(NamedChain::ScrollSepolia) {
             return Self::scroll_sepolia_activation_timestamp(fork);
         }
+        // TODO(scroll): migrate to Chain::scroll() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
         if chain == Chain::from_named(NamedChain::Scroll) {
             return Self::scroll_mainnet_activation_timestamp(fork);
         }

@@ -148,12 +148,12 @@ impl EthChainSpec for ScrollChainSpec {
     }
 
     fn base_fee_params_at_block(&self, block_number: u64) -> BaseFeeParams {
-        // TODO need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
+        // TODO(scroll): need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_block(block_number)
     }
 
     fn base_fee_params_at_timestamp(&self, timestamp: u64) -> BaseFeeParams {
-        // TODO need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
+        // TODO(scroll): need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_timestamp(timestamp)
     }
 
