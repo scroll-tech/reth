@@ -317,6 +317,10 @@ impl ChainSpec {
 
     /// Get the initial base fee of the genesis block.
     pub fn initial_base_fee(&self) -> Option<u64> {
+        if self.chain.named() == Chain::scroll_mainnet().named() {
+            return Some(0)
+        }
+
         // If the base fee is set in the genesis block, we use that instead of the default.
         let genesis_base_fee =
             self.genesis.base_fee_per_gas.map(|fee| fee as u64).unwrap_or(INITIAL_BASE_FEE);

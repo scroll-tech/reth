@@ -2,7 +2,7 @@
 
 use alloc::sync::Arc;
 
-use alloy_chains::{Chain, NamedChain};
+use alloy_chains::Chain;
 use alloy_primitives::b256;
 use reth_chainspec::{once_cell_set, ChainSpec};
 use reth_scroll_forks::ScrollHardfork;
@@ -13,7 +13,7 @@ use crate::{LazyLock, ScrollChainSpec};
 pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
     ScrollChainSpec {
         inner: ChainSpec {
-            chain: Chain::from_named(NamedChain::Scroll),
+            chain: Chain::scroll_mainnet(),
             // genesis contains empty alloc field because state at first bedrock block is imported
             // manually from trusted source
             genesis: serde_json::from_str(include_str!("../res/genesis/scroll.json"))
