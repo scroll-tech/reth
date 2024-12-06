@@ -14,11 +14,8 @@ use serde::{Deserialize, Serialize};
 
 hardfork!(
     /// The name of the Scroll hardfork
-    ///
-    /// When building a list of hardforks for a chain, it's still expected to mix with
-    /// [`EthereumHardfork`].
     ScrollHardfork {
-        /// Archimedes switch block (nil = no fork, 0 = already on archimedes)
+        /// Archimedes: scroll test hardfork.
         Archimedes,
         /// Bernoulli: <https://scroll.io/blog/blobs-are-here-scrolls-bernoulli-upgrade>.
         Bernoulli,
@@ -34,11 +31,10 @@ hardfork!(
 impl ScrollHardfork {
     /// Retrieves the activation block for the specified hardfork on the given chain.
     pub fn activation_block<H: Hardfork>(self, fork: H, chain: Chain) -> Option<u64> {
-        // will replace scroll_sepolia after alloy-chains release new tag
-        if chain == Chain::from_named(NamedChain::ScrollSepolia) {
+        if chain == Chain::scroll_mainnet() {
             return Self::scroll_sepolia_activation_block(fork);
         }
-        if chain == Chain::from_named(NamedChain::Scroll) {
+        if chain == Chain::scroll_sepolia() {
             return Self::scroll_mainnet_activation_block(fork);
         }
 

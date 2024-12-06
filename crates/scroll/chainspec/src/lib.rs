@@ -148,10 +148,12 @@ impl EthChainSpec for ScrollChainSpec {
     }
 
     fn base_fee_params_at_block(&self, block_number: u64) -> BaseFeeParams {
+        // TODO need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_block(block_number)
     }
 
     fn base_fee_params_at_timestamp(&self, timestamp: u64) -> BaseFeeParams {
+        // TODO need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_timestamp(timestamp)
     }
 
@@ -227,9 +229,9 @@ impl ScrollHardforks for ScrollChainSpec {}
 impl From<Genesis> for ScrollChainSpec {
     fn from(genesis: Genesis) -> Self {
         use reth_scroll_forks::ScrollHardfork;
-        let scroll_genesis_info = ScrollGenesisInfo::extract_from(&genesis);
-        let genesis_info =
-            scroll_genesis_info.scroll_chain_info.genesis_info.expect("load scroll genesis info");
+        let scroll_chain_info = ScrollConfigInfo::extract_from(&genesis);
+        let hard_fork_info =
+            scroll_chain_info.scroll_chain_info.hard_fork_info.expect("load scroll hard fork info");
 
         // Block-based hardforks
         let hardfork_opts = [
@@ -242,9 +244,9 @@ impl From<Genesis> for ScrollChainSpec {
             (EthereumHardfork::Istanbul.boxed(), genesis.config.istanbul_block),
             (EthereumHardfork::Berlin.boxed(), genesis.config.berlin_block),
             (EthereumHardfork::London.boxed(), genesis.config.london_block),
-            (ScrollHardfork::Archimedes.boxed(), genesis_info.archimedes_block),
-            (ScrollHardfork::Bernoulli.boxed(), genesis_info.bernoulli_block),
-            (ScrollHardfork::Curie.boxed(), genesis_info.curie_block),
+            (ScrollHardfork::Archimedes.boxed(), hard_fork_info.archimedes_block),
+            (ScrollHardfork::Bernoulli.boxed(), hard_fork_info.bernoulli_block),
+            (ScrollHardfork::Curie.boxed(), hard_fork_info.curie_block),
         ];
         let mut block_hardforks = hardfork_opts
             .into_iter()
@@ -254,8 +256,8 @@ impl From<Genesis> for ScrollChainSpec {
         // Time-based hardforks
         let time_hardfork_opts = [
             (EthereumHardfork::Shanghai.boxed(), genesis.config.shanghai_time),
-            (ScrollHardfork::Darwin.boxed(), genesis_info.darwin_time),
-            (ScrollHardfork::DarwinV2.boxed(), genesis_info.darwin_v2_time),
+            (ScrollHardfork::Darwin.boxed(), hard_fork_info.darwin_time),
+            (ScrollHardfork::DarwinV2.boxed(), hard_fork_info.darwin_v2_time),
         ];
 
         let mut time_hardforks = time_hardfork_opts
@@ -293,11 +295,11 @@ impl From<Genesis> for ScrollChainSpec {
 }
 
 #[derive(Default, Debug)]
-struct ScrollGenesisInfo {
+struct ScrollConfigInfo {
     scroll_chain_info: ScrollChainInfo,
 }
 
-impl ScrollGenesisInfo {
+impl ScrollConfigInfo {
     fn extract_from(genesis: &Genesis) -> Self {
         Self {
             scroll_chain_info: ScrollChainInfo::extract_from(&genesis.config.extra_fields)
