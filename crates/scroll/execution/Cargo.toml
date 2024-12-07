@@ -16,11 +16,13 @@ workspace = true
 reth-revm.workspace = true
 
 # scroll
+reth-scroll-primitives = { workspace = true, optional = true }
 reth-scroll-storage = { workspace = true, optional = true }
 
 [features]
 scroll = [
 	"reth-scroll-storage/scroll",
-	"reth-revm/scroll"
+	"reth-revm/scroll",
+	"reth-scroll-primitives"
 ]
 test-utils = ["reth-revm/test-utils"]

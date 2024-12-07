@@ -1,10 +1,10 @@
 #![allow(clippy::useless_conversion)]
 
+#[cfg(feature = "test-utils")]
+use reth_revm::EmptyDBTyped;
+use reth_revm::{cached::CachedReadsDbMut, database::EvmStateProvider, revm::State};
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-use reth_revm::{
-    cached::CachedReadsDbMut, database::StateProviderDatabase, revm::CacheDB, DatabaseRef,
-};
-use reth_revm::{database::EvmStateProvider, revm::State, EmptyDBTyped};
+use reth_revm::{database::StateProviderDatabase, revm::CacheDB, DatabaseRef};
 #[cfg(feature = "scroll")]
 use reth_scroll_storage::ScrollStateProviderDatabase;
 
@@ -34,6 +34,17 @@ impl<DB: EvmStateProvider> FinalizeExecution for State<&mut ScrollStateProviderD
     fn finalize(&mut self) -> Self::Output {
         let bundle = self.take_bundle();
         (bundle, &self.database.post_execution_context).into()
+    }
+}
+
+#[cfg(feature = "scroll")]
+impl<DB: EvmStateProvider> FinalizeExecution
+    for State<CachedReadsDbMut<'_, ScrollStateProviderDatabase<DB>>>
+{
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        (self.take_bundle(), &self.database.db.post_execution_context).into()
     }
 }
 
