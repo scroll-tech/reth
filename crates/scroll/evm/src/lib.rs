@@ -1,5 +1,5 @@
 //! Scroll evm execution implementation.
-#![cfg(not(feature = "optimism"))]
+#![cfg(all(feature = "scroll", not(feature = "optimism")))]
 
 pub use config::ScrollEvmConfig;
 mod config;

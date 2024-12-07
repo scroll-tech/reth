@@ -1,3 +1,22 @@
+//! Curie fork transition for Scroll.
+//!
+//! On block 7096836, Scroll performed a transition to the Curie fork state, which brought  various
+//! changes to the protocol:
+//!    1. Fee reduction cost thanks to the use of compressed blobs on the L1.
+//!    2. Modified [EIP-1559](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md) pricing
+//!       model along with support for EIP-1559 and EIP-2930 transactions.
+//!    3. Support for `MLOAD`, `TLOAD` and `MCOPY` ([EIP-1153](https://eips.ethereum.org/EIPS/eip-1153)
+//!       and [EIP-5656](https://eips.ethereum.org/EIPS/eip-5656)).
+//!    4. Dynamic block time.
+//!
+//! Compressed blobs allowed for more transactions to be stored in each blob, reducing the DA cost
+//! per transactions. Accordingly, the L1 gas oracle contract's bytecode was updated in order to
+//! reflect the update in the DA costs:
+//!    - original formula: `(l1GasUsed(txRlp) + overhead) * l1BaseFee * scalar`.
+//!    - updated formula: `l1BaseFee * commitScalar + len(txRlp) * l1BlobBaseFee * blobScalar`.
+//!
+//! More details on the Curie update: <https://scroll.io/blog/compressing-the-gas-scrolls-curie-upgrade>
+
 use revm::{
     db::states::StorageSlot,
     primitives::{address, bytes, Address, Bytecode, Bytes, U256},
@@ -6,6 +25,7 @@ use revm::{
 };
 
 /// L1 gas price oracle address.
+/// <https://scrollscan.com/address/0x5300000000000000000000000000000000000002>
 pub const L1_GAS_PRICE_ORACLE_ADDRESS: Address =
     address!("5300000000000000000000000000000000000002");
 /// Bytecode of L1 gas price oracle at Curie transition.
@@ -34,12 +54,19 @@ pub const BLOB_SCALAR_SLOT: U256 = U256::from_limbs([7, 0, 0, 0]);
 /// L1 gas price oracle "is Curie" slot. Added in the Curie fork.
 pub const IS_CURIE_SLOT: U256 = U256::from_limbs([8, 0, 0, 0]);
 
+/// The initial blob base fee used by the oracle contract.
 const INITIAL_L1_BLOB_BASE_FEE: U256 = U256::from_limbs([1, 0, 0, 0]);
+/// The initial commit scalar used by the oracle contract.
 const INITIAL_COMMIT_SCALAR: U256 = U256::from_limbs([230759955285, 0, 0, 0]);
+/// The initial blob scalar used by the oracle contract.
 const INITIAL_BLOB_SCALAR: U256 = U256::from_limbs([417565260, 0, 0, 0]);
+/// Curie slot is set to 1 (true) after the Curie block fork.
 const IS_CURIE: U256 = U256::from_limbs([1, 0, 0, 0]);
 
-/// Applies the Scroll Curie hard fork to the state.
+/// Applies the Scroll Curie hard fork to the state:
+///    - Updates the L1 oracle contract bytecode to reflect the DA cost reduction.
+///    - Sets the initial blob base fee, commit and blob scalar and sets the `isCurie` slot to 1
+///      (true).
 pub fn apply_curie_hard_fork<DB: Database>(state: &mut State<DB>) -> Result<(), DB::Error> {
     let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
 

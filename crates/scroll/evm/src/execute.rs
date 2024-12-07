@@ -32,6 +32,7 @@ use std::{
 #[derive(Debug)]
 pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     /// Chain specification.
+    // TODO (scroll): update to the Scroll chain spec
     chain_spec: Arc<ChainSpec>,
     /// Evm configuration.
     evm_config: EvmConfig,
@@ -137,7 +138,6 @@ where
                     hash: transaction.recalculate_hash(),
                     error: Box::new(err.map_db_err(|e| e.into())),
                 })?;
-
             evm.db_mut().commit(state);
 
             let l1_fee = if transaction.is_l1_message() {
@@ -227,6 +227,7 @@ where
 #[derive(Clone, Debug)]
 pub struct ScrollExecutionStrategyFactory<EvmConfig = ScrollEvmConfig> {
     /// The chain specification for the [`ScrollExecutionStrategy`].
+    // TODO (scroll): update to the Scroll chain spec
     chain_spec: Arc<ChainSpec>,
     /// The Evm configuration for the [`ScrollExecutionStrategy`].
     evm_config: EvmConfig,
@@ -324,7 +325,6 @@ mod tests {
     }
 
     fn transaction(typ: TxType, gas_limit: u64) -> TransactionSigned {
-        let pk = B256::random();
         let transaction = match typ {
             TxType::Eip4844 => reth_primitives::Transaction::Eip4844(alloy_consensus::TxEip4844 {
                 gas_limit,
@@ -345,8 +345,9 @@ mod tests {
                 ..Default::default()
             }),
         };
+        let pk = B256::random();
         let signature = reth_primitives::sign_message(pk, transaction.signature_hash()).unwrap();
-        reth_primitives::TransactionSigned::new_unhashed(transaction, signature)
+        TransactionSigned::new_unhashed(transaction, signature)
     }
 
     #[test]

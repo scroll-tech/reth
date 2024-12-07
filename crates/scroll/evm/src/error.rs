@@ -4,7 +4,7 @@ use reth_evm::execute::BlockExecutionError;
 /// Execution error for Scroll.
 #[derive(thiserror::Error, Display, From, Debug)]
 pub enum ScrollBlockExecutionError {
-    /// Error occurred at a hard fork.
+    /// Error occurred at fork transition.
     #[display("failed to apply fork: {_0}")]
     Fork(ForkError),
     /// Error occurred at L1 fee computation.
@@ -31,7 +31,7 @@ impl ScrollBlockExecutionError {
 /// Scroll fork error.
 #[derive(Debug, Display)]
 pub enum ForkError {
-    /// Error occurred at the Curie hard fork.
+    /// Error occurred at Curie fork.
     Curie,
 }
 
