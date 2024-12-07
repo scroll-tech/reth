@@ -58,7 +58,7 @@ impl<'a> BranchNodeRef<'a> {
         self.stack
             .len()
             .checked_sub((self.state_mask & CHILD_INDEX_MASK).count_ones() as usize)
-            .unwrap()
+            .expect("branch node stack is in inconsistent state")
     }
 
     #[inline]

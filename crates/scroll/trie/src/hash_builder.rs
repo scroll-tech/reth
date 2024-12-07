@@ -235,11 +235,17 @@ impl HashBuilder {
                         self.stack.push(*hash);
 
                         if self.stored_in_database {
-                            self.tree_masks[current.len() - 1] |=
-                                TrieMask::from_nibble(current.last().unwrap());
+                            self.tree_masks[current.len() - 1] |= TrieMask::from_nibble(
+                                current
+                                    .last()
+                                    .expect("must have at least a single bit in the current key"),
+                            );
                         }
-                        self.hash_masks[current.len() - 1] |=
-                            TrieMask::from_nibble(current.last().unwrap());
+                        self.hash_masks[current.len() - 1] |= TrieMask::from_nibble(
+                            current
+                                .last()
+                                .expect("must have at least a single bit in the current key"),
+                        );
 
                         build_extensions = true;
                     }
@@ -365,7 +371,10 @@ impl HashBuilder {
                     (len == 0).then(|| self.current_root()),
                 );
                 trace!(target: "trie::hash_builder", ?node, "storing updated intermediate node");
-                self.updated_branch_nodes.as_mut().unwrap().insert(common_prefix, node);
+                self.updated_branch_nodes
+                    .as_mut()
+                    .expect("updates_branch_nodes is some")
+                    .insert(common_prefix, node);
             }
         }
     }
