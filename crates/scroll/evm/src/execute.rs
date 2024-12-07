@@ -7,8 +7,8 @@ use reth_chainspec::{ChainSpec, EthereumHardfork, EthereumHardforks};
 use reth_consensus::ConsensusError;
 use reth_evm::{
     execute::{
-        BlockExecutionError, BlockExecutionStrategy, BlockExecutionStrategyFactory,
-        BlockValidationError, ExecuteOutput, ProviderError,
+        BasicBlockExecutorProvider, BlockExecutionError, BlockExecutionStrategy,
+        BlockExecutionStrategyFactory, BlockValidationError, ExecuteOutput, ProviderError,
     },
     ConfigureEvm, ConfigureEvmEnv,
 };
@@ -238,6 +238,11 @@ impl ScrollExecutionStrategyFactory {
         let evm_config = ScrollEvmConfig::new(chain_spec.clone());
         Self { chain_spec, evm_config }
     }
+
+    /// Returns the EVM configuration for the strategy factory.
+    pub fn evm_config(&self) -> ScrollEvmConfig {
+        self.evm_config.clone()
+    }
 }
 
 impl<EvmConfig> BlockExecutionStrategyFactory for ScrollExecutionStrategyFactory<EvmConfig>
@@ -259,6 +264,21 @@ where
         let state =
             State::builder().with_database(db).without_state_clear().with_bundle_update().build();
         ScrollExecutionStrategy::new(self.chain_spec.clone(), self.evm_config.clone(), state)
+    }
+}
+
+/// Helper type with backwards compatible methods to obtain Scroll executor
+/// providers.
+#[derive(Debug)]
+pub struct ScrollExecutorProvider;
+
+impl ScrollExecutorProvider {
+    /// Creates a new default scroll executor provider.
+    pub fn scroll(
+        // TODO (scroll): replace with `ScrollChainSpec`.
+        chain_spec: Arc<ChainSpec>,
+    ) -> BasicBlockExecutorProvider<ScrollExecutionStrategyFactory> {
+        BasicBlockExecutorProvider::new(ScrollExecutionStrategyFactory::new(chain_spec))
     }
 }
 
