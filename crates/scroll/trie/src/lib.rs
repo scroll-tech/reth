@@ -6,9 +6,11 @@ extern crate alloc;
 
 mod branch;
 mod hash_builder;
-pub use hash_builder::HashBuilder;
 mod leaf;
 mod sub_tree;
+
+pub use hash_builder::HashBuilder;
+
 use reth_scroll_primitives::poseidon::Fr;
 
 /// The hashing domain for leaf nodes.
