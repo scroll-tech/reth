@@ -1,0 +1,41 @@
+[package]
+name = "reth-scroll-node"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# reth
+reth-db = { workspace = true, features = ["scroll"] }
+# TODO (scroll): remove this
+reth-chainspec = { workspace = true, features = ["scroll"] }
+reth-consensus.workspace = true
+reth-ethereum-engine-primitives.workspace = true
+reth-ethereum-forks.workspace = true
+reth-evm.workspace = true
+reth-network.workspace = true
+reth-node-types.workspace = true
+reth-node-builder = { workspace = true, features = ["scroll"] }
+reth-payload-builder.workspace = true
+reth-primitives = { workspace = true, features = ["scroll"] }
+reth-provider = { workspace = true, features = ["scroll"] }
+reth-tracing.workspace = true
+reth-transaction-pool.workspace = true
+reth-trie-db = { workspace = true, features = ["scroll"] }
+
+# scroll
+reth-scroll-evm.workspace = true
+
+# alloy
+alloy-primitives.workspace = true
+
+# misc
+eyre.workspace = true
+tokio.workspace = true
