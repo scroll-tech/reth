@@ -179,8 +179,7 @@ dependencies = [
 [[package]]
 name = "alloy-eip2930"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0069cf0642457f87a01a014f6dc29d5d893cd4fd8fddf0c3cdfad1bb3ebafc41"
+source = "git+https://github.com/scroll-tech/alloy-eips?branch=v0.3.2#8d5fc83fc257b09510dc8d76561188218d9c0c32"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -1352,6 +1351,19 @@ dependencies = [
  "glob",
  "threadpool",
  "zeroize",
+]
+
+[[package]]
+name = "bn254"
+version = "0.1.0"
+source = "git+https://github.com/scroll-tech/bn254.git?branch=master#81e1dcc92ee9a2798b13b84b24de182e9c42256e"
+dependencies = [
+ "ff",
+ "getrandom 0.2.15",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "sp1-intrinsics",
+ "subtle",
 ]
 
 [[package]]
@@ -3178,8 +3190,7 @@ dependencies = [
 [[package]]
 name = "ff"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
+source = "git+https://github.com/scroll-tech/ff?branch=feat/sp1#244b1098f6be1d19c5fd3f0ec60117ac2940e6ca"
 dependencies = [
  "bitvec",
  "rand_core 0.6.4",
@@ -5778,9 +5789,19 @@ checksum = "280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6"
 [[package]]
 name = "poseidon-bn254"
 version = "0.1.0"
+source = "git+https://github.com/scroll-tech/poseidon-bn254?branch=master#254baa0e3e85c0975c16fe6f33042b1fa9ae0a44"
+dependencies = [
+ "bn254 0.1.0 (git+https://github.com/scroll-tech/bn254.git?branch=master)",
+ "itertools 0.13.0",
+ "sp1-intrinsics",
+]
+
+[[package]]
+name = "poseidon-bn254"
+version = "0.1.0"
 source = "git+https://github.com/scroll-tech/poseidon-bn254?rev=526a64a#526a64a81419bcab6bd8280a8a3f9808189e0373"
 dependencies = [
- "bn254",
+ "bn254 0.1.0 (git+https://github.com/scroll-tech/bn254)",
  "itertools 0.13.0",
 ]
 
@@ -9159,6 +9180,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-consensus"
+version = "1.1.2"
+dependencies = [
+ "eyre",
+ "reth-scroll-revm",
+]
+
+[[package]]
+name = "reth-scroll-evm"
+version = "1.1.2"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "auto_impl",
+ "derive_more",
+ "eyre",
+ "reth-chainspec",
+ "reth-consensus",
+ "reth-ethereum-consensus",
+ "reth-evm",
+ "reth-primitives",
+ "reth-primitives-traits",
+ "reth-revm",
+ "reth-scroll-consensus",
+ "reth-scroll-execution",
+ "reth-scroll-primitives",
+ "reth-scroll-revm",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "reth-scroll-execution"
 version = "1.1.2"
 dependencies = [
@@ -9179,7 +9232,7 @@ dependencies = [
  "bincode",
  "bytes",
  "modular-bitfield",
- "poseidon-bn254",
+ "poseidon-bn254 0.1.0 (git+https://github.com/scroll-tech/poseidon-bn254?rev=526a64a)",
  "proptest",
  "proptest-arbitrary-interop",
  "rand 0.8.5",
@@ -9622,8 +9675,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15689a3c6a8d14b647b4666f2e236ef47b5a5133cdfd423f545947986fff7013"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -9656,9 +9708,9 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74e3f11d0fed049a4a10f79820c59113a79b38aed4ebec786a79d5c667bfeb51"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
+ "cfg-if",
  "revm-primitives",
  "serde",
 ]
@@ -9666,8 +9718,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e381060af24b750069a2b2d2c54bba273d84e8f5f9e8026fc9262298e26cc336"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -9686,8 +9737,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3702f132bb484f4f0d0ca4f6fbde3c82cfd745041abbedd6eda67730e1868ef0"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -9700,6 +9750,7 @@ dependencies = [
  "dyn-clone",
  "enumn",
  "hex",
+ "poseidon-bn254 0.1.0 (git+https://github.com/scroll-tech/poseidon-bn254?branch=master)",
  "serde",
 ]
 
