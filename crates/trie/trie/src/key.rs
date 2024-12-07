@@ -8,7 +8,7 @@ pub const MAX_BITS: usize = 248;
 /// The maximum number of bytes a key can contain.
 const MAX_BYTES: usize = 31;
 
-// TODO(frisitano): Refactor this into a trait that is more generic and can be used by any
+// TODO(scroll): Refactor this into a trait that is more generic and can be used by any
 // implementation that requires converting between nibbles and bits. Better yet we should use a
 // trait that allows for defining the key type via a GAT as opposed to using Nibbles.
 

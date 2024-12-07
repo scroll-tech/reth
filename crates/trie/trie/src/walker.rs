@@ -103,7 +103,7 @@ impl<C> TrieWalker<C> {
         self.key()
             .and_then(|key| {
                 if self.can_skip_current_node {
-                    // TODO(frisitano): replace this with key abstraction.
+                    // TODO(scroll): replace this with key abstraction.
                     #[cfg(not(feature = "scroll"))]
                     let key = key.increment().map(|inc| inc.pack());
                     #[cfg(feature = "scroll")]

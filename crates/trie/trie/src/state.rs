@@ -121,7 +121,7 @@ impl HashedPostState {
         let mut account_prefix_set = PrefixSetMut::with_capacity(self.accounts.len());
         let mut destroyed_accounts = HashSet::default();
         for (hashed_address, account) in &self.accounts {
-            // TODO(frisitano): replace with key abstraction
+            // TODO(scroll): replace with key abstraction
             #[cfg(feature = "scroll")]
             let nibbles = Nibbles::unpack_and_truncate_bits(hashed_address);
             #[cfg(not(feature = "scroll"))]
@@ -137,7 +137,7 @@ impl HashedPostState {
         let mut storage_prefix_sets =
             HashMap::with_capacity_and_hasher(self.storages.len(), Default::default());
         for (hashed_address, hashed_storage) in &self.storages {
-            // TODO(frisitano): replace this with abstraction.
+            // TODO(scroll): replace this with abstraction.
             #[cfg(feature = "scroll")]
             let nibbles = Nibbles::unpack_and_truncate_bits(hashed_address);
             #[cfg(not(feature = "scroll"))]
@@ -266,7 +266,7 @@ impl HashedStorage {
         } else {
             let mut prefix_set = PrefixSetMut::with_capacity(self.storage.len());
             for hashed_slot in self.storage.keys() {
-                // TODO(frisitano): replace this with key abstraction.
+                // TODO(scroll): replace this with key abstraction.
                 #[cfg(feature = "scroll")]
                 let nibbles = Nibbles::unpack_and_truncate_bits(hashed_slot);
                 #[cfg(not(feature = "scroll"))]

@@ -27,7 +27,7 @@ impl PoseidonValueHasher {
     pub(crate) fn hash_account(account: ScrollTrieAccount) -> B256 {
         // combine nonce and code size and parse into field element
         let nonce_code_size_bytes = field_element_from_be_bytes(
-            // TODO(frisitano): Replace with native handling of bytes instead of using U256.
+            // TODO(scroll): Replace with native handling of bytes instead of using U256.
             U256::from_limbs([account.nonce, account.code_size, 0, 0]).to_be_bytes(),
         );
 

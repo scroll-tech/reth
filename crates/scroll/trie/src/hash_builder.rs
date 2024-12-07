@@ -21,7 +21,7 @@ pub struct HashBuilder {
     pub value: HashBuilderValue,
     pub stack: Vec<B256>,
 
-    // TODO(frisitano): Introduce terminator / leaf masks
+    // TODO(scroll): Introduce terminator / leaf masks
     pub state_masks: Vec<TrieMask>,
     pub tree_masks: Vec<TrieMask>,
     pub hash_masks: Vec<TrieMask>,
@@ -216,7 +216,7 @@ impl HashBuilder {
             if !build_extensions {
                 match self.value.as_ref() {
                     HashBuilderValueRef::Bytes(leaf_value) => {
-                        // TODO(frisitano): Replace with terminator masks
+                        // TODO(scroll): Replace with terminator masks
                         // Set the terminator mask for the leaf node
                         self.state_masks[len] |= TrieMask::new(0b100 << extra_digit);
                         let leaf_node = LeafNodeRef::new(&current, leaf_value);
@@ -370,7 +370,7 @@ impl HashBuilder {
         }
     }
 
-    // TODO(frisitano): Enable proof retention
+    // TODO(scroll): Enable proof retention
     // fn retain_proof_from_stack(&mut self, prefix: &Nibbles) {
     //     if let Some(proof_retainer) = self.proof_retainer.as_mut() {
     //         proof_retainer.retain(
@@ -405,7 +405,7 @@ impl HashBuilder {
     }
 }
 
-// TODO(frisitano): Introduce generic for the HashBuilder.
+// TODO(scroll): Introduce generic for the HashBuilder.
 impl From<reth_trie::HashBuilder> for HashBuilder {
     fn from(hash_builder: reth_trie::HashBuilder) -> Self {
         Self {

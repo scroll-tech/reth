@@ -15,15 +15,13 @@ use reth_scroll_state_commitment::{
     PoseidonKeyHasher, StateRoot, StorageRoot,
 };
 
+use reth_scroll_state_commitment::test_utils::b256_clear_first_byte;
 use reth_trie::{
     trie_cursor::InMemoryTrieCursorFactory, updates::TrieUpdates, HashedPostState, HashedStorage,
     KeyHasher,
 };
 use reth_trie_db::{DatabaseStateRoot, DatabaseStorageRoot, DatabaseTrieCursorFactory};
 use std::collections::BTreeMap;
-
-#[cfg(feature = "scroll")]
-use reth_scroll_state_commitment::test_utils::b256_clear_first_byte;
 
 proptest! {
     #![proptest_config(ProptestConfig {

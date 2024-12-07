@@ -21,7 +21,7 @@ use tracing::{debug, trace};
 #[cfg(feature = "metrics")]
 use reth_trie::metrics::{StateRootMetrics, TrieRootMetrics, TrieType};
 
-// TODO(frisitano): Instead of introducing this new type we should make StateRoot generic over
+// TODO(scroll): Instead of introducing this new type we should make StateRoot generic over
 // the [`HashBuilder`] and key traversal types
 
 /// `StateRoot` is used to compute the root node of a state trie.
