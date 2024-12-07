@@ -13,7 +13,7 @@ mod key;
 pub use key::PoseidonKeyHasher;
 
 mod value;
-pub use value::PosiedonValueHasher;
+pub use value::PoseidonValueHasher;
 
 /// test utils for the state commitment
 #[cfg(feature = "test-utils")]

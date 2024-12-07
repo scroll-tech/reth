@@ -1,4 +1,4 @@
-use super::{PoseidonKeyHasher, PosiedonValueHasher, ScrollTrieAccount};
+use super::{PoseidonKeyHasher, PoseidonValueHasher, ScrollTrieAccount};
 use alloy_primitives::{Address, BlockNumber, B256};
 use reth_db::transaction::DbTx;
 use reth_execution_errors::{StateRootError, StorageRootError};
@@ -232,7 +232,7 @@ where
                     };
 
                     let account = ScrollTrieAccount::from((account, storage_root));
-                    let account_hash = PosiedonValueHasher::hash_account(account);
+                    let account_hash = PoseidonValueHasher::hash_account(account);
                     hash_builder.add_leaf(
                         Nibbles::unpack_and_truncate_bits(hashed_address),
                         account_hash.as_slice(),
@@ -431,7 +431,7 @@ where
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 TrieElement::Leaf(hashed_slot, value) => {
-                    let hashed_value = PosiedonValueHasher::hash_storage(value);
+                    let hashed_value = PoseidonValueHasher::hash_storage(value);
                     tracker.inc_leaf();
                     hash_builder.add_leaf(
                         Nibbles::unpack_and_truncate_bits(hashed_slot),

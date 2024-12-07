@@ -99,7 +99,7 @@ members = [
     "crates/rpc/rpc-server-types/",
     "crates/rpc/rpc-testing-util/",
     "crates/rpc/rpc-types-compat/",
-    "crates/rpc/rpc/", 
+    "crates/rpc/rpc/",
     "crates/scroll/execution",
     "crates/scroll/primitives",
     "crates/scroll/revm",

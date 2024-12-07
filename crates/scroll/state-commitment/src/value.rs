@@ -9,9 +9,9 @@ use reth_scroll_primitives::poseidon::{
 ///
 /// This hash provides hashing of a [`ScrollTrieAccount`] and a storage entry ([`U256`]).
 #[derive(Debug)]
-pub struct PosiedonValueHasher;
+pub struct PoseidonValueHasher;
 
-impl PosiedonValueHasher {
+impl PoseidonValueHasher {
     /// The number of field elements in the account hashing.
     const ACCOUNT_HASHING_FIELD_ELEMENTS: u64 = 5;
 
