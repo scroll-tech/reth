@@ -28,4 +28,3 @@ scroll = []
 [[bin]]
 name = "reth-scroll"
 path = "src/main.rs"
-

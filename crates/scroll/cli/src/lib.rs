@@ -1,14 +1,14 @@
 //! Scroll CLI implementation.
 #![cfg(not(feature = "optimism"))]
 
-pub use args::ScrollRollupArgs;
 mod args;
+pub use args::ScrollRollupArgs;
 
-pub use commands::Commands;
 mod commands;
+pub use commands::Commands;
 
-pub use spec::ScrollChainSpecParser;
 mod spec;
+pub use spec::ScrollChainSpecParser;
 
 use clap::Parser;
 use reth_cli::chainspec::ChainSpecParser;
