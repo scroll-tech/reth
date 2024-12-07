@@ -7334,6 +7334,7 @@ dependencies = [
  "reth-revm",
  "reth-rpc-types-compat",
  "reth-scroll-primitives",
+ "reth-scroll-storage",
  "reth-stages",
  "reth-stages-api",
  "reth-static-file",
@@ -9163,6 +9164,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll"
+version = "1.1.2"
+dependencies = [
+ "clap",
+ "reth-cli-util",
+ "reth-node-builder",
+ "reth-provider",
+ "reth-scroll-cli",
+ "reth-scroll-node",
+]
+
+[[package]]
+name = "reth-scroll-cli"
+version = "1.1.2"
+dependencies = [
+ "clap",
+ "eyre",
+ "reth-cli",
+ "reth-cli-commands",
+ "reth-cli-runner",
+ "reth-db",
+ "reth-node-builder",
+ "reth-node-core",
+ "reth-node-metrics",
+ "reth-scroll-evm",
+ "reth-scroll-node",
+ "reth-tracing",
+ "tracing",
+]
+
+[[package]]
 name = "reth-scroll-consensus"
 version = "1.1.2"
 dependencies = [
@@ -9199,7 +9231,33 @@ name = "reth-scroll-execution"
 version = "1.1.2"
 dependencies = [
  "reth-revm",
+ "reth-scroll-primitives",
  "reth-scroll-storage",
+]
+
+[[package]]
+name = "reth-scroll-node"
+version = "1.1.2"
+dependencies = [
+ "alloy-primitives",
+ "eyre",
+ "reth-chainspec",
+ "reth-consensus",
+ "reth-db",
+ "reth-ethereum-engine-primitives",
+ "reth-ethereum-forks",
+ "reth-evm",
+ "reth-network",
+ "reth-node-builder",
+ "reth-node-types",
+ "reth-payload-builder",
+ "reth-primitives",
+ "reth-provider",
+ "reth-scroll-evm",
+ "reth-tracing",
+ "reth-transaction-pool",
+ "reth-trie-db",
+ "tokio",
 ]
 
 [[package]]
