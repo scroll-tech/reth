@@ -73,7 +73,7 @@ test-utils = [
     "reth-trie/test-utils",
     "reth-trie-common/test-utils",
     "reth-trie-db/test-utils"
-    ]
+]
 metrics = ["reth-metrics", "dep:metrics"]
 
 
