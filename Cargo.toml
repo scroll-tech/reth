@@ -100,9 +100,13 @@ members = [
     "crates/rpc/rpc-testing-util/",
     "crates/rpc/rpc-types-compat/",
     "crates/rpc/rpc/",
+    "crates/scroll/alloy/consensus",
+    "crates/scroll/alloy/network",
+    "crates/scroll/alloy/rpc-types", 
     "crates/scroll/execution",
     "crates/scroll/primitives",
     "crates/scroll/revm",
+    "crates/scroll/rpc",
     "crates/scroll/storage",
     "crates/stages/api/",
     "crates/stages/stages/",
@@ -480,6 +484,8 @@ alloy-transport-ipc = { version = "0.6.4", default-features = false }
 alloy-transport-ws = { version = "0.6.4", default-features = false }
 
 # scroll
+scroll-alloy-consensus = { path = "crates/scroll/alloy/consensus" }
+scroll-alloy-rpc-types = { path = "crates/scroll/alloy/rpc-types" }
 # TODO (scroll): point to crates.io/tag once the crate is published/a tag is created.
 poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", rev = "526a64a", features = ["bn254"] }
 
