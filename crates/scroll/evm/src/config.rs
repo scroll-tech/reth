@@ -313,7 +313,7 @@ mod tests {
             timestamp: U256::from(attributes.timestamp),
             prevrandao: Some(attributes.prev_randao),
             difficulty: U256::ZERO,
-            // TODO (scroll): this shouldn't be 0 at curie fork
+            // TODO(scroll): this shouldn't be 0 at curie fork
             basefee: U256::ZERO,
             gas_limit: U256::from(header.gas_limit),
             blob_excess_gas_and_price: None,
