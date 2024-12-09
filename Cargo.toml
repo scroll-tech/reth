@@ -666,9 +666,12 @@ tracy-client = "0.17.3"
 #op-alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/op-alloy", rev = "6a042e7681b1" }
 
 [patch.crates-io]
-revm = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v50" }
-revm-primitives = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v50" }
+revm = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v50" }
+revm-primitives = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v50" }
 
 ff = { git = "https://github.com/scroll-tech/ff", branch = "feat/sp1" }
 
-alloy-eip2930 = { git = "https://github.com/scroll-tech/alloy-eips", branch = "v0.3.2" }
+alloy-eip2930 = { git = "https://github.com/scroll-tech/alloy-eips", branch = "v0.4.2" }
+alloy-eip7702 = { git = "https://github.com/scroll-tech/alloy-eips", branch = "v0.4.2" }
+
+alloy-sol-types = { git = "https://github.com/scroll-tech/alloy-core", branch = "v0.8.14" }
