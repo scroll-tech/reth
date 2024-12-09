@@ -33,7 +33,7 @@ mod dev;
 pub use dev::SCROLL_DEV;
 
 mod genesis;
-pub use genesis::ScrollChainInfo;
+pub use genesis::{ScrollChainConfig, ScrollChainInfo};
 
 mod scroll;
 pub use scroll::SCROLL_MAINNET;
