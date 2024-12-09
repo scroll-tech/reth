@@ -673,5 +673,3 @@ ff = { git = "https://github.com/scroll-tech/ff", branch = "feat/sp1" }
 
 alloy-eip2930 = { git = "https://github.com/scroll-tech/alloy-eips", branch = "v0.4.2" }
 alloy-eip7702 = { git = "https://github.com/scroll-tech/alloy-eips", branch = "v0.4.2" }
-
-alloy-sol-types = { git = "https://github.com/scroll-tech/alloy-core", branch = "v0.8.14" }
