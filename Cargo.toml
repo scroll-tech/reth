@@ -106,6 +106,8 @@ members = [
     "crates/scroll/primitives",
     "crates/scroll/revm",
     "crates/scroll/storage",
+    "crates/scroll/state-commitment",
+    "crates/scroll/trie",
     "crates/stages/api/",
     "crates/stages/stages/",
     "crates/stages/types/",
@@ -413,6 +415,8 @@ reth-scroll-consensus = { path = "crates/scroll/consensus" }
 reth-scroll-evm = { path = "crates/scroll/evm" }
 reth-scroll-execution = { path = "crates/scroll/execution" }
 reth-scroll-primitives = { path = "crates/scroll/primitives" }
+reth-scroll-state-commitment = { path = "crates/scroll/state-commitment" }
+reth-scroll-trie = { path = "crates/scroll/trie" }
 reth-scroll-revm = { path = "crates/scroll/revm" }
 reth-scroll-storage = { path = "crates/scroll/storage" }
 reth-stages = { path = "crates/stages/stages" }
