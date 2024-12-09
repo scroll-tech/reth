@@ -273,7 +273,7 @@ impl From<Account> for revm_primitives::shared::AccountInfo {
             poseidon_code_hash: reth_acc
                 .account_extension
                 .and_then(|acc| acc.poseidon_code_hash)
-                .unwrap_or(reth_scroll_primitives::POSEIDON_EMPTY),
+                .unwrap_or(reth_scroll_primitives::poseidon::POSEIDON_EMPTY),
             code: None,
         }
     }
