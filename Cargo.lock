@@ -179,7 +179,7 @@ dependencies = [
 [[package]]
 name = "alloy-eip2930"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/alloy-eips?branch=v0.4.2#92b2892d7b5b325c1f2f3e90a5befadbb5e610d4"
+source = "git+https://github.com/scroll-tech/alloy-eips?branch=v0.3.2#8d5fc83fc257b09510dc8d76561188218d9c0c32"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -191,7 +191,8 @@ dependencies = [
 [[package]]
 name = "alloy-eip7702"
 version = "0.4.2"
-source = "git+https://github.com/scroll-tech/alloy-eips?branch=v0.4.2#92b2892d7b5b325c1f2f3e90a5befadbb5e610d4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c986539255fb839d1533c128e190e557e52ff652c9ef62939e233a81dd93f7e"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -9226,32 +9227,34 @@ dependencies = [
 name = "reth-scroll-consensus"
 version = "1.1.2"
 dependencies = [
-	"eyre",
-	"reth-scroll-revm",
+ "eyre",
+ "reth-scroll-revm",
 ]
 
 [[package]]
 name = "reth-scroll-evm"
 version = "1.1.2"
 dependencies = [
-	"alloy-consensus",
-	"alloy-eips",
-	"auto_impl",
-	"derive_more",
-	"eyre",
-	"reth-chainspec",
-	"reth-consensus",
-	"reth-ethereum-consensus",
-	"reth-evm",
-	"reth-primitives",
-	"reth-primitives-traits",
-	"reth-revm",
-	"reth-scroll-consensus",
-	"reth-scroll-execution",
-	"reth-scroll-primitives",
-	"reth-scroll-revm",
-	"thiserror 1.0.69",
-	"tracing",
+ "alloy-consensus",
+ "alloy-eips",
+ "auto_impl",
+ "derive_more",
+ "eyre",
+ "reth-chainspec",
+ "reth-consensus",
+ "reth-ethereum-consensus",
+ "reth-evm",
+ "reth-primitives",
+ "reth-primitives-traits",
+ "reth-revm",
+ "reth-scroll-chainspec",
+ "reth-scroll-consensus",
+ "reth-scroll-execution",
+ "reth-scroll-forks",
+ "reth-scroll-primitives",
+ "reth-scroll-revm",
+ "thiserror 1.0.69",
+ "tracing",
 ]
 
 [[package]]
@@ -9773,7 +9776,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "18.0.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/v50#9df25c5085f9ca477944b52bca972a6c920bcc8d"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -9806,7 +9809,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "14.0.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/v50#9df25c5085f9ca477944b52bca972a6c920bcc8d"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "cfg-if",
  "revm-primitives",
@@ -9816,7 +9819,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "15.0.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/v50#9df25c5085f9ca477944b52bca972a6c920bcc8d"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -9835,7 +9838,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "14.0.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/v50#9df25c5085f9ca477944b52bca972a6c920bcc8d"
+source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/reth/v50#a740f3d8086395c00fa77fad5474bc4fde5b195d"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",

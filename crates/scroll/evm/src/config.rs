@@ -1,7 +1,9 @@
-use reth_chainspec::{ChainSpec, Head};
+use reth_chainspec::Head;
 use reth_evm::{ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
 use reth_primitives::{transaction::FillTxEnv, TransactionSigned};
 use reth_revm::{inspector_handle_register, Database, Evm, GetInspector, TxEnv};
+use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec};
+use reth_scroll_forks::ScrollHardfork;
 use revm::{
     precompile::{Address, Bytes},
     primitives::{
@@ -15,30 +17,27 @@ use std::{convert::Infallible, sync::Arc};
 #[derive(Clone, Debug)]
 pub struct ScrollEvmConfig {
     /// The chain spec for Scroll.
-    // TODO (scroll): update to ScrollChainSpec.
-    chain_spec: Arc<ChainSpec>,
+    chain_spec: Arc<ScrollChainSpec>,
+    /// Additional Scroll configuration.
+    scroll_config: ScrollChainConfig,
 }
 
 impl ScrollEvmConfig {
     /// Returns a new instance of [`ScrollEvmConfig`].
-    pub const fn new(chain_spec: Arc<ChainSpec>) -> Self {
-        Self { chain_spec }
+    pub const fn new(chain_spec: Arc<ScrollChainSpec>, scroll_config: ScrollChainConfig) -> Self {
+        Self { chain_spec, scroll_config }
     }
 
     /// Returns the spec id at the given head.
-    pub fn spec_id_at_head(&self, _head: &Head) -> SpecId {
-        // TODO (scroll): uncomment once the Scroll chain spec is available
-        // let chain_spec = &self.chain_spec;
-        // if chain_spec.fork(ScrollHardfork::Euclid).active_at_head(head) {
-        //     SpecId::EUCLID
-        // } else if chain_spec.fork(ScrollHardfork::Curie).active_at_head(head) {
-        //     SpecId::CURIE
-        // } else if chain_spec.fork(ScrollHardfork::Bernouilli).active_at_head(head) {
-        //     SpecId::BERNOULLI
-        // } else {
-        //     SpecId::PRE_BERNOULLI
-        // }
-        SpecId::PRE_BERNOULLI
+    pub fn spec_id_at_head(&self, head: &Head) -> SpecId {
+        let chain_spec = &self.chain_spec;
+        if chain_spec.fork(ScrollHardfork::Curie).active_at_head(head) {
+            SpecId::CURIE
+        } else if chain_spec.fork(ScrollHardfork::Bernoulli).active_at_head(head) {
+            SpecId::BERNOULLI
+        } else {
+            SpecId::PRE_BERNOULLI
+        }
     }
 }
 
@@ -107,10 +106,9 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
     fn fill_block_env(&self, block_env: &mut BlockEnv, header: &Self::Header, after_merge: bool) {
         block_env.number = U256::from(header.number);
         block_env.coinbase = header.beneficiary;
-        // TODO (scroll): uncomment once the Scroll chain spec is available
-        // if let Some(vault_address) = self.chain_spec.fee_vault_address {
-        //    block_env.coinbase = vault_address;
-        // }
+        if let Some(vault_address) = self.scroll_config.fee_vault_address {
+            block_env.coinbase = vault_address;
+        }
         block_env.timestamp = U256::from(header.timestamp);
         if after_merge {
             block_env.prevrandao = Some(header.mix_hash);
@@ -138,11 +136,11 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
             ..Default::default()
         });
 
-        let coinbase = attributes.suggested_fee_recipient;
-        // TODO (scroll): uncomment once the Scroll chain spec is available
-        // if let Some(vault_address) = self.chain_spec.fee_vault_address {
-        //    block_env.coinbase = vault_address;
-        // }
+        let coinbase = if let Some(vault_address) = self.scroll_config.fee_vault_address {
+            vault_address
+        } else {
+            attributes.suggested_fee_recipient
+        };
 
         let block_env = BlockEnv {
             number: U256::from(parent.number + 1),
@@ -152,9 +150,8 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
             prevrandao: Some(attributes.prev_randao),
             gas_limit: U256::from(parent.gas_limit),
             // calculate basefee based on parent block's gas usage
-            basefee: U256::ZERO,
-            // TODO (scroll): uncomment once the Scroll chain spec is available
-            // self.chain_spec.next_block_base_fee(parent, attributes.timestamp)?,
+            // TODO(scroll): update with correct block fee calculation for block building.
+            basefee: U256::from(parent.base_fee_per_gas.unwrap_or_default()),
             blob_excess_gas_and_price: None,
         };
 
@@ -172,21 +169,22 @@ mod tests {
     use super::*;
     use alloy_consensus::Header;
     use reth_chainspec::NamedChain::Scroll;
-    use revm::primitives::{address, SpecId, B256};
+    use reth_scroll_chainspec::ScrollChainSpecBuilder;
+    use revm::primitives::{SpecId, B256};
 
     #[test]
     fn test_spec_at_head() {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build().into(),
+            ScrollChainConfig::default(),
+        );
 
         // prepare all fork heads
-        let euclid_head = &Head { number: u64::MAX, ..Default::default() };
         let curie_head = &Head { number: 7096836, ..Default::default() };
         let bernouilli_head = &Head { number: 5220340, ..Default::default() };
         let pre_bernouilli_head = &Head { number: 0, ..Default::default() };
 
         // check correct spec id
-        assert_eq!(config.spec_id_at_head(euclid_head), SpecId::EUCLID);
         assert_eq!(config.spec_id_at_head(curie_head), SpecId::CURIE);
         assert_eq!(config.spec_id_at_head(bernouilli_head), SpecId::BERNOULLI);
         assert_eq!(config.spec_id_at_head(pre_bernouilli_head), SpecId::PRE_BERNOULLI);
@@ -194,21 +192,10 @@ mod tests {
 
     #[test]
     fn test_fill_cfg_env() {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let config = ScrollEvmConfig::new(ChainSpec::default().into());
-
-        // euclid header
-        let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
-        let euclid_header = Header { number: u64::MAX, ..Default::default() };
-
-        // fill cfg env
-        config.fill_cfg_env(&mut cfg_env, &euclid_header, U256::ZERO);
-
-        // check correct cfg env
-        assert_eq!(cfg_env.chain_id, Scroll as u64);
-        assert_eq!(cfg_env.perf_analyse_created_bytecodes, AnalysisKind::Analyse);
-        assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::EUCLID);
-        assert!(cfg_env.handler_cfg.is_scroll);
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build().into(),
+            ScrollChainConfig::default(),
+        );
 
         // curie
         let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
@@ -223,7 +210,7 @@ mod tests {
         assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::CURIE);
         assert!(cfg_env.handler_cfg.is_scroll);
 
-        // bernouilli
+        // bernoulli
         let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
         let bernouilli_header = Header { number: 5220340, ..Default::default() };
 
@@ -236,7 +223,7 @@ mod tests {
         assert_eq!(cfg_env.handler_cfg.spec_id, SpecId::BERNOULLI);
         assert!(cfg_env.handler_cfg.is_scroll);
 
-        // pre-bernouilli
+        // pre-bernoulli
         let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
         let pre_bernouilli_header = Header { number: 0, ..Default::default() };
 
@@ -252,8 +239,10 @@ mod tests {
 
     #[test]
     fn test_fill_block_env() {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build().into(),
+            ScrollChainConfig::mainnet(),
+        );
         let mut block_env = BlockEnv::default();
 
         // curie header
@@ -271,11 +260,9 @@ mod tests {
         config.fill_block_env(&mut block_env, &header, true);
 
         // verify block env correctly updated
-        // TODO (scroll): replace with `config.chain_spec.fee_vault_address.unwrap()`
-        const FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
         let expected = BlockEnv {
             number: U256::from(header.number),
-            coinbase: FEE_VAULT_ADDRESS,
+            coinbase: config.scroll_config.fee_vault_address.unwrap(),
             timestamp: U256::from(header.timestamp),
             prevrandao: Some(header.mix_hash),
             difficulty: U256::ZERO,
@@ -288,8 +275,10 @@ mod tests {
 
     #[test]
     fn test_next_cfg_and_block_env() -> eyre::Result<()> {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let config = ScrollEvmConfig::new(ChainSpec::default().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build().into(),
+            ScrollChainConfig::mainnet(),
+        );
 
         // pre curie header
         let header = Header {
@@ -318,18 +307,16 @@ mod tests {
         assert!(cfg_env.handler_cfg.is_scroll);
 
         // verify block env
-        // TODO (scroll): replace with `config.chain_spec.fee_vault_address.unwrap()`
-        const FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
         let expected = BlockEnv {
             number: U256::from(header.number + 1),
-            coinbase: FEE_VAULT_ADDRESS,
+            coinbase: config.scroll_config.fee_vault_address.unwrap(),
             timestamp: U256::from(attributes.timestamp),
             prevrandao: Some(attributes.prev_randao),
             difficulty: U256::ZERO,
-            // TODO (scroll): update once the Scroll chain spec is available
             // TODO (scroll): this shouldn't be 0 at curie fork
             basefee: U256::ZERO,
             gas_limit: U256::from(header.gas_limit),
+            blob_excess_gas_and_price: None,
             ..Default::default()
         };
         assert_eq!(block_env, expected);

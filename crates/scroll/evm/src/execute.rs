@@ -3,7 +3,7 @@
 use crate::{ForkError, ScrollBlockExecutionError, ScrollEvmConfig};
 use alloy_consensus::{Header, Transaction};
 use alloy_eips::{eip2718::Encodable2718, eip7685::Requests};
-use reth_chainspec::{ChainSpec, EthereumHardfork, EthereumHardforks};
+use reth_chainspec::EthereumHardforks;
 use reth_consensus::ConsensusError;
 use reth_evm::{
     execute::{
@@ -16,8 +16,10 @@ use reth_primitives::{
     gas_spent_by_transactions, BlockWithSenders, GotExpected, InvalidTransactionError, Receipt,
 };
 use reth_revm::primitives::{CfgEnvWithHandlerCfg, U256};
+use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec};
 use reth_scroll_consensus::apply_curie_hard_fork;
 use reth_scroll_execution::FinalizeExecution;
+use reth_scroll_forks::ScrollHardfork;
 use revm::{
     db::BundleState,
     primitives::{bytes::BytesMut, BlockEnv, EnvWithHandlerCfg, ResultAndState},
@@ -32,8 +34,7 @@ use std::{
 #[derive(Debug)]
 pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     /// Chain specification.
-    // TODO (scroll): update to the Scroll chain spec
-    chain_spec: Arc<ChainSpec>,
+    chain_spec: Arc<ScrollChainSpec>,
     /// Evm configuration.
     evm_config: EvmConfig,
     /// Current state for the execution.
@@ -42,7 +43,11 @@ pub struct ScrollExecutionStrategy<DB, EvmConfig> {
 
 impl<DB, EvmConfig> ScrollExecutionStrategy<DB, EvmConfig> {
     /// Returns an instance of [`ScrollExecutionStrategy`].
-    pub const fn new(chain_spec: Arc<ChainSpec>, evm_config: EvmConfig, state: State<DB>) -> Self {
+    pub const fn new(
+        chain_spec: Arc<ScrollChainSpec>,
+        evm_config: EvmConfig,
+        state: State<DB>,
+    ) -> Self {
         Self { chain_spec, evm_config, state }
     }
 }
@@ -78,9 +83,7 @@ where
         block: &BlockWithSenders,
         _total_difficulty: U256,
     ) -> Result<(), Self::Error> {
-        // TODO (scroll): update to the Scroll chain spec
-        // TODO (scroll): update to the Curie hardfork
-        if self.chain_spec.fork(EthereumHardfork::Dao).transitions_at_block(block.number) {
+        if self.chain_spec.fork(ScrollHardfork::Curie).transitions_at_block(block.number) {
             if let Err(err) = apply_curie_hard_fork(&mut self.state) {
                 tracing::debug!(%err, "failed to apply curie hardfork");
                 return Err(ForkError::Curie.into());
@@ -227,16 +230,15 @@ where
 #[derive(Clone, Debug)]
 pub struct ScrollExecutionStrategyFactory<EvmConfig = ScrollEvmConfig> {
     /// The chain specification for the [`ScrollExecutionStrategy`].
-    // TODO (scroll): update to the Scroll chain spec
-    chain_spec: Arc<ChainSpec>,
+    chain_spec: Arc<ScrollChainSpec>,
     /// The Evm configuration for the [`ScrollExecutionStrategy`].
     evm_config: EvmConfig,
 }
 
 impl ScrollExecutionStrategyFactory {
     /// Returns a new instance of the [`ScrollExecutionStrategyFactory`].
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
-        let evm_config = ScrollEvmConfig::new(chain_spec.clone());
+    pub fn new(chain_spec: Arc<ScrollChainSpec>, scroll_config: ScrollChainConfig) -> Self {
+        let evm_config = ScrollEvmConfig::new(chain_spec.clone(), scroll_config);
         Self { chain_spec, evm_config }
     }
 }
@@ -267,10 +269,11 @@ where
 mod tests {
     use super::*;
     use crate::{ScrollEvmConfig, ScrollExecutionStrategy, ScrollExecutionStrategyFactory};
-    use reth_chainspec::{ChainSpecBuilder, MIN_TRANSACTION_GAS};
+    use reth_chainspec::MIN_TRANSACTION_GAS;
     use reth_evm::execute::ExecuteOutput;
     use reth_primitives::{Block, BlockBody, BlockWithSenders, Receipt, TransactionSigned, TxType};
     use reth_primitives_traits::transaction::signed::SignedTransaction;
+    use reth_scroll_chainspec::ScrollChainSpecBuilder;
     use reth_scroll_consensus::{
         BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
         CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BASE_FEE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -284,9 +287,9 @@ mod tests {
     };
 
     fn strategy() -> ScrollExecutionStrategy<EmptyDBTyped<ProviderError>, ScrollEvmConfig> {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let chain_spec = Arc::new(ChainSpecBuilder::mainnet().build());
-        let factory = ScrollExecutionStrategyFactory::new(chain_spec);
+        let chain_spec = Arc::new(ScrollChainSpecBuilder::scroll_mainnet().build());
+        let config = ScrollChainConfig::mainnet();
+        let factory = ScrollExecutionStrategyFactory::new(chain_spec, config);
         let db = EmptyDBTyped::<ProviderError>::new();
 
         factory.create_strategy(db)
@@ -467,9 +470,9 @@ mod tests {
                 (L1_BASE_FEE_SLOT, U256::from(1000)),
                 (OVER_HEAD_SLOT, U256::from(1000)),
                 (SCALAR_SLOT, U256::from(1000)),
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
                 (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                (BLOB_SCALAR_SLOT, U256::from(1000)),
+                (BLOB_SCALAR_SLOT, U256::from(10000)),
                 (IS_CURIE_SLOT, U256::from(1)),
             ]
             .into_iter()
@@ -488,9 +491,7 @@ mod tests {
             tx_type: TxType::Legacy,
             cumulative_gas_used: MIN_TRANSACTION_GAS,
             success: true,
-            // TODO (scroll): set this to the correct value (should be different from
-            // not_curie_fork)
-            l1_fee: U256::from(3),
+            l1_fee: U256::from(9),
             ..Default::default()
         }];
 

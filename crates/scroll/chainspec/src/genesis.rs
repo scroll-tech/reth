@@ -1,6 +1,6 @@
 //! Scroll types for genesis data.
 
-use alloy_primitives::Address;
+use alloy_primitives::{address, Address};
 use alloy_serde::OtherFields;
 use serde::de::Error;
 
@@ -114,6 +114,31 @@ impl ScrollChainConfig {
     /// parsed from a genesis file.
     pub fn extract_from(others: &OtherFields) -> Option<Self> {
         Self::try_from(others).ok()
+    }
+
+    /// Returns the [`ScrollChainConfig`] for Scroll Mainnet.
+    pub const fn mainnet() -> Self {
+        Self {
+            fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),
+            l1_config: L1Config {
+                l1_chain_id: 1,
+                l1_message_queue_address: address!("0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"),
+                scroll_chain_address: address!("a13BAF47339d63B743e7Da8741db5456DAc1E556"),
+                num_l1_messages_per_block: 10,
+            },
+        }
+    }
+    /// Returns the [`ScrollChainConfig`] for Scroll Sepolia.
+    pub const fn sepolia() -> Self {
+        Self {
+            fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),
+            l1_config: L1Config {
+                l1_chain_id: 11155111,
+                l1_message_queue_address: address!("F0B2293F5D834eAe920c6974D50957A1732de763"),
+                scroll_chain_address: address!("2D567EcE699Eabe5afCd141eDB7A4f2D0D6ce8a0"),
+                num_l1_messages_per_block: 10,
+            },
+        }
     }
 }
 
