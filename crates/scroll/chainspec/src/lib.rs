@@ -1,19 +1,8 @@
 //! Scroll-Reth chain specs.
 
-#![doc(
-    html_logo_url = "https://raw.githubusercontent.com/paradigmxyz/reth/main/assets/reth-docs.png",
-    html_favicon_url = "https://avatars0.githubusercontent.com/u/97369466?s=256",
-    issue_tracker_base_url = "https://github.com/paradigmxyz/reth/issues/"
-)]
+#![doc = include_str!("../../../../docs/hardforks.md")]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
-
-extern crate alloc;
-
-mod dev;
-mod genesis;
-mod scroll;
-mod scroll_sepolia;
 
 use alloc::{boxed::Box, vec::Vec};
 use alloy_chains::Chain;
@@ -21,10 +10,6 @@ use alloy_consensus::Header;
 use alloy_genesis::Genesis;
 use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, Display, From, Into};
-pub use dev::SCROLL_DEV;
-pub use genesis::ScrollChainInfo;
-#[cfg(not(feature = "std"))]
-pub(crate) use once_cell::sync::Lazy as LazyLock;
 use reth_chainspec::{
     BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec, EthereumHardforks,
     ForkFilter, ForkId, Hardforks, Head,
@@ -32,10 +17,25 @@ use reth_chainspec::{
 use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition, Hardfork};
 use reth_network_peers::NodeRecord;
 use reth_scroll_forks::ScrollHardforks;
-pub use scroll::SCROLL_MAINNET;
-pub use scroll_sepolia::SCROLL_SEPOLIA;
+
+#[cfg(not(feature = "std"))]
+use once_cell::sync::Lazy as LazyLock;
 #[cfg(feature = "std")]
-pub(crate) use std::sync::LazyLock;
+use std::sync::LazyLock;
+
+extern crate alloc;
+
+mod dev;
+pub use dev::SCROLL_DEV;
+
+mod genesis;
+pub use genesis::ScrollChainInfo;
+
+mod scroll;
+pub use scroll::SCROLL_MAINNET;
+
+mod scroll_sepolia;
+pub use scroll_sepolia::SCROLL_SEPOLIA;
 
 /// Chain spec builder for a Scroll chain.
 #[derive(Debug, Default, From)]
