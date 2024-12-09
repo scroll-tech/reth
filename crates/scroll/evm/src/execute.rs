@@ -123,13 +123,13 @@ where
             self.evm_config.fill_tx_env(evm.tx_mut(), transaction, *sender);
             if transaction.is_l1_message() {
                 evm.context.evm.env.cfg.disable_base_fee = true; // disable base fee for l1 msg
+            } else {
+                // RLP encode the transaction following eip 2718
+                let mut buf = BytesMut::with_capacity(transaction.encode_2718_len());
+                transaction.encode_2718(&mut buf);
+                let transaction_rlp_bytes = buf.freeze();
+                evm.context.evm.env.tx.scroll.rlp_bytes = Some(transaction_rlp_bytes.into());
             }
-
-            // RLP encode the transaction following eip 2718
-            let mut buf = BytesMut::with_capacity(transaction.encode_2718_len());
-            transaction.encode_2718(&mut buf);
-            let transaction_rlp_bytes = buf.freeze();
-            evm.context.evm.env.tx.scroll.rlp_bytes = Some(transaction_rlp_bytes.into());
             evm.context.evm.env.tx.scroll.is_l1_msg = transaction.is_l1_message();
 
             // execute the transaction and commit the result to the database
