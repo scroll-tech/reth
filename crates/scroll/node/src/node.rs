@@ -1,30 +1,35 @@
 //! Node specific implementations for Scroll.
 
-use reth_chainspec::ChainSpec;
+use alloy_rpc_types_engine::{ExecutionPayload, ExecutionPayloadSidecar, PayloadError};
 use reth_consensus::noop::NoopConsensus;
 use reth_db::transaction::{DbTx, DbTxMut};
-use reth_ethereum_engine_primitives::EthEngineTypes;
+use reth_ethereum_engine_primitives::{EthEngineTypes, EthPayloadAttributes};
 use reth_ethereum_forks::EthereumHardforks;
 use reth_evm::execute::BasicBlockExecutorProvider;
-use reth_network::PeersInfo;
+use reth_network::{NetworkHandle, PeersInfo};
 use reth_node_builder::{
     components::{
-        Components, ComponentsBuilder, ConsensusBuilder, ExecutorBuilder, NetworkBuilder,
+        ComponentsBuilder, ConsensusBuilder, ExecutorBuilder, NetworkBuilder,
         PayloadServiceBuilder, PoolBuilder,
     },
-    BuilderContext, FullNodeTypes, Node,
+    rpc::{EngineValidatorBuilder, RpcAddOns},
+    AddOnsContext, BuilderContext, EngineApiMessageVersion, EngineObjectValidationError,
+    EngineTypes, EngineValidator, FullNodeComponents, FullNodeTypes, Node, NodeAdapter,
+    NodeComponentsBuilder, PayloadOrAttributes,
 };
-use reth_node_types::{NodePrimitives, NodeTypes, NodeTypesWithEngine};
+use reth_node_types::{NodeTypes, NodeTypesWithDB, NodeTypesWithEngine};
 use reth_payload_builder::PayloadBuilderHandle;
-use reth_primitives::BlockBody;
+use reth_primitives::{Block, BlockBody, EthPrimitives, SealedBlock};
 use reth_provider::{
     providers::ChainStorage, BlockBodyReader, BlockBodyWriter, ChainSpecProvider, DBProvider,
     EthStorage, ProviderResult, ReadBodyInput,
 };
+use reth_rpc::EthApi;
+use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_evm::{ScrollEvmConfig, ScrollExecutionStrategyFactory};
+use reth_scroll_state_commitment::BinaryMerklePatriciaTrie;
 use reth_tracing::tracing::info;
 use reth_transaction_pool::{noop::NoopTransactionPool, TransactionPool};
-use reth_trie_db::MerklePatriciaTrie;
 
 // #################### NODE ####################
 
@@ -35,8 +40,13 @@ pub struct ScrollNode;
 impl<N> Node<N> for ScrollNode
 where
     N: FullNodeTypes,
-    // TODO (scroll): replace with `ScrollChainSpec`.
-    N::Types: NodeTypes<ChainSpec = ChainSpec, Primitives = ScrollPrimitives>,
+    N::Types: NodeTypesWithDB
+        + NodeTypesWithEngine<
+            ChainSpec = ScrollChainSpec,
+            Primitives = EthPrimitives,
+            Engine = EthEngineTypes,
+            Storage = ScrollStorage,
+        >,
 {
     type ComponentsBuilder = ComponentsBuilder<
         N,
@@ -46,7 +56,9 @@ where
         ScrollExecutorBuilder,
         ScrollConsensusBuilder,
     >;
-    type AddOns = ();
+    type AddOns = ScrollAddOns<
+        NodeAdapter<N, <Self::ComponentsBuilder as NodeComponentsBuilder<N>>::Components>,
+    >;
 
     fn components_builder(&self) -> Self::ComponentsBuilder {
         ComponentsBuilder::default()
@@ -58,7 +70,88 @@ where
             .consensus(ScrollConsensusBuilder)
     }
 
-    fn add_ons(&self) -> Self::AddOns {}
+    fn add_ons(&self) -> Self::AddOns {
+        ScrollAddOns::default()
+    }
+}
+
+// #################### NODE TYPES ####################
+
+impl NodeTypesWithEngine for ScrollNode {
+    type Engine = EthEngineTypes;
+}
+
+impl NodeTypes for ScrollNode {
+    type Primitives = EthPrimitives;
+    type ChainSpec = ScrollChainSpec;
+    type StateCommitment = BinaryMerklePatriciaTrie;
+    type Storage = ScrollStorage;
+}
+
+// #################### NODE ADD-ONS ####################
+
+/// Add-ons for the Scroll follower node.
+pub type ScrollAddOns<N> = RpcAddOns<
+    N,
+    EthApi<
+        <N as FullNodeTypes>::Provider,
+        <N as FullNodeComponents>::Pool,
+        NetworkHandle,
+        <N as FullNodeComponents>::Evm,
+    >,
+    ScrollEngineValidatorBuilder,
+>;
+
+/// Builder for [`ScrollEngineValidator`].
+#[derive(Debug, Default, Clone)]
+pub struct ScrollEngineValidatorBuilder;
+
+impl<Node, Types> EngineValidatorBuilder<Node> for ScrollEngineValidatorBuilder
+where
+    Types: NodeTypesWithEngine<ChainSpec = ScrollChainSpec>,
+    Node: FullNodeComponents<Types = Types>,
+    NoopEngineValidator: EngineValidator<Types::Engine>,
+{
+    type Validator = NoopEngineValidator;
+
+    async fn build(self, _ctx: &AddOnsContext<'_, Node>) -> eyre::Result<Self::Validator> {
+        Ok(NoopEngineValidator)
+    }
+}
+
+/// Noop engine validator used as default for Scroll.
+#[derive(Debug, Clone)]
+pub struct NoopEngineValidator;
+
+impl<Types> EngineValidator<Types> for NoopEngineValidator
+where
+    Types: EngineTypes<PayloadAttributes = EthPayloadAttributes>,
+{
+    type Block = Block;
+
+    fn validate_version_specific_fields(
+        &self,
+        _version: EngineApiMessageVersion,
+        _payload_or_attrs: PayloadOrAttributes<'_, EthPayloadAttributes>,
+    ) -> Result<(), EngineObjectValidationError> {
+        Ok(())
+    }
+
+    fn ensure_well_formed_attributes(
+        &self,
+        _version: EngineApiMessageVersion,
+        _attributes: &EthPayloadAttributes,
+    ) -> Result<(), EngineObjectValidationError> {
+        Ok(())
+    }
+
+    fn ensure_well_formed_payload(
+        &self,
+        _payload: ExecutionPayload,
+        _sidecar: ExecutionPayloadSidecar,
+    ) -> Result<SealedBlock, PayloadError> {
+        Ok(SealedBlock::default())
+    }
 }
 
 // #################### NODE POOL ####################
@@ -110,10 +203,8 @@ pub struct ScrollNetworkBuilder;
 
 impl<Node, Pool> NetworkBuilder<Node, Pool> for ScrollNetworkBuilder
 where
-    // TODO (scroll): replace with
-    // ScrollChainSpec.
     Node: FullNodeTypes,
-    Node::Types: NodeTypes<ChainSpec = ChainSpec, Primitives = ScrollPrimitives>,
+    Node::Types: NodeTypes<ChainSpec = ScrollChainSpec, Primitives = EthPrimitives>,
     Pool: TransactionPool + Unpin + 'static,
 {
     async fn build_network(
@@ -136,10 +227,8 @@ pub struct ScrollExecutorBuilder;
 
 impl<Node> ExecutorBuilder<Node> for ScrollExecutorBuilder
 where
-    // TODO (scroll): replace with
-    // ScrollChainSpec.
     Node: FullNodeTypes,
-    Node::Types: NodeTypesWithEngine<ChainSpec = ChainSpec>,
+    Node::Types: NodeTypesWithEngine<ChainSpec = ScrollChainSpec>,
 {
     type EVM = ScrollEvmConfig;
     type Executor = BasicBlockExecutorProvider<ScrollExecutionStrategyFactory>;
@@ -214,58 +303,24 @@ where
     }
 }
 
-impl ChainStorage<ScrollPrimitives> for ScrollStorage {
+impl ChainStorage<EthPrimitives> for ScrollStorage {
     fn reader<TX, Types>(
         &self,
-    ) -> impl reth_provider::ChainStorageReader<
-        reth_provider::DatabaseProvider<TX, Types>,
-        ScrollPrimitives,
-    >
+    ) -> impl reth_provider::ChainStorageReader<reth_provider::DatabaseProvider<TX, Types>, EthPrimitives>
     where
         TX: DbTx + 'static,
-        Types: reth_provider::providers::NodeTypesForProvider<Primitives = ScrollPrimitives>,
+        Types: reth_provider::providers::NodeTypesForProvider<Primitives = EthPrimitives>,
     {
         self
     }
 
     fn writer<TX, Types>(
         &self,
-    ) -> impl reth_provider::ChainStorageWriter<
-        reth_provider::DatabaseProvider<TX, Types>,
-        ScrollPrimitives,
-    >
+    ) -> impl reth_provider::ChainStorageWriter<reth_provider::DatabaseProvider<TX, Types>, EthPrimitives>
     where
         TX: DbTxMut + DbTx + 'static,
-        Types: NodeTypes<Primitives = ScrollPrimitives>,
+        Types: NodeTypes<Primitives = EthPrimitives>,
     {
         self
     }
-}
-
-// #################### NODE TYPES ####################
-
-impl NodeTypesWithEngine for ScrollNode {
-    type Engine = EthEngineTypes;
-}
-
-impl NodeTypes for ScrollNode {
-    type Primitives = ScrollPrimitives;
-    // TODO (scroll): replace with ScrollChainSpec.
-    type ChainSpec = ChainSpec;
-    // TODO (scroll): replace with BinaryMerklePatriciaTrie.
-    type StateCommitment = MerklePatriciaTrie;
-    type Storage = ScrollStorage;
-}
-
-/// The primitive types for Scroll.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ScrollPrimitives;
-
-impl NodePrimitives for ScrollPrimitives {
-    type Block = reth_primitives::Block;
-    type BlockHeader = reth_primitives::Header;
-    type BlockBody = BlockBody;
-    type SignedTx = reth_primitives::TransactionSigned;
-    type TxType = reth_primitives::TxType;
-    type Receipt = reth_primitives::Receipt;
 }

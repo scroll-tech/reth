@@ -13,25 +13,28 @@ workspace = true
 
 [dependencies]
 # reth
-reth-db = { workspace = true, features = ["scroll"] }
-# TODO (scroll): remove this
-reth-chainspec = { workspace = true, features = ["scroll"] }
+reth-db.workspace = true
 reth-consensus.workspace = true
 reth-ethereum-engine-primitives.workspace = true
 reth-ethereum-forks.workspace = true
 reth-evm.workspace = true
 reth-network.workspace = true
 reth-node-types.workspace = true
-reth-node-builder = { workspace = true, features = ["scroll"] }
+reth-node-builder.workspace = true
 reth-payload-builder.workspace = true
-reth-primitives = { workspace = true, features = ["scroll"] }
-reth-provider = { workspace = true, features = ["scroll"] }
+reth-primitives.workspace = true
+reth-provider.workspace = true
+reth-rpc.workspace = true
 reth-tracing.workspace = true
 reth-transaction-pool.workspace = true
-reth-trie-db = { workspace = true, features = ["scroll"] }
+
+# alloy
+alloy-rpc-types-engine.workspace = true
 
 # scroll
+reth-scroll-chainspec.workspace = true
 reth-scroll-evm.workspace = true
+reth-scroll-state-commitment.workspace = true
 
 # alloy
 alloy-primitives.workspace = true
@@ -39,3 +42,20 @@ alloy-primitives.workspace = true
 # misc
 eyre.workspace = true
 tokio.workspace = true
+
+[features]
+optimism = [
+	"reth-db/optimism",
+	"reth-primitives/optimism",
+	"reth-provider/optimism",
+	"reth-scroll-evm/optimism"
+]
+scroll = [
+	"reth-db/scroll",
+	"reth-node-builder/scroll",
+	"reth-primitives/scroll",
+	"reth-provider/scroll",
+	"reth-evm/scroll",
+	"reth-scroll-state-commitment/scroll",
+	"reth-scroll-evm/scroll",
+]

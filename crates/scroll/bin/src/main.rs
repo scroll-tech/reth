@@ -1,11 +1,12 @@
 //! Scroll binary
+#![cfg_attr(all(feature = "scroll", not(feature = "optimism")), allow(unused_crate_dependencies))]
 #![cfg(all(feature = "scroll", not(feature = "optimism")))]
 
 use clap::Parser;
 use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher, Node};
 use reth_provider::providers::BlockchainProvider2;
-use reth_scroll_cli::{ScrollChainSpecParser, ScrollRollupArgs};
-use reth_scroll_node::ScrollNode;
+use reth_scroll_cli::{Cli, ScrollChainSpecParser, ScrollRollupArgs};
+use reth_scroll_node::{ScrollAddOns, ScrollNode};
 
 #[global_allocator]
 static ALLOC: reth_cli_util::allocator::Allocator = reth_cli_util::allocator::new_allocator();
@@ -27,6 +28,7 @@ fn main() {
             let handle = builder
                 .with_types_and_provider::<ScrollNode, BlockchainProvider2<_>>()
                 .with_components(node.components_builder())
+                .with_add_ons(ScrollAddOns::default())
                 .launch_with_fn(|builder| {
                     let launcher = EngineNodeLauncher::new(
                         builder.task_executor().clone(),
