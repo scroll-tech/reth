@@ -17,7 +17,7 @@ use reth_primitives::{
     TxType,
 };
 use reth_revm::primitives::{CfgEnvWithHandlerCfg, U256};
-use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec};
+use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_consensus::apply_curie_hard_fork;
 use reth_scroll_execution::FinalizeExecution;
 use reth_scroll_forks::{ScrollHardfork, ScrollHardforks};
@@ -256,8 +256,8 @@ pub struct ScrollExecutionStrategyFactory<EvmConfig = ScrollEvmConfig> {
 
 impl ScrollExecutionStrategyFactory {
     /// Returns a new instance of the [`ScrollExecutionStrategyFactory`].
-    pub fn new(chain_spec: Arc<ScrollChainSpec>, scroll_config: ScrollChainConfig) -> Self {
-        let evm_config = ScrollEvmConfig::new(chain_spec.clone(), scroll_config);
+    pub fn new(chain_spec: Arc<ScrollChainSpec>) -> Self {
+        let evm_config = ScrollEvmConfig::new(chain_spec.clone());
         Self { chain_spec, evm_config }
     }
 
@@ -297,8 +297,7 @@ pub struct ScrollExecutorProvider;
 impl ScrollExecutorProvider {
     /// Creates a new default scroll executor provider.
     pub fn scroll(
-        // TODO (scroll): replace with `ScrollChainSpec`.
-        chain_spec: Arc<ChainSpec>,
+        chain_spec: Arc<ScrollChainSpec>,
     ) -> BasicBlockExecutorProvider<ScrollExecutionStrategyFactory> {
         BasicBlockExecutorProvider::new(ScrollExecutionStrategyFactory::new(chain_spec))
     }
@@ -332,8 +331,7 @@ mod tests {
 
     fn strategy() -> ScrollExecutionStrategy<EmptyDBTyped<ProviderError>, ScrollEvmConfig> {
         let chain_spec = Arc::new(ScrollChainSpecBuilder::scroll_mainnet().build());
-        let config = ScrollChainConfig::mainnet();
-        let factory = ScrollExecutionStrategyFactory::new(chain_spec, config);
+        let factory = ScrollExecutionStrategyFactory::new(chain_spec);
         let db = EmptyDBTyped::<ProviderError>::new();
 
         factory.create_strategy(db)

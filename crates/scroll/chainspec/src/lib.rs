@@ -31,8 +31,10 @@ extern crate alloc;
 
 mod constants;
 pub use constants::{
-    SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG, SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
-    SCROLL_MAINNET_L1_PROXY_ADDRESS, SCROLL_MAINNET_MAX_L1_MESSAGES, SCROLL_SEPOLIA_L1_CONFIG,
+    SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
+    SCROLL_DEV_MAX_L1_MESSAGES, SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG,
+    SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_MAINNET_L1_PROXY_ADDRESS,
+    SCROLL_MAINNET_MAX_L1_MESSAGES, SCROLL_SEPOLIA_L1_CONFIG,
     SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
     SCROLL_SEPOLIA_MAX_L1_MESSAGES,
 };
@@ -54,6 +56,8 @@ pub use scroll_sepolia::SCROLL_SEPOLIA;
 pub struct ScrollChainSpecBuilder {
     /// [`ChainSpecBuilder`]
     inner: ChainSpecBuilder,
+    /// [`ScrollChainConfig`]
+    config: ScrollChainConfig,
 }
 
 impl ScrollChainSpecBuilder {
@@ -65,7 +69,7 @@ impl ScrollChainSpecBuilder {
         let forks = SCROLL_MAINNET.hardforks.clone();
         inner = inner.with_forks(forks);
 
-        Self { inner }
+        Self { inner, config: SCROLL_MAINNET.config }
     }
 }
 
@@ -79,6 +83,12 @@ impl ScrollChainSpecBuilder {
     /// Set the genesis block.
     pub fn genesis(mut self, genesis: Genesis) -> Self {
         self.inner = self.inner.genesis(genesis);
+        self
+    }
+
+    /// Set the Scroll config.
+    pub const fn scroll_config(mut self, config: ScrollChainConfig) -> Self {
+        self.config = config;
         self
     }
 
@@ -152,7 +162,7 @@ impl ScrollChainSpecBuilder {
     /// This function panics if the chain ID and genesis is not set ([`Self::chain`] and
     /// [`Self::genesis`])
     pub fn build(self) -> ScrollChainSpec {
-        ScrollChainSpec { inner: self.inner.build() }
+        ScrollChainSpec { inner: self.inner.build(), config: self.config }
     }
 }
 
@@ -160,7 +170,10 @@ impl ScrollChainSpecBuilder {
 #[derive(Debug, Clone, Deref, Into, Constructor, PartialEq, Eq)]
 pub struct ScrollChainSpec {
     /// [`ChainSpec`].
+    #[deref]
     pub inner: ChainSpec,
+    /// [`ScrollChainConfig`]
+    pub config: ScrollChainConfig,
 }
 
 impl EthChainSpec for ScrollChainSpec {
@@ -311,6 +324,7 @@ impl From<Genesis> for ScrollChainSpec {
                 hardforks: ChainHardforks::new(ordered_hardforks),
                 ..Default::default()
             },
+            config: scroll_chain_info.scroll_chain_info.scroll_chain_config,
         }
     }
 }
