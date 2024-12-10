@@ -56,6 +56,7 @@ where
         ScrollExecutorBuilder,
         ScrollConsensusBuilder,
     >;
+
     type AddOns = ScrollAddOns<
         NodeAdapter<N, <Self::ComponentsBuilder as NodeComponentsBuilder<N>>::Components>,
     >;
@@ -184,13 +185,19 @@ where
 {
     async fn spawn_payload_service(
         self,
-        _ctx: &BuilderContext<Node>,
+        ctx: &BuilderContext<Node>,
         _pool: Pool,
     ) -> eyre::Result<
         PayloadBuilderHandle<<<Node as FullNodeTypes>::Types as NodeTypesWithEngine>::Engine>,
     > {
-        // TODO (scroll): trying to send on the channel will return an error.
-        let (tx, _) = tokio::sync::mpsc::unbounded_channel();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        ctx.task_executor().spawn(async move {
+            loop {
+                if let Some(msg) = rx.recv().await {
+                    info!(target: "scroll::payload_service", ?msg, "engine service disabled");
+                }
+            }
+        });
         eyre::Ok(PayloadBuilderHandle::new(tx))
     }
 }

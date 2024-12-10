@@ -1,5 +1,4 @@
 //! Scroll binary
-#![cfg_attr(all(feature = "scroll", not(feature = "optimism")), allow(unused_crate_dependencies))]
 #![cfg(all(feature = "scroll", not(feature = "optimism")))]
 
 use clap::Parser;

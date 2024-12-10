@@ -21,6 +21,6 @@ reth-scroll-storage = { workspace = true, optional = true }
 [features]
 scroll = [
 	"reth-scroll-storage/scroll",
-	"reth-revm/scroll",
+	"reth-revm/scroll"
 ]
 test-utils = ["reth-revm/test-utils"]
