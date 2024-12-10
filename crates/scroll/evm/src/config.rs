@@ -105,10 +105,13 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
 
     fn fill_block_env(&self, block_env: &mut BlockEnv, header: &Self::Header, after_merge: bool) {
         block_env.number = U256::from(header.number);
-        block_env.coinbase = header.beneficiary;
+
         if let Some(vault_address) = self.scroll_config.fee_vault_address {
             block_env.coinbase = vault_address;
+        } else {
+            block_env.coinbase = header.beneficiary;
         }
+
         block_env.timestamp = U256::from(header.timestamp);
         if after_merge {
             block_env.prevrandao = Some(header.mix_hash);

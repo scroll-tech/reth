@@ -7,12 +7,6 @@ pub enum ScrollBlockExecutionError {
     /// Error occurred at fork transition.
     #[display("failed to apply fork: {_0}")]
     Fork(ForkError),
-    /// Error occurred at L1 fee computation.
-    #[display("failed to compute l1 fee: {reason}")]
-    L1FeeComputation {
-        /// The reason for the fee computation error.
-        reason: &'static str,
-    },
 }
 
 impl From<ScrollBlockExecutionError> for BlockExecutionError {
@@ -21,18 +15,11 @@ impl From<ScrollBlockExecutionError> for BlockExecutionError {
     }
 }
 
-impl ScrollBlockExecutionError {
-    /// Returns a [`ScrollBlockExecutionError`] with the `L1FeeComputation` variant.
-    pub const fn l1_fee(reason: &'static str) -> Self {
-        Self::L1FeeComputation { reason }
-    }
-}
-
 /// Scroll fork error.
 #[derive(Debug, Display)]
 pub enum ForkError {
     /// Error occurred at Curie fork.
-    Curie,
+    Curie(String),
 }
 
 impl From<ForkError> for BlockExecutionError {
