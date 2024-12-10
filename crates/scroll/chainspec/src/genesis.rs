@@ -3,7 +3,7 @@
 use crate::constants::{
     SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG, SCROLL_SEPOLIA_L1_CONFIG,
 };
-use alloy_primitives::{address, Address};
+use alloy_primitives::Address;
 use alloy_serde::OtherFields;
 use serde::de::Error;
 
