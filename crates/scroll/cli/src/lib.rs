@@ -1,5 +1,6 @@
 //! Scroll CLI implementation.
-#![cfg(not(feature = "optimism"))]
+#![cfg_attr(all(feature = "scroll", not(feature = "optimism")), allow(unused_crate_dependencies))]
+#![cfg(all(feature = "scroll", not(feature = "optimism")))]
 
 mod args;
 pub use args::ScrollRollupArgs;
@@ -10,16 +11,20 @@ pub use commands::Commands;
 mod spec;
 pub use spec::ScrollChainSpecParser;
 
-use clap::Parser;
+use clap::{value_parser, Parser};
 use reth_cli::chainspec::ChainSpecParser;
 use reth_cli_commands::node::NoArgs;
 use reth_cli_runner::CliRunner;
 use reth_db::DatabaseEnv;
 use reth_node_builder::{NodeBuilder, WithLaunchContext};
-use reth_node_core::args::LogArgs;
+use reth_node_core::{
+    args::LogArgs,
+    version::{LONG_VERSION, SHORT_VERSION},
+};
 use reth_node_metrics::recorder::install_prometheus_recorder;
+use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_evm::ScrollExecutorProvider;
-use reth_scroll_node::{ScrollExecutorBuilder, ScrollNode};
+use reth_scroll_node::ScrollNode;
 use reth_tracing::FileWorkerGuard;
 use std::{ffi::OsString, fmt, future::Future, sync::Arc};
 use tracing::info;
@@ -88,7 +93,7 @@ impl Cli {
 
 impl<C, Ext> Cli<C, Ext>
 where
-    C: ChainSpecParser<ChainSpec = ScrollChainSpecParser>,
+    C: ChainSpecParser<ChainSpec = ScrollChainSpec>,
     Ext: clap::Args + fmt::Debug,
 {
     /// Execute the configured cli command.

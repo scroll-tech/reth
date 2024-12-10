@@ -2,6 +2,7 @@ use reth_node_builder::engine_tree_config::{
     DEFAULT_MEMORY_BLOCK_BUFFER_TARGET, DEFAULT_PERSISTENCE_THRESHOLD,
 };
 
+/// Rollup arguments for the Scroll node.
 #[derive(Debug, clap::Args)]
 pub struct ScrollRollupArgs {
     /// Configure persistence threshold for engine experimental.

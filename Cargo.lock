@@ -9309,6 +9309,7 @@ dependencies = [
  "reth-node-builder",
  "reth-node-core",
  "reth-node-metrics",
+ "reth-scroll-chainspec",
  "reth-scroll-evm",
  "reth-scroll-node",
  "reth-tracing",
@@ -9354,7 +9355,6 @@ name = "reth-scroll-execution"
 version = "1.1.2"
 dependencies = [
  "reth-revm",
- "reth-scroll-primitives",
  "reth-scroll-storage",
 ]
 
@@ -9374,8 +9374,8 @@ name = "reth-scroll-node"
 version = "1.1.2"
 dependencies = [
  "alloy-primitives",
+ "alloy-rpc-types-engine",
  "eyre",
- "reth-chainspec",
  "reth-consensus",
  "reth-db",
  "reth-ethereum-engine-primitives",
@@ -9387,10 +9387,12 @@ dependencies = [
  "reth-payload-builder",
  "reth-primitives",
  "reth-provider",
+ "reth-rpc",
+ "reth-scroll-chainspec",
  "reth-scroll-evm",
+ "reth-scroll-state-commitment",
  "reth-tracing",
  "reth-transaction-pool",
- "reth-trie-db",
  "tokio",
 ]
 

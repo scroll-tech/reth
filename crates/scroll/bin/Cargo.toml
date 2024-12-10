@@ -14,8 +14,10 @@ workspace = true
 [dependencies]
 # reth
 reth-cli-util.workspace = true
-reth-node-builder = { workspace = true, features = ["scroll"] }
-reth-provider = { workspace = true, features = ["scroll"] }
+reth-node-builder.workspace = true
+reth-provider.workspace = true
+
+# scroll
 reth-scroll-cli.workspace = true
 reth-scroll-node.workspace = true
 
@@ -23,7 +25,16 @@ reth-scroll-node.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 
 [features]
-scroll = []
+scroll = [
+	"reth-node-builder/scroll",
+	"reth-provider/scroll",
+	"reth-scroll-cli/scroll"
+]
+optimism = [
+	"reth-provider/optimism",
+	"reth-scroll-cli/optimism",
+	"reth-scroll-node/optimism"
+]
 
 [[bin]]
 name = "reth-scroll"

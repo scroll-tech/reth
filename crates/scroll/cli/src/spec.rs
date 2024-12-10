@@ -1,12 +1,13 @@
 use reth_cli::chainspec::{parse_genesis, ChainSpecParser};
+use reth_scroll_chainspec::{ScrollChainSpec, SCROLL_DEV, SCROLL_MAINNET, SCROLL_SEPOLIA};
 use std::sync::Arc;
 
+/// The parser for the Scroll chain specification.
 #[derive(Debug, Clone)]
 pub struct ScrollChainSpecParser;
 
 impl ChainSpecParser for ScrollChainSpecParser {
-    // TODO (scroll): replace with ScrollChainSpec.
-    type ChainSpec = ();
+    type ChainSpec = ScrollChainSpec;
     const SUPPORTED_CHAINS: &'static [&'static str] = &["dev", "scroll-mainnet", "scroll-sepolia"];
 
     fn parse(s: &str) -> eyre::Result<Arc<Self::ChainSpec>> {

@@ -78,7 +78,7 @@ where
         );
 
         #[cfg(not(feature = "scroll"))]
-        let db = StateProviderDatabase::new(
+        let db = reth_revm::database::StateProviderDatabase::new(
             self.provider.history_by_block_number(self.range.start().saturating_sub(1))?,
         );
         #[cfg(feature = "scroll")]
