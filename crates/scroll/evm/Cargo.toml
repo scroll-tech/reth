@@ -24,6 +24,10 @@ reth-revm.workspace = true
 # revm
 revm = { workspace = true, features = ["optional_no_base_fee"] }
 
+# scroll
+reth-scroll-chainspec.workspace = true
+reth-scroll-forks.workspace = true
+
 # alloy
 alloy-consensus.workspace = true
 alloy-eips.workspace = true

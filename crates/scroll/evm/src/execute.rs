@@ -1,9 +1,9 @@
 //! Implementation of the [`BlockExecutionStrategy`] for Scroll.
 
-use crate::{ForkError, ScrollBlockExecutionError, ScrollEvmConfig};
+use crate::{ForkError, ScrollEvmConfig};
 use alloy_consensus::{Header, Transaction};
 use alloy_eips::{eip2718::Encodable2718, eip7685::Requests};
-use reth_chainspec::{ChainSpec, EthereumHardfork, EthereumHardforks};
+use reth_chainspec::EthereumHardforks;
 use reth_consensus::ConsensusError;
 use reth_evm::{
     execute::{
@@ -14,10 +14,13 @@ use reth_evm::{
 };
 use reth_primitives::{
     gas_spent_by_transactions, BlockWithSenders, GotExpected, InvalidTransactionError, Receipt,
+    TxType,
 };
 use reth_revm::primitives::{CfgEnvWithHandlerCfg, U256};
+use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec};
 use reth_scroll_consensus::apply_curie_hard_fork;
 use reth_scroll_execution::FinalizeExecution;
+use reth_scroll_forks::{ScrollHardfork, ScrollHardforks};
 use revm::{
     db::BundleState,
     primitives::{bytes::BytesMut, BlockEnv, EnvWithHandlerCfg, ResultAndState},
@@ -32,8 +35,7 @@ use std::{
 #[derive(Debug)]
 pub struct ScrollExecutionStrategy<DB, EvmConfig> {
     /// Chain specification.
-    // TODO (scroll): update to the Scroll chain spec
-    chain_spec: Arc<ChainSpec>,
+    chain_spec: Arc<ScrollChainSpec>,
     /// Evm configuration.
     evm_config: EvmConfig,
     /// Current state for the execution.
@@ -42,7 +44,11 @@ pub struct ScrollExecutionStrategy<DB, EvmConfig> {
 
 impl<DB, EvmConfig> ScrollExecutionStrategy<DB, EvmConfig> {
     /// Returns an instance of [`ScrollExecutionStrategy`].
-    pub const fn new(chain_spec: Arc<ChainSpec>, evm_config: EvmConfig, state: State<DB>) -> Self {
+    pub const fn new(
+        chain_spec: Arc<ScrollChainSpec>,
+        evm_config: EvmConfig,
+        state: State<DB>,
+    ) -> Self {
         Self { chain_spec, evm_config, state }
     }
 }
@@ -78,12 +84,10 @@ where
         block: &BlockWithSenders,
         _total_difficulty: U256,
     ) -> Result<(), Self::Error> {
-        // TODO (scroll): update to the Scroll chain spec
-        // TODO (scroll): update to the Curie hardfork
-        if self.chain_spec.fork(EthereumHardfork::Dao).transitions_at_block(block.number) {
+        if self.chain_spec.fork(ScrollHardfork::Curie).transitions_at_block(block.number) {
             if let Err(err) = apply_curie_hard_fork(&mut self.state) {
                 tracing::debug!(%err, "failed to apply curie hardfork");
-                return Err(ForkError::Curie.into());
+                return Err(ForkError::Curie(err.to_string()).into());
             };
         }
 
@@ -113,23 +117,45 @@ where
                 .into())
             }
 
-            if transaction.is_eip4844() {
-                return Err(ConsensusError::InvalidTransaction(
-                    InvalidTransactionError::Eip4844Disabled,
-                )
-                .into())
-            }
+            // verify the transaction type is accepted by the current fork.
+            match transaction.tx_type() {
+                TxType::Eip2930 if !self.chain_spec.is_curie_active_at_block(block.number) => {
+                    return Err(ConsensusError::InvalidTransaction(
+                        InvalidTransactionError::Eip2930Disabled,
+                    )
+                    .into())
+                }
+                TxType::Eip1559 if !self.chain_spec.is_curie_active_at_block(block.number) => {
+                    return Err(ConsensusError::InvalidTransaction(
+                        InvalidTransactionError::Eip1559Disabled,
+                    )
+                    .into())
+                }
+                TxType::Eip4844 => {
+                    return Err(ConsensusError::InvalidTransaction(
+                        InvalidTransactionError::Eip4844Disabled,
+                    )
+                    .into())
+                }
+                TxType::Eip7702 => {
+                    return Err(ConsensusError::InvalidTransaction(
+                        InvalidTransactionError::Eip7702Disabled,
+                    )
+                    .into())
+                }
+                _ => (),
+            };
 
             self.evm_config.fill_tx_env(evm.tx_mut(), transaction, *sender);
             if transaction.is_l1_message() {
                 evm.context.evm.env.cfg.disable_base_fee = true; // disable base fee for l1 msg
+            } else {
+                // RLP encode the transaction following eip 2718
+                let mut buf = BytesMut::with_capacity(transaction.encode_2718_len());
+                transaction.encode_2718(&mut buf);
+                let transaction_rlp_bytes = buf.freeze();
+                evm.context.evm.env.tx.scroll.rlp_bytes = Some(transaction_rlp_bytes.into());
             }
-
-            // RLP encode the transaction following eip 2718
-            let mut buf = BytesMut::with_capacity(transaction.encode_2718_len());
-            transaction.encode_2718(&mut buf);
-            let transaction_rlp_bytes = buf.freeze();
-            evm.context.evm.env.tx.scroll.rlp_bytes = Some(transaction_rlp_bytes.into());
             evm.context.evm.env.tx.scroll.is_l1_msg = transaction.is_l1_message();
 
             // execute the transaction and commit the result to the database
@@ -145,13 +171,9 @@ where
             } else {
                 // compute l1 fee for all non-l1 transaction
                 let l1_block_info =
-                    evm.context.evm.inner.l1_block_info.as_ref().ok_or_else(|| {
-                        ScrollBlockExecutionError::l1_fee("missing l1 block info")
-                    })?;
+                    evm.context.evm.inner.l1_block_info.as_ref().expect("l1_block_info loaded");
                 let transaction_rlp_bytes =
-                    evm.context.evm.env.tx.scroll.rlp_bytes.as_ref().ok_or_else(|| {
-                        ScrollBlockExecutionError::l1_fee("missing transaction rlp bytes")
-                    })?;
+                    evm.context.evm.env.tx.scroll.rlp_bytes.as_ref().expect("rlp_bytes loaded");
                 l1_block_info.calculate_tx_l1_cost(transaction_rlp_bytes, evm.handler.cfg.spec_id)
             };
 
@@ -227,16 +249,15 @@ where
 #[derive(Clone, Debug)]
 pub struct ScrollExecutionStrategyFactory<EvmConfig = ScrollEvmConfig> {
     /// The chain specification for the [`ScrollExecutionStrategy`].
-    // TODO (scroll): update to the Scroll chain spec
-    chain_spec: Arc<ChainSpec>,
+    chain_spec: Arc<ScrollChainSpec>,
     /// The Evm configuration for the [`ScrollExecutionStrategy`].
     evm_config: EvmConfig,
 }
 
 impl ScrollExecutionStrategyFactory {
     /// Returns a new instance of the [`ScrollExecutionStrategyFactory`].
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
-        let evm_config = ScrollEvmConfig::new(chain_spec.clone());
+    pub fn new(chain_spec: Arc<ScrollChainSpec>, scroll_config: ScrollChainConfig) -> Self {
+        let evm_config = ScrollEvmConfig::new(chain_spec.clone(), scroll_config);
         Self { chain_spec, evm_config }
     }
 
@@ -287,10 +308,11 @@ impl ScrollExecutorProvider {
 mod tests {
     use super::*;
     use crate::{ScrollEvmConfig, ScrollExecutionStrategy, ScrollExecutionStrategyFactory};
-    use reth_chainspec::{ChainSpecBuilder, MIN_TRANSACTION_GAS};
+    use reth_chainspec::MIN_TRANSACTION_GAS;
     use reth_evm::execute::ExecuteOutput;
     use reth_primitives::{Block, BlockBody, BlockWithSenders, Receipt, TransactionSigned, TxType};
     use reth_primitives_traits::transaction::signed::SignedTransaction;
+    use reth_scroll_chainspec::ScrollChainSpecBuilder;
     use reth_scroll_consensus::{
         BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
         CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BASE_FEE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -303,16 +325,20 @@ mod tests {
         Bytecode, EmptyDBTyped, TxKind,
     };
 
+    const BLOCK_GAS_LIMIT: u64 = 10_000_000;
+    const SCROLL_CHAIN_ID: u64 = 534352;
+    const NOT_CURIE_BLOCK_NUMBER: u64 = 7096835;
+    const CURIE_BLOCK_NUMBER: u64 = 7096837;
+
     fn strategy() -> ScrollExecutionStrategy<EmptyDBTyped<ProviderError>, ScrollEvmConfig> {
-        // TODO (scroll): change this to `ScrollChainSpecBuilder::mainnet()`.
-        let chain_spec = Arc::new(ChainSpecBuilder::mainnet().build());
-        let factory = ScrollExecutionStrategyFactory::new(chain_spec);
+        let chain_spec = Arc::new(ScrollChainSpecBuilder::scroll_mainnet().build());
+        let config = ScrollChainConfig::mainnet();
+        let factory = ScrollExecutionStrategyFactory::new(chain_spec, config);
         let db = EmptyDBTyped::<ProviderError>::new();
 
         factory.create_strategy(db)
     }
 
-    const BLOCK_GAS_LIMIT: u64 = 10_000_000;
     fn block(number: u64, transactions: Vec<TransactionSigned>) -> BlockWithSenders {
         let senders = transactions.iter().map(|t| t.recover_signer().unwrap()).collect();
         BlockWithSenders {
@@ -325,29 +351,109 @@ mod tests {
     }
 
     fn transaction(typ: TxType, gas_limit: u64) -> TransactionSigned {
-        let transaction = match typ {
+        let mut transaction = match typ {
+            TxType::Legacy => reth_primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
+                to: TxKind::Call(Address::ZERO),
+                ..Default::default()
+            }),
+            TxType::Eip2930 => reth_primitives::Transaction::Eip2930(alloy_consensus::TxEip2930 {
+                to: TxKind::Call(Address::ZERO),
+                ..Default::default()
+            }),
+            TxType::Eip1559 => reth_primitives::Transaction::Eip1559(alloy_consensus::TxEip1559 {
+                to: TxKind::Call(Address::ZERO),
+                ..Default::default()
+            }),
             TxType::Eip4844 => reth_primitives::Transaction::Eip4844(alloy_consensus::TxEip4844 {
-                gas_limit,
+                to: Address::ZERO,
+                ..Default::default()
+            }),
+            TxType::Eip7702 => reth_primitives::Transaction::Eip7702(alloy_consensus::TxEip7702 {
                 to: Address::ZERO,
                 ..Default::default()
             }),
             TxType::L1Message => {
                 reth_primitives::Transaction::L1Message(reth_scroll_primitives::TxL1Message {
-                    gas_limit,
                     sender: Address::random(),
                     to: Address::ZERO,
                     ..Default::default()
                 })
             }
-            _ => reth_primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
-                gas_limit,
-                to: TxKind::Call(Address::ZERO),
-                ..Default::default()
-            }),
         };
+        transaction.set_chain_id(SCROLL_CHAIN_ID);
+        transaction.set_gas_limit(gas_limit);
+
         let pk = B256::random();
         let signature = reth_primitives::sign_message(pk, transaction.signature_hash()).unwrap();
         TransactionSigned::new_unhashed(transaction, signature)
+    }
+
+    fn execute_transactions(
+        tx_type: TxType,
+        block_number: u64,
+        expected_l1_fee: U256,
+        expected_error: Option<&str>,
+    ) -> eyre::Result<()> {
+        // init strategy
+        let mut strategy = strategy();
+
+        // prepare transaction
+        let transaction = transaction(tx_type, MIN_TRANSACTION_GAS);
+        let block = block(block_number, vec![transaction]);
+
+        // determine l1 gas oracle storage
+        let l1_gas_oracle_storage = if strategy.chain_spec.is_curie_active_at_block(block_number) {
+            vec![
+                (L1_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+                (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                (BLOB_SCALAR_SLOT, U256::from(10000)),
+                (IS_CURIE_SLOT, U256::from(1)),
+            ]
+        } else {
+            vec![
+                (L1_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+            ]
+        }
+        .into_iter()
+        .collect();
+
+        // load accounts in state
+        strategy.state.insert_account_with_storage(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            Default::default(),
+            l1_gas_oracle_storage,
+        );
+        for add in &block.senders {
+            strategy
+                .state
+                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
+        }
+
+        // execute and verify output
+        let res = strategy.execute_transactions(&block, U256::ZERO);
+
+        // check for error or execution outcome
+        if let Some(error) = expected_error {
+            assert_eq!(res.unwrap_err().to_string(), error);
+        } else {
+            let ExecuteOutput { receipts, .. } = res?;
+            let expected = vec![Receipt {
+                tx_type,
+                cumulative_gas_used: MIN_TRANSACTION_GAS,
+                success: true,
+                l1_fee: expected_l1_fee,
+                ..Default::default()
+            }];
+
+            assert_eq!(receipts, expected);
+        }
+
+        Ok(())
     }
 
     #[test]
@@ -406,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_transaction_exceeds_block_gas_limit() -> eyre::Result<()> {
+    fn test_execute_transactions_exceeds_block_gas_limit() -> eyre::Result<()> {
         // init strategy
         let mut strategy = strategy();
 
@@ -425,140 +531,90 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_transaction_eip4844() -> eyre::Result<()> {
-        // init strategy
-        let mut strategy = strategy();
+    fn test_execute_transactions_eip4844() -> eyre::Result<()> {
+        // Execute eip4844 transaction
+        execute_transactions(
+            TxType::Eip4844,
+            CURIE_BLOCK_NUMBER,
+            U256::ZERO,
+            Some("EIP-4844 transactions are disabled"),
+        )?;
+        Ok(())
+    }
 
-        // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::Eip4844, 1_000);
-        let block = block(7096837, vec![transaction]);
-
-        // execute and verify error
-        let res = strategy.execute_transactions(&block, U256::ZERO);
-        assert_eq!(res.unwrap_err().to_string(), "EIP-4844 transactions are disabled");
-
+    #[test]
+    fn test_execute_transactions_eip7702() -> eyre::Result<()> {
+        // Execute eip7702 transaction
+        execute_transactions(
+            TxType::Eip7702,
+            CURIE_BLOCK_NUMBER,
+            U256::ZERO,
+            Some("EIP-7702 transactions are disabled"),
+        )?;
         Ok(())
     }
 
     #[test]
     fn test_execute_transactions_l1_message() -> eyre::Result<()> {
-        // init strategy
-        let mut strategy = strategy();
-
-        // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::L1Message, MIN_TRANSACTION_GAS);
-        let block = block(7096837, vec![transaction]);
-
-        // load accounts in state
-        strategy.state.insert_account(L1_GAS_PRICE_ORACLE_ADDRESS, Default::default());
-        for add in &block.senders {
-            strategy.state.insert_account(*add, Default::default());
-        }
-
-        // execute and verify output
-        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
-        let expected = vec![Receipt {
-            tx_type: TxType::L1Message,
-            cumulative_gas_used: MIN_TRANSACTION_GAS,
-            success: true,
-            l1_fee: U256::ZERO,
-            ..Default::default()
-        }];
-
-        assert_eq!(receipts, expected);
-
+        // Execute l1 message on curie block
+        let expected_l1_fee = U256::ZERO;
+        execute_transactions(TxType::L1Message, CURIE_BLOCK_NUMBER, expected_l1_fee, None)?;
         Ok(())
     }
 
     #[test]
-    fn test_execute_transactions_curie_fork() -> eyre::Result<()> {
-        // init strategy
-        let mut strategy = strategy();
-
-        // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::Legacy, MIN_TRANSACTION_GAS);
-        let block = block(7096837, vec![transaction]);
-
-        // load l1 gas price oracle with l1 block info in storage
-        strategy.state.insert_account_with_storage(
-            L1_GAS_PRICE_ORACLE_ADDRESS,
-            Default::default(),
-            [
-                (L1_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                (BLOB_SCALAR_SLOT, U256::from(1000)),
-                (IS_CURIE_SLOT, U256::from(1)),
-            ]
-            .into_iter()
-            .collect(),
-        );
-        // load accounts in state
-        for add in &block.senders {
-            strategy
-                .state
-                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
-        }
-
-        // execute and verify output
-        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
-        let expected = vec![Receipt {
-            tx_type: TxType::Legacy,
-            cumulative_gas_used: MIN_TRANSACTION_GAS,
-            success: true,
-            // TODO (scroll): set this to the correct value (should be different from
-            // not_curie_fork)
-            l1_fee: U256::from(3),
-            ..Default::default()
-        }];
-
-        assert_eq!(receipts, expected);
-
+    fn test_execute_transactions_legacy_curie_fork() -> eyre::Result<()> {
+        // Execute legacy transaction on curie block
+        let expected_l1_fee = U256::from(10);
+        execute_transactions(TxType::Legacy, CURIE_BLOCK_NUMBER, expected_l1_fee, None)?;
         Ok(())
     }
 
     #[test]
-    fn test_execute_transactions_not_curie_fork() -> eyre::Result<()> {
-        // init strategy
-        let mut strategy = strategy();
+    fn test_execute_transactions_legacy_not_curie_fork() -> eyre::Result<()> {
+        // Execute legacy before curie block
+        let expected_l1_fee = U256::from(2);
+        execute_transactions(TxType::Legacy, NOT_CURIE_BLOCK_NUMBER, expected_l1_fee, None)?;
+        Ok(())
+    }
 
-        // prepare transactions exceeding block gas limit
-        let transaction = transaction(TxType::Legacy, MIN_TRANSACTION_GAS);
-        let block = block(7096835, vec![transaction]);
+    #[test]
+    fn test_execute_transactions_eip2930_curie_fork() -> eyre::Result<()> {
+        // Execute eip2930 transaction on curie block
+        let expected_l1_fee = U256::from(10);
+        execute_transactions(TxType::Eip2930, CURIE_BLOCK_NUMBER, expected_l1_fee, None)?;
+        Ok(())
+    }
 
-        // load l1 gas price oracle with l1 block info in storage
-        strategy.state.insert_account_with_storage(
-            L1_GAS_PRICE_ORACLE_ADDRESS,
-            Default::default(),
-            [
-                (L1_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-            ]
-            .into_iter()
-            .collect(),
-        );
-        // load accounts in state
-        for add in &block.senders {
-            strategy
-                .state
-                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
-        }
+    #[test]
+    fn test_execute_transactions_eip2930_not_curie_fork() -> eyre::Result<()> {
+        // Execute eip2930 transaction before curie block
+        execute_transactions(
+            TxType::Eip2930,
+            NOT_CURIE_BLOCK_NUMBER,
+            U256::ZERO,
+            Some("EIP-2930 transactions are disabled"),
+        )?;
+        Ok(())
+    }
 
-        // execute and verify output
-        let ExecuteOutput { receipts, .. } = strategy.execute_transactions(&block, U256::ZERO)?;
-        let expected = vec![Receipt {
-            tx_type: TxType::Legacy,
-            cumulative_gas_used: MIN_TRANSACTION_GAS,
-            success: true,
-            l1_fee: U256::from(2),
-            ..Default::default()
-        }];
+    #[test]
+    fn test_execute_transactions_eip1559_curie_fork() -> eyre::Result<()> {
+        // Execute eip1559 transaction on curie block
+        let expected_l1_fee = U256::from(10);
+        execute_transactions(TxType::Eip1559, CURIE_BLOCK_NUMBER, expected_l1_fee, None)?;
+        Ok(())
+    }
 
-        assert_eq!(receipts, expected);
-
+    #[test]
+    fn test_execute_transactions_eip_not_curie_fork() -> eyre::Result<()> {
+        // Execute eip1559 transaction before curie block
+        execute_transactions(
+            TxType::Eip1559,
+            NOT_CURIE_BLOCK_NUMBER,
+            U256::ZERO,
+            Some("EIP-1559 transactions are disabled"),
+        )?;
         Ok(())
     }
 }

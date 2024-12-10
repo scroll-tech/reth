@@ -1,8 +1,9 @@
 #![allow(clippy::useless_conversion)]
 
+use reth_revm::{cached::CachedReadsDbMut, database::EvmStateProvider, revm::State};
+
 #[cfg(feature = "test-utils")]
 use reth_revm::EmptyDBTyped;
-use reth_revm::{cached::CachedReadsDbMut, database::EvmStateProvider, revm::State};
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
 use reth_revm::{database::StateProviderDatabase, revm::CacheDB, DatabaseRef};
 #[cfg(feature = "scroll")]
