@@ -14,12 +14,15 @@ pub const SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS: Address =
 pub const SCROLL_MAINNET_L1_PROXY_ADDRESS: Address =
     address!("a13BAF47339d63B743e7Da8741db5456DAc1E556");
 
+/// The maximum allowed l1 messages per block for Scroll mainnet.
+pub const SCROLL_MAINNET_MAX_L1_MESSAGES: u64 = 10;
+
 /// The L1 configuration for Scroll mainnet.
 pub const SCROLL_MAINNET_L1_CONFIG: L1Config = L1Config {
-    l1_chain_id: 1,
+    l1_chain_id: alloy_chains::NamedChain::Mainnet as u64,
     l1_message_queue_address: SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
     scroll_chain_address: SCROLL_MAINNET_L1_PROXY_ADDRESS,
-    num_l1_messages_per_block: 10,
+    num_l1_messages_per_block: SCROLL_MAINNET_MAX_L1_MESSAGES,
 };
 
 /// The L1 message queue address for Scroll sepolia.
@@ -32,10 +35,13 @@ pub const SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS: Address =
 pub const SCROLL_SEPOLIA_L1_PROXY_ADDRESS: Address =
     address!("2D567EcE699Eabe5afCd141eDB7A4f2D0D6ce8a0");
 
+/// The maximum allowed l1 messages per block for Scroll sepolia.
+pub const SCROLL_SEPOLIA_MAX_L1_MESSAGES: u64 = 10;
+
 /// The L1 configuration for Scroll sepolia.
 pub const SCROLL_SEPOLIA_L1_CONFIG: L1Config = L1Config {
-    l1_chain_id: 11155111,
+    l1_chain_id: alloy_chains::NamedChain::Sepolia as u64,
     l1_message_queue_address: SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS,
     scroll_chain_address: SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
-    num_l1_messages_per_block: 10,
+    num_l1_messages_per_block: SCROLL_SEPOLIA_MAX_L1_MESSAGES,
 };
