@@ -3,7 +3,9 @@
 use alloy_rpc_types_engine::{ExecutionPayload, ExecutionPayloadSidecar, PayloadError};
 use reth_consensus::noop::NoopConsensus;
 use reth_db::transaction::{DbTx, DbTxMut};
-use reth_ethereum_engine_primitives::{EthEngineTypes, EthPayloadAttributes};
+use reth_ethereum_engine_primitives::{
+    EthBuiltPayload, EthEngineTypes, EthPayloadAttributes, EthPayloadBuilderAttributes,
+};
 use reth_ethereum_forks::EthereumHardforks;
 use reth_evm::execute::BasicBlockExecutorProvider;
 use reth_network::{NetworkHandle, PeersInfo};
@@ -15,14 +17,16 @@ use reth_node_builder::{
     rpc::{EngineValidatorBuilder, RpcAddOns},
     AddOnsContext, BuilderContext, EngineApiMessageVersion, EngineObjectValidationError,
     EngineTypes, EngineValidator, FullNodeComponents, FullNodeTypes, Node, NodeAdapter,
-    NodeComponentsBuilder, PayloadOrAttributes,
+    NodeComponentsBuilder, PayloadOrAttributes, PayloadTypes,
 };
 use reth_node_types::{NodeTypes, NodeTypesWithDB, NodeTypesWithEngine};
-use reth_payload_builder::PayloadBuilderHandle;
+use reth_payload_builder::{
+    test_utils::TestPayloadJobGenerator, PayloadBuilderHandle, PayloadBuilderService,
+};
 use reth_primitives::{Block, BlockBody, EthPrimitives, SealedBlock};
 use reth_provider::{
-    providers::ChainStorage, BlockBodyReader, BlockBodyWriter, ChainSpecProvider, DBProvider,
-    EthStorage, ProviderResult, ReadBodyInput,
+    providers::ChainStorage, BlockBodyReader, BlockBodyWriter, CanonStateSubscriptions,
+    ChainSpecProvider, DBProvider, EthStorage, ProviderResult, ReadBodyInput,
 };
 use reth_rpc::EthApi;
 use reth_scroll_chainspec::ScrollChainSpec;
@@ -181,6 +185,12 @@ pub struct ScrollPayloadBuilder;
 impl<Node, Pool> PayloadServiceBuilder<Node, Pool> for ScrollPayloadBuilder
 where
     Node: FullNodeTypes,
+    Node::Types: NodeTypesWithEngine<Primitives = EthPrimitives>,
+    <Node::Types as NodeTypesWithEngine>::Engine: PayloadTypes<
+        BuiltPayload = EthBuiltPayload,
+        PayloadAttributes = EthPayloadAttributes,
+        PayloadBuilderAttributes = EthPayloadBuilderAttributes,
+    >,
     Pool: TransactionPool,
 {
     async fn spawn_payload_service(
@@ -190,15 +200,15 @@ where
     ) -> eyre::Result<
         PayloadBuilderHandle<<<Node as FullNodeTypes>::Types as NodeTypesWithEngine>::Engine>,
     > {
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        ctx.task_executor().spawn(async move {
-            loop {
-                if let Some(msg) = rx.recv().await {
-                    info!(target: "scroll::payload_service", ?msg, "engine service disabled");
-                }
-            }
-        });
-        eyre::Ok(PayloadBuilderHandle::new(tx))
+        let test_payload_generator = TestPayloadJobGenerator::default();
+        let (payload_service, payload_builder) = PayloadBuilderService::new(
+            test_payload_generator,
+            ctx.provider().canonical_state_stream(),
+        );
+
+        ctx.task_executor().spawn_critical("payload builder service", Box::pin(payload_service));
+
+        eyre::Ok(payload_builder)
     }
 }
 
