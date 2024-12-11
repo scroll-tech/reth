@@ -120,7 +120,7 @@ scroll = [
     "reth-db-api/scroll",
     "reth-evm/scroll",
     "reth-provider/scroll",
-    "reth-db/scroll",
+    "reth-db?/scroll",
     "reth-rpc/scroll",
     "reth-node-core/scroll",
     "reth-node-api/scroll",
