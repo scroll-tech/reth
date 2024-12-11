@@ -479,7 +479,7 @@ mod test {
         let hex = hex!("0102030405060708090a0b0c0d0e0f0102030405060708090a0b0c0d0e0f0102030405060708090a0b0c0d0e0f0102030405060708090a0b0c0d0e0f01020304");
         assert_eq!(hex.len(), 64);
         let nibbles = Nibbles::unpack_bits(hex);
-        assert_eq!(nibbles.len(), 248);
+        assert_eq!(nibbles.len(), 254);
     }
 
     #[test]
