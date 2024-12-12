@@ -45,6 +45,9 @@ pub use dev::SCROLL_DEV;
 mod genesis;
 pub use genesis::{ScrollChainConfig, ScrollChainInfo};
 
+// convenience re-export of the chain spec provider.
+pub use reth_chainspec::ChainSpecProvider;
+
 mod scroll;
 pub use scroll::SCROLL_MAINNET;
 
@@ -56,8 +59,6 @@ pub use scroll_sepolia::SCROLL_SEPOLIA;
 pub struct ScrollChainSpecBuilder {
     /// [`ChainSpecBuilder`]
     inner: ChainSpecBuilder,
-    /// [`ScrollChainConfig`]
-    config: ScrollChainConfig,
 }
 
 impl ScrollChainSpecBuilder {
@@ -69,7 +70,7 @@ impl ScrollChainSpecBuilder {
         let forks = SCROLL_MAINNET.hardforks.clone();
         inner = inner.with_forks(forks);
 
-        Self { inner, config: SCROLL_MAINNET.config }
+        Self { inner }
     }
 }
 
@@ -83,12 +84,6 @@ impl ScrollChainSpecBuilder {
     /// Set the genesis block.
     pub fn genesis(mut self, genesis: Genesis) -> Self {
         self.inner = self.inner.genesis(genesis);
-        self
-    }
-
-    /// Set the Scroll config.
-    pub const fn scroll_config(mut self, config: ScrollChainConfig) -> Self {
-        self.config = config;
         self
     }
 
@@ -161,8 +156,8 @@ impl ScrollChainSpecBuilder {
     ///
     /// This function panics if the chain ID and genesis is not set ([`Self::chain`] and
     /// [`Self::genesis`])
-    pub fn build(self) -> ScrollChainSpec {
-        ScrollChainSpec { inner: self.inner.build(), config: self.config }
+    pub fn build(self, config: ScrollChainConfig) -> ScrollChainSpec {
+        ScrollChainSpec { inner: self.inner.build(), config }
     }
 }
 
@@ -355,7 +350,8 @@ mod tests {
     #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
     #[test]
     fn scroll_mainnet_forkids() {
-        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        let scroll_mainnet =
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet());
         let _ =
             scroll_mainnet.genesis_hash.set(SCROLL_MAINNET.genesis_hash.get().copied().unwrap());
         test_fork_ids(
@@ -490,7 +486,8 @@ mod tests {
     #[ignore = "waiting on https://github.com/scroll-tech/reth/pull/36"]
     #[test]
     fn latest_scroll_mainnet_fork_id_with_builder() {
-        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        let scroll_mainnet =
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet());
         assert_eq!(
             ForkId { hash: ForkHash([0xbc, 0x38, 0xf9, 0xca]), next: 0 },
             scroll_mainnet.latest_fork_id()
@@ -499,7 +496,8 @@ mod tests {
 
     #[test]
     fn is_bernoulli_active() {
-        let scroll_mainnet = ScrollChainSpecBuilder::scroll_mainnet().build();
+        let scroll_mainnet =
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet());
         assert!(!scroll_mainnet.is_bernoulli_active_at_block(1))
     }
 

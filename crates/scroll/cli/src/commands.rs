@@ -2,7 +2,8 @@ use crate::ScrollChainSpecParser;
 use clap::Subcommand;
 use reth_cli::chainspec::ChainSpecParser;
 use reth_cli_commands::{
-    config_cmd, db, dump_genesis, init_cmd, node, node::NoArgs, p2p, prune, recover, stage,
+    config_cmd, db, dump_genesis, import, init_cmd, init_state, node, node::NoArgs, p2p, prune,
+    recover, stage,
 };
 use std::fmt;
 
@@ -18,6 +19,12 @@ pub enum Commands<
     /// Initialize the database from a genesis file.
     #[command(name = "init")]
     Init(init_cmd::InitCommand<Spec>),
+    /// Initialize the database from a state dump file.
+    #[command(name = "init-state")]
+    InitState(init_state::InitStateCommand<Spec>),
+    /// This syncs RLP encoded blocks from a file.
+    #[command(name = "import")]
+    Import(import::ImportCommand<Spec>),
     /// Dumps genesis block JSON configuration to stdout.
     DumpGenesis(dump_genesis::DumpGenesisCommand<Spec>),
     /// Database debugging utilities

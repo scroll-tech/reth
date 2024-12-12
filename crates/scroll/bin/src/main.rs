@@ -23,10 +23,9 @@ fn main() {
             let engine_tree_config = TreeConfig::default()
                 .with_persistence_threshold(rollup_args.persistence_threshold)
                 .with_memory_block_buffer_target(rollup_args.memory_block_buffer_target);
-            let node = ScrollNode;
             let handle = builder
                 .with_types_and_provider::<ScrollNode, BlockchainProvider2<_>>()
-                .with_components(node.components_builder())
+                .with_components(ScrollNode.components_builder())
                 .with_add_ons(ScrollAddOns::default())
                 .launch_with_fn(|builder| {
                     let launcher = EngineNodeLauncher::new(

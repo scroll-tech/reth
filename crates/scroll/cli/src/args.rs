@@ -5,7 +5,7 @@ use reth_node_builder::engine_tree_config::{
 /// Rollup arguments for the Scroll node.
 #[derive(Debug, clap::Args)]
 pub struct ScrollRollupArgs {
-    /// Configure persistence threshold for engine experimental.
+    /// Configure persistence threshold for engine.
     #[arg(long = "engine.persistence-threshold", default_value_t = DEFAULT_PERSISTENCE_THRESHOLD)]
     pub persistence_threshold: u64,
 

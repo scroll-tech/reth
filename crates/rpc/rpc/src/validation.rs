@@ -146,6 +146,7 @@ where
 
         let mut request_cache = self.cached_reads(latest_header_hash).await;
 
+        // TODO(scroll): remove once issue #76 is completed.
         #[cfg(feature = "scroll")]
         let db = reth_scroll_storage::ScrollStateProviderDatabase::new(&state_provider);
         #[cfg(not(feature = "scroll"))]

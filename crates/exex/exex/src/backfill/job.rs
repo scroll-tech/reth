@@ -213,6 +213,7 @@ where
 
         // Configure the executor to use the previous block's state.
         let provider = self.provider.history_by_block_number(block_number.saturating_sub(1))?;
+        // TODO(scroll): remove once issue #76 is completed.
         #[cfg(feature = "scroll")]
         let db = reth_scroll_storage::ScrollStateProviderDatabase::new(provider);
         #[cfg(not(feature = "scroll"))]

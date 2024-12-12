@@ -1,5 +1,5 @@
 [package]
-name = "reth-scroll"
+name = "scroll-reth"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -37,5 +37,5 @@ optimism = [
 ]
 
 [[bin]]
-name = "reth-scroll"
+name = "scroll-reth"
 path = "src/main.rs"

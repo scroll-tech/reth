@@ -122,6 +122,12 @@ where
             Commands::Init(command) => {
                 runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
             }
+            Commands::InitState(command) => {
+                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+            }
+            Commands::Import(command) => runner.run_blocking_until_ctrl_c(
+                command.execute::<ScrollNode, _, _>(ScrollExecutorProvider::scroll),
+            ),
             Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
             Commands::Db(command) => {
                 runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())

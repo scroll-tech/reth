@@ -1,4 +1,4 @@
-use reth_chainspec::Head;
+use reth_chainspec::{ChainSpecProvider, Head};
 use reth_evm::{ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
 use reth_primitives::{transaction::FillTxEnv, TransactionSigned};
 use reth_revm::{inspector_handle_register, Database, Evm, GetInspector, TxEnv};
@@ -165,17 +165,27 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
     }
 }
 
+impl ChainSpecProvider for ScrollEvmConfig {
+    type ChainSpec = ScrollChainSpec;
+
+    fn chain_spec(&self) -> Arc<Self::ChainSpec> {
+        self.chain_spec.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy_consensus::Header;
     use reth_chainspec::NamedChain::Scroll;
-    use reth_scroll_chainspec::ScrollChainSpecBuilder;
+    use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpecBuilder};
     use revm::primitives::{SpecId, B256};
 
     #[test]
     fn test_spec_at_head() {
-        let config = ScrollEvmConfig::new(ScrollChainSpecBuilder::scroll_mainnet().build().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet()).into(),
+        );
 
         // prepare all fork heads
         let curie_head = &Head { number: 7096836, ..Default::default() };
@@ -190,7 +200,9 @@ mod tests {
 
     #[test]
     fn test_fill_cfg_env() {
-        let config = ScrollEvmConfig::new(ScrollChainSpecBuilder::scroll_mainnet().build().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet()).into(),
+        );
 
         // curie
         let mut cfg_env = CfgEnvWithHandlerCfg::new(Default::default(), Default::default());
@@ -234,7 +246,9 @@ mod tests {
 
     #[test]
     fn test_fill_block_env() {
-        let config = ScrollEvmConfig::new(ScrollChainSpecBuilder::scroll_mainnet().build().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet()).into(),
+        );
         let mut block_env = BlockEnv::default();
 
         // curie header
@@ -267,7 +281,9 @@ mod tests {
 
     #[test]
     fn test_next_cfg_and_block_env() -> eyre::Result<()> {
-        let config = ScrollEvmConfig::new(ScrollChainSpecBuilder::scroll_mainnet().build().into());
+        let config = ScrollEvmConfig::new(
+            ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet()).into(),
+        );
 
         // pre curie header
         let header = Header {
