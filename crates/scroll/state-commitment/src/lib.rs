@@ -7,7 +7,7 @@ mod commitment;
 pub use commitment::BinaryMerklePatriciaTrie;
 
 mod root;
-pub use root::{StateRoot, StorageRoot};
+pub use root::*;
 
 mod key;
 pub use key::PoseidonKeyHasher;
@@ -19,5 +19,6 @@ pub use value::PoseidonValueHasher;
 #[cfg(feature = "test-utils")]
 pub mod test_utils;
 
-#[cfg(all(test, feature = "scroll"))]
+// #[cfg(all(test, feature = "scroll"))]
+#[cfg(test)]
 mod test;
