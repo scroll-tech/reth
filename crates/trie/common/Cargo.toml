@@ -94,6 +94,7 @@ arbitrary = [
     "alloy-consensus/arbitrary",
     "alloy-primitives/arbitrary",
     "nybbles/arbitrary",
+    "smallvec/arbitrary",
     "revm-primitives/arbitrary",
     "reth-codecs/arbitrary",
 	"reth-scroll-primitives?/arbitrary"
