@@ -169,6 +169,11 @@ where
             evm.db_mut().commit(state);
 
             let l1_fee = if transaction.is_l1_message() {
+                // l1 messages do not get any gas refunded
+                if let ExecutionResult::Success { gas_refunded, .. } = result {
+                    cumulative_gas_used += gas_refunded
+                }
+
                 U256::ZERO
             } else {
                 // compute l1 fee for all non-l1 transaction
@@ -180,13 +185,6 @@ where
             };
 
             cumulative_gas_used += result.gas_used();
-
-            // l1 messages do not get any gas refunded
-            if transaction.is_l1_message() {
-                if let ExecutionResult::Success { gas_refunded, .. } = result {
-                    cumulative_gas_used += gas_refunded
-                }
-            }
 
             receipts.push(Receipt {
                 tx_type: transaction.tx_type(),

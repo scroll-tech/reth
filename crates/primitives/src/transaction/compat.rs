@@ -123,6 +123,7 @@ impl FillTxEnv for TransactionSigned {
                 tx_env.authorization_list = None;
 
                 tx_env.scroll.is_l1_msg = true;
+                tx_env.scroll.rlp_bytes = None;
             }
         }
 
@@ -138,6 +139,7 @@ impl FillTxEnv for TransactionSigned {
 
         #[cfg(all(feature = "scroll", not(feature = "optimism")))]
         if !self.is_l1_message() {
+            tx_env.scroll.is_l1_msg = false;
             tx_env.scroll.rlp_bytes = Some(envelope.into());
         }
     }
