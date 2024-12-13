@@ -45,7 +45,7 @@ impl From<GenesisAccount> for ScrollTrieAccount {
         let storage_root = account
             .storage
             .map(|storage| {
-                crate::hash_state::storage_root_unhashed(
+                crate::storage_root_unhashed(
                     storage
                         .into_iter()
                         .filter(|(_, value)| !value.is_zero())
