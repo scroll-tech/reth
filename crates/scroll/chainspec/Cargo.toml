@@ -20,7 +20,7 @@ reth-network-peers.workspace = true
 
 # scroll
 reth-scroll-forks.workspace = true
-reth-scroll-state-commitment.workspace = true
+reth-scroll-state-commitment = { workspace = true, features = ["scroll"] }
 
 # ethereum
 alloy-chains.workspace = true
