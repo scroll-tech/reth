@@ -19,6 +19,5 @@ pub use value::PoseidonValueHasher;
 #[cfg(feature = "test-utils")]
 pub mod test_utils;
 
-// #[cfg(all(test, feature = "scroll"))]
-#[cfg(test)]
+#[cfg(all(test, feature = "scroll"))]
 mod test;

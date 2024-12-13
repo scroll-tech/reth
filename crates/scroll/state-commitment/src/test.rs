@@ -10,18 +10,14 @@ use reth_db::{
 };
 use reth_primitives::{Account, StorageEntry};
 use reth_provider::{test_utils::create_test_provider_factory, StorageTrieWriter, TrieWriter};
-use reth_scroll_state_commitment::{
-    test_utils::{b256_clear_last_byte, b256_reverse_bits, u256_clear_msb},
-    PoseidonKeyHasher, StateRoot, StorageRoot,
-};
+use reth_scroll_state_commitment::{test_utils::*, PoseidonKeyHasher, StateRoot, StorageRoot};
 
 use reth_scroll_state_commitment::state_root_unsorted;
 use reth_trie::{
-    key::BitsCompatibility,
     prefix_set::{PrefixSetMut, TriePrefixSets},
     trie_cursor::InMemoryTrieCursorFactory,
     updates::TrieUpdates,
-    HashedPostState, HashedStorage, KeyHasher, Nibbles,
+    BitsCompatibility, HashedPostState, HashedStorage, KeyHasher, Nibbles,
 };
 use reth_trie_db::{DatabaseStateRoot, DatabaseStorageRoot, DatabaseTrieCursorFactory};
 use std::collections::BTreeMap;
