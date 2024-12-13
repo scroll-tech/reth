@@ -120,6 +120,7 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
         }
         block_env.basefee = U256::from(header.base_fee_per_gas.unwrap_or_default());
         block_env.gas_limit = U256::from(header.gas_limit);
+        block_env.blob_excess_gas_and_price = None;
     }
 
     fn next_cfg_and_block_env(

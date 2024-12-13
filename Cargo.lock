@@ -9280,6 +9280,8 @@ dependencies = [
  "reth-network-peers",
  "reth-primitives-traits",
  "reth-scroll-forks",
+ "reth-scroll-state-commitment",
+ "reth-trie-common",
  "serde",
  "serde_json",
 ]
@@ -9421,6 +9423,7 @@ name = "reth-scroll-state-commitment"
 version = "1.1.2"
 dependencies = [
  "alloy-consensus",
+ "alloy-genesis",
  "alloy-primitives",
  "alloy-rlp",
  "itertools 0.13.0",

@@ -6,6 +6,8 @@ pub use account::ScrollTrieAccount;
 mod commitment;
 pub use commitment::BinaryMerklePatriciaTrie;
 
+pub mod hash_state;
+
 mod root;
 pub use root::*;
 

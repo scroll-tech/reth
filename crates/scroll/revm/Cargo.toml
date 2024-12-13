@@ -36,7 +36,12 @@ serde = [
 	"serde/std",
 	"reth-scroll-primitives/serde"
 ]
-scroll = ["revm/scroll-poseidon-codehash"]
+scroll = [
+	"revm/scroll-poseidon-codehash",
+	"revm/scroll-default-handler",
+	"revm/optional_no_base_fee",
+	"revm/std"
+]
 test-utils = ["revm/test-utils"]
 std = [
 	"revm/std",
