@@ -78,6 +78,15 @@ where
         block: &BlockWithSenders,
         _total_difficulty: U256,
     ) -> Result<(), Self::Error> {
+        // set state clear flag if the block is after the Spurious Dragon hardfork.
+        let state_clear_flag =
+            (*self.evm_config.chain_spec()).is_spurious_dragon_active_at_block(block.header.number);
+        self.state.set_state_clear_flag(state_clear_flag);
+
+        // load the l1 gas oracle contract in cache
+        let _ =
+            self.state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS).map_err(|err| err.into())?;
+
         if self
             .evm_config
             .chain_spec()
@@ -104,15 +113,6 @@ where
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.transactions.len());
         let chain_spec = self.evm_config.chain_spec();
-
-        // load the l1 gas oracle contract in cache
-        let _ = evm
-            .context
-            .evm
-            .inner
-            .db
-            .load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)
-            .map_err(|err| err.into())?;
 
         for (sender, transaction) in block.transactions_with_sender() {
             // The sum of the transaction’s gas limit and the gas utilized in this block prior,
