@@ -33,7 +33,7 @@ pub trait BitsCompatibility: Sized {
     /// Unpacks the bits from the provided bytes such that there is a byte for each bit in the
     /// input. The representation is big-endian with respect to the input.
     ///
-    /// We truncate the Nibbles such that we only have [`MAX_BITS`] (bn254 field size) bits.
+    /// We truncate the Nibbles such that we only have 254 (bn254 field size) bits.
     fn unpack_bits<T: AsRef<[u8]>>(data: T) -> Self;
 
     /// Pack the bits into a byte representation.
