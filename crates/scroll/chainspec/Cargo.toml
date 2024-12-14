@@ -20,7 +20,7 @@ reth-network-peers.workspace = true
 
 # scroll
 reth-scroll-forks.workspace = true
-reth-scroll-state-commitment = { workspace = true, features = ["scroll"] }
+reth-scroll-state-commitment.workspace = true
 
 # ethereum
 alloy-chains.workspace = true
@@ -41,9 +41,6 @@ once_cell.workspace = true
 [dev-dependencies]
 alloy-genesis.workspace = true
 reth-chainspec = { workspace = true, features = ["test-utils"] }
-reth-primitives-traits = { workspace = true, features = ["test-utils"] }
-reth-scroll-state-commitment = { workspace = true, features = ["test-utils", "scroll"] }
-reth-trie-common.workspace = true
 
 [features]
 default = ["std"]
