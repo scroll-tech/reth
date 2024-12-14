@@ -9771,7 +9771,6 @@ dependencies = [
  "reth-storage-errors",
  "reth-trie-common",
  "serde_json",
- "smallvec",
  "tracing",
  "triehash",
 ]
@@ -9803,6 +9802,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "smallvec",
 ]
 
 [[package]]

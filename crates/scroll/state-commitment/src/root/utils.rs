@@ -4,7 +4,7 @@ use crate::{PoseidonKeyHasher, PoseidonValueHasher, ScrollTrieAccount};
 use alloy_primitives::{Address, B256, U256};
 use itertools::Itertools;
 use reth_scroll_trie::HashBuilder;
-use reth_trie::{key::BitsCompatibility, KeyHasher, Nibbles};
+use reth_trie::{BitsCompatibility, KeyHasher, Nibbles};
 
 /// Hashes and sorts account keys, then proceeds to calculating the root hash of the state
 /// represented as MPT.

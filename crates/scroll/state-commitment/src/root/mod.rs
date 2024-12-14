@@ -6,15 +6,14 @@ use reth_scroll_primitives::poseidon::EMPTY_ROOT_HASH;
 use reth_scroll_trie::HashBuilder;
 use reth_trie::{
     hashed_cursor::{HashedCursorFactory, HashedPostStateCursorFactory, HashedStorageCursor},
-    key::BitsCompatibility,
     node_iter::{TrieElement, TrieNodeIter},
     prefix_set::{PrefixSet, TriePrefixSets},
     stats::TrieTracker,
     trie_cursor::{InMemoryTrieCursorFactory, TrieCursorFactory},
     updates::{StorageTrieUpdates, TrieUpdates},
     walker::TrieWalker,
-    HashedPostState, HashedPostStateSorted, HashedStorage, IntermediateStateRootState, KeyHasher,
-    Nibbles, StateRootProgress, TrieInput,
+    BitsCompatibility, HashedPostState, HashedPostStateSorted, HashedStorage,
+    IntermediateStateRootState, KeyHasher, Nibbles, StateRootProgress, TrieInput,
 };
 use tracing::{debug, trace};
 
