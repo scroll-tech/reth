@@ -14,6 +14,8 @@ workspace = true
 [dependencies]
 # reth
 reth-revm.workspace = true
+
+# scroll
 reth-scroll-storage = { workspace = true, optional = true }
 
 [features]

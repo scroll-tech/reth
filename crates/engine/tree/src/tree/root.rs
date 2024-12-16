@@ -232,7 +232,13 @@ where
                 let hashed_address = keccak256(address);
 
                 let destroyed = account.is_selfdestructed();
-                let info = if account.is_empty() { None } else { Some(account.info.into()) };
+                let info = if account.is_empty() {
+                    None
+                } else {
+                    // TODO (scroll): once we transition to the sdk pattern, a solution
+                    // needs to be found for this.
+                    Some(reth_primitives::Account::from_account_info(account.info))
+                };
                 hashed_state_update.accounts.insert(hashed_address, info);
 
                 let mut changed_storage_iter = account
@@ -542,6 +548,7 @@ fn update_sparse_trie(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::needless_update)]
     use super::*;
     use reth_primitives::{Account as RethAccount, StorageEntry};
     use reth_provider::{
@@ -600,6 +607,7 @@ mod tests {
                         nonce: rng.gen::<u64>(),
                         code_hash: KECCAK_EMPTY,
                         code: Some(Default::default()),
+                        ..Default::default()
                     },
                     storage,
                     status: AccountStatus::Touched,

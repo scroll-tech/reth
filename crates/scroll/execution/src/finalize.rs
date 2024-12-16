@@ -1,11 +1,11 @@
 #![allow(clippy::useless_conversion)]
 
+use reth_revm::{cached::CachedReadsDbMut, database::EvmStateProvider, revm::State};
+
+#[cfg(feature = "test-utils")]
+use reth_revm::EmptyDBTyped;
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-use reth_revm::{cached::CachedReadsDbMut, revm::CacheDB, DatabaseRef};
-use reth_revm::{
-    database::{EvmStateProvider, StateProviderDatabase},
-    revm::State,
-};
+use reth_revm::{database::StateProviderDatabase, revm::CacheDB, DatabaseRef};
 #[cfg(feature = "scroll")]
 use reth_scroll_storage::ScrollStateProviderDatabase;
 
@@ -39,6 +39,26 @@ impl<DB: EvmStateProvider> FinalizeExecution for State<&mut ScrollStateProviderD
 }
 
 #[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+impl<DB: DatabaseRef> FinalizeExecution for State<CachedReadsDbMut<'_, DB>> {
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        self.take_bundle().into()
+    }
+}
+
+#[cfg(all(feature = "scroll", not(feature = "test-utils")))]
+impl<DB: EvmStateProvider> FinalizeExecution
+    for State<CachedReadsDbMut<'_, ScrollStateProviderDatabase<DB>>>
+{
+    type Output = reth_revm::db::BundleState;
+
+    fn finalize(&mut self) -> Self::Output {
+        (self.take_bundle(), &self.database.db.post_execution_context).into()
+    }
+}
+
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
 impl<DB: EvmStateProvider> FinalizeExecution for State<StateProviderDatabase<DB>> {
     type Output = reth_revm::db::BundleState;
 
@@ -65,8 +85,8 @@ impl<DB: DatabaseRef> FinalizeExecution for State<CacheDB<DB>> {
     }
 }
 
-#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-impl<DB: DatabaseRef> FinalizeExecution for State<CachedReadsDbMut<'_, DB>> {
+#[cfg(feature = "test-utils")]
+impl<E> FinalizeExecution for State<EmptyDBTyped<E>> {
     type Output = reth_revm::db::BundleState;
 
     fn finalize(&mut self) -> Self::Output {

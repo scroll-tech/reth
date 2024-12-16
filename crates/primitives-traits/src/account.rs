@@ -25,7 +25,7 @@ pub mod compact_ids {
 
 /// An Ethereum account.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
 #[cfg_attr(any(test, feature = "reth-codec"), derive(reth_codecs::Compact))]
 #[cfg_attr(any(test, feature = "reth-codec"), reth_codecs::add_arbitrary_tests(compact))]
@@ -45,6 +45,18 @@ pub struct Account {
     /// details.
     #[cfg(feature = "scroll")]
     pub account_extension: Option<reth_scroll_primitives::AccountExtension>,
+}
+
+impl Default for Account {
+    fn default() -> Self {
+        Self {
+            nonce: 0,
+            balance: U256::ZERO,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            account_extension: Some(Default::default()),
+        }
+    }
 }
 
 impl Account {
@@ -74,16 +86,35 @@ impl Account {
             nonce: info.nonce,
             bytecode_hash: (info.code_hash != KECCAK_EMPTY).then_some(info.code_hash),
             #[cfg(feature = "scroll")]
-            account_extension: Some(
-                info.code
-                    .map(|code| {
-                        reth_scroll_primitives::AccountExtension::from_bytecode(
-                            &code.original_byte_slice(),
-                        )
-                    })
-                    .unwrap_or(reth_scroll_primitives::AccountExtension::empty()),
-            ),
+            account_extension: Some(reth_scroll_primitives::AccountExtension {
+                code_size: (info.poseidon_code_hash !=
+                    reth_scroll_primitives::poseidon::POSEIDON_EMPTY)
+                    .then_some(info.code_size as u64)
+                    .unwrap_or_default(),
+                poseidon_code_hash: (info.poseidon_code_hash !=
+                    reth_scroll_primitives::poseidon::POSEIDON_EMPTY)
+                    .then_some(info.poseidon_code_hash),
+            }),
         }
+    }
+}
+
+#[cfg(feature = "scroll")]
+impl Account {
+    /// Returns the code size (number of bytes) for the code in this account.
+    /// In case of no bytecode, returns 0.
+    pub fn get_code_size(&self) -> u64 {
+        self.account_extension.as_ref().unwrap().code_size
+    }
+
+    /// Returns the account poseidon code hash.
+    /// In the case of no bytecode returns [`reth_scroll_primitives::poseidon::POSEIDON_EMPTY`]
+    pub fn get_poseidon_code_hash(&self) -> B256 {
+        self.account_extension
+            .as_ref()
+            .unwrap()
+            .poseidon_code_hash
+            .unwrap_or(reth_scroll_primitives::poseidon::POSEIDON_EMPTY)
     }
 }
 
@@ -235,7 +266,7 @@ impl From<Account> for AccountInfo {
                 .account_extension
                 .unwrap_or_default()
                 .poseidon_code_hash
-                .unwrap_or(reth_scroll_primitives::POSEIDON_EMPTY),
+                .unwrap_or(reth_scroll_primitives::poseidon::POSEIDON_EMPTY),
         }
     }
 }
@@ -246,7 +277,15 @@ impl From<Account> for revm_primitives::shared::AccountInfo {
         Self {
             balance: reth_acc.balance,
             nonce: reth_acc.nonce,
+            code_size: reth_acc
+                .account_extension
+                .map(|acc| acc.code_size as usize)
+                .unwrap_or_default(),
             code_hash: reth_acc.bytecode_hash.unwrap_or(KECCAK_EMPTY),
+            poseidon_code_hash: reth_acc
+                .account_extension
+                .and_then(|acc| acc.poseidon_code_hash)
+                .unwrap_or(reth_scroll_primitives::poseidon::POSEIDON_EMPTY),
             code: None,
         }
     }

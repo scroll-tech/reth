@@ -5,7 +5,7 @@ use crate::{
     },
     ScrollAccountInfo,
 };
-use reth_scroll_primitives::{hash_code, POSEIDON_EMPTY};
+use reth_scroll_primitives::poseidon::{hash_code, POSEIDON_EMPTY};
 use revm::db::{
     states::{reverts::AccountInfoRevert, PlainStateReverts, StateChangeset},
     AccountRevert,
@@ -92,6 +92,10 @@ impl From<ScrollAccountInfo> for AccountInfo {
             nonce: info.nonce,
             code_hash: info.code_hash,
             code: info.code,
+            #[cfg(feature = "scroll")]
+            code_size: info.code_size as usize,
+            #[cfg(feature = "scroll")]
+            poseidon_code_hash: info.poseidon_code_hash,
         }
     }
 }
