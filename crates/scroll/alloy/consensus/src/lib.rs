@@ -10,5 +10,8 @@ pub use transaction::{
     ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction, TxL1Message, L1_MESSAGE_TX_TYPE_ID,
 };
 
+mod receipt;
+pub use receipt::ScrollReceiptEnvelope;
+
 #[cfg(feature = "serde")]
 pub use transaction::serde_l1_message_tx_rpc;

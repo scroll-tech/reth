@@ -4,34 +4,31 @@
 
 pub use alloy_network::*;
 
-use alloy_consensus::{TxEnvelope, TxType, TypedTransaction};
-use alloy_primitives::{Address, Bytes, ChainId, TxKind, U256};
-use alloy_rpc_types_eth::AccessList;
-use scroll_alloy_consensus::{ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction};
-use scroll_alloy_rpc_types::OpTransactionRequest;
+use scroll_alloy_consensus::{self, ScrollTxType};
+use scroll_alloy_rpc_types;
 
 /// Types for an Op-stack network.
 #[derive(Clone, Copy, Debug)]
-pub struct Optimism {
+pub struct Scroll {
     _private: (),
 }
 
-impl Network for Optimism {
+impl Network for Scroll {
     type TxType = ScrollTxType;
 
     type TxEnvelope = scroll_alloy_consensus::ScrollTxEnvelope;
 
     type UnsignedTx = scroll_alloy_consensus::ScrollTypedTransaction;
 
-    type ReceiptEnvelope = scroll_alloy_consensus::OpReceiptEnvelope;
+    type ReceiptEnvelope = scroll_alloy_consensus::ScrollTxEnvelope;
 
     type Header = alloy_consensus::Header;
 
-    type TransactionRequest = scroll_alloy_rpc_types::OpTransactionRequest;
+    type TransactionRequest = scroll_alloy_rpc_types::ScrollTransactionRequest;
 
     type TransactionResponse = scroll_alloy_rpc_types::Transaction;
 
-    type ReceiptResponse = scroll_alloy_rpc_types::OpTransactionReceipt;
+    type ReceiptResponse = scroll_alloy_rpc_types::ScrollTransactionReceipt;
 
     type HeaderResponse = alloy_rpc_types_eth::Header;
 

@@ -1,4 +1,4 @@
-//! Tramsaction types for Scroll.
+//! Transaction types for Scroll.
 
 mod tx_type;
 pub use tx_type::{ScrollTxType, L1_MESSAGE_TX_TYPE_ID};

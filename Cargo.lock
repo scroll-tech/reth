@@ -9200,6 +9200,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-rpc"
+version = "1.1.2"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rpc-types-debug",
+ "alloy-rpc-types-eth",
+ "derive_more",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
+ "op-alloy-consensus",
+ "op-alloy-network",
+ "op-alloy-rpc-types",
+ "op-alloy-rpc-types-engine",
+ "parking_lot",
+ "reqwest",
+ "reth-chainspec",
+ "reth-evm",
+ "reth-network-api",
+ "reth-node-api",
+ "reth-node-builder",
+ "reth-optimism-chainspec",
+ "reth-optimism-consensus",
+ "reth-optimism-evm",
+ "reth-optimism-forks",
+ "reth-optimism-payload-builder",
+ "reth-optimism-primitives",
+ "reth-primitives",
+ "reth-provider",
+ "reth-rpc",
+ "reth-rpc-api",
+ "reth-rpc-eth-api",
+ "reth-rpc-eth-types",
+ "reth-rpc-server-types",
+ "reth-scroll-revm",
+ "reth-tasks",
+ "reth-transaction-pool",
+ "scroll-alloy-rpc-types",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "reth-scroll-storage"
 version = "1.1.2"
 dependencies = [
@@ -9821,10 +9867,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 
 [[package]]
-name = "rpc"
-version = "1.1.2"
-
-[[package]]
 name = "rstest"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10156,7 +10198,17 @@ dependencies = [
 name = "scroll-alloy-rpc-types"
 version = "1.1.2"
 dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-network-primitives",
+ "alloy-primitives",
+ "alloy-rpc-types-eth",
+ "alloy-serde",
+ "derive_more",
  "scroll-alloy-consensus",
+ "serde",
+ "serde_json",
+ "similar-asserts",
 ]
 
 [[package]]

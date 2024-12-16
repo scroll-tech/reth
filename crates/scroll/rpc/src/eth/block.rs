@@ -1,5 +1,6 @@
-//! Loads and formats OP block RPC response.
+//! Loads and formats Scroll block RPC response.
 
+use crate::{OpEthApi, OpEthApiError, OpReceiptBuilder};
 use alloy_rpc_types_eth::BlockId;
 use op_alloy_network::Network;
 use op_alloy_rpc_types::OpTransactionReceipt;
@@ -12,13 +13,13 @@ use reth_rpc_eth_api::{
     RpcNodeCore, RpcReceipt,
 };
 
-use crate::{OpEthApi, OpEthApiError, OpReceiptBuilder};
+use scroll_alloy_rpc_types::ScrollTransactionReceipt;
 
 impl<N> EthBlocks for OpEthApi<N>
 where
     Self: LoadBlock<
         Error = OpEthApiError,
-        NetworkTypes: Network<ReceiptResponse = OpTransactionReceipt>,
+        NetworkTypes: Network<ReceiptResponse = ScrollTransactionReceipt>,
     >,
     N: RpcNodeCore<Provider: ChainSpecProvider<ChainSpec = OpChainSpec> + HeaderProvider>,
 {

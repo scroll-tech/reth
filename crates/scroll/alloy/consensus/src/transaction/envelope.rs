@@ -11,7 +11,7 @@ use alloy_rlp::{Decodable, Encodable};
 
 use crate::{ScrollTxType, TxL1Message};
 
-/// The Ethereum [EIP-2718] Transaction Envelope, modified for OP Stack chains.
+/// The Ethereum [EIP-2718] Transaction Envelope, modified for Scroll chains.
 ///
 /// # Note:
 ///
