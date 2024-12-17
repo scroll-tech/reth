@@ -64,24 +64,22 @@ pub struct ScrollChainSpecBuilder {
 impl ScrollChainSpecBuilder {
     /// Construct a new builder from the scroll mainnet chain spec.
     pub fn scroll_mainnet() -> Self {
-        let mut inner = ChainSpecBuilder::default()
-            .chain(SCROLL_MAINNET.chain)
-            .genesis(SCROLL_MAINNET.genesis.clone());
-        let forks = SCROLL_MAINNET.hardforks.clone();
-        inner = inner.with_forks(forks);
-
-        Self { inner }
+        Self {
+            inner: ChainSpecBuilder::default()
+                .chain(SCROLL_MAINNET.chain)
+                .genesis(SCROLL_MAINNET.genesis.clone())
+                .with_forks(SCROLL_MAINNET.hardforks.clone()),
+        }
     }
 
     /// Construct a new builder from the scroll sepolia chain spec.
     pub fn scroll_sepolia() -> Self {
-        let mut inner = ChainSpecBuilder::default()
-            .chain(SCROLL_SEPOLIA.chain)
-            .genesis(SCROLL_SEPOLIA.genesis.clone());
-        let forks = SCROLL_SEPOLIA.hardforks.clone();
-        inner = inner.with_forks(forks);
-
-        Self { inner }
+        Self {
+            inner: ChainSpecBuilder::default()
+                .chain(SCROLL_SEPOLIA.chain)
+                .genesis(SCROLL_SEPOLIA.genesis.clone())
+                .with_forks(SCROLL_SEPOLIA.hardforks.clone()),
+        }
     }
 }
 
