@@ -12,8 +12,11 @@ pub trait FillTxEnv {
 
 impl FillTxEnv for TransactionSigned {
     fn fill_tx_env(&self, tx_env: &mut TxEnv, sender: Address) {
-        #[cfg(any(feature = "optimism", feature = "scroll"))]
-        let _envelope = alloy_eips::eip2718::Encodable2718::encoded_2718(self);
+        #[cfg(any(
+            all(feature = "optimism", not(feature = "scroll")),
+            all(feature = "scroll", not(feature = "optimism"))
+        ))]
+        let envelope = alloy_eips::eip2718::Encodable2718::encoded_2718(self);
 
         tx_env.caller = sender;
         match self.as_ref() {
@@ -105,7 +108,7 @@ impl FillTxEnv for TransactionSigned {
                     source_hash: Some(tx.source_hash),
                     mint: tx.mint,
                     is_system_transaction: Some(tx.is_system_transaction),
-                    enveloped_tx: Some(_envelope.into()),
+                    enveloped_tx: Some(envelope.into()),
                 };
                 return;
             }
@@ -133,14 +136,14 @@ impl FillTxEnv for TransactionSigned {
                 source_hash: None,
                 mint: None,
                 is_system_transaction: Some(false),
-                enveloped_tx: Some(_envelope.into()),
+                enveloped_tx: Some(envelope.into()),
             }
         }
 
         #[cfg(all(feature = "scroll", not(feature = "optimism")))]
         if !self.is_l1_message() {
             tx_env.scroll.is_l1_msg = false;
-            tx_env.scroll.rlp_bytes = Some(_envelope.into());
+            tx_env.scroll.rlp_bytes = Some(envelope.into());
         }
     }
 }
