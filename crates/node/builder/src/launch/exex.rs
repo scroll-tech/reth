@@ -40,7 +40,9 @@ impl<Node: FullNodeComponents + Clone> ExExLauncher<Node> {
     ///
     /// Spawns all extensions and returns the handle to the exex manager if any extensions are
     /// installed.
-    pub async fn launch(self) -> eyre::Result<Option<ExExManagerHandle>> {
+    pub async fn launch(
+        self,
+    ) -> eyre::Result<Option<ExExManagerHandle<<Node::Types as NodeTypes>::Primitives>>> {
         let Self { head, extensions, components, config_container } = self;
 
         if extensions.is_empty() {

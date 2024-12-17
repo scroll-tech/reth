@@ -1,6 +1,5 @@
 use crate::job::EmptyBlockPayloadJob;
 use alloy_eips::BlockNumberOrTag;
-use alloy_primitives::Bytes;
 use reth::{
     providers::{BlockReaderIdExt, BlockSource, StateProviderFactory},
     tasks::TaskSpawner,
@@ -9,7 +8,7 @@ use reth::{
 use reth_basic_payload_builder::{BasicPayloadJobGeneratorConfig, PayloadBuilder, PayloadConfig};
 use reth_node_api::PayloadBuilderAttributes;
 use reth_payload_builder::{PayloadBuilderError, PayloadJobGenerator};
-use reth_primitives::SealedHeader;
+use reth_primitives::{BlockExt, SealedHeader};
 use std::sync::Arc;
 
 /// The generator type that creates new jobs that builds empty blocks.
@@ -48,7 +47,11 @@ impl<Client, Pool, Tasks, Builder> EmptyBlockPayloadJobGenerator<Client, Pool, T
 impl<Client, Pool, Tasks, Builder> PayloadJobGenerator
     for EmptyBlockPayloadJobGenerator<Client, Pool, Tasks, Builder>
 where
-    Client: StateProviderFactory + BlockReaderIdExt + Clone + Unpin + 'static,
+    Client: StateProviderFactory
+        + BlockReaderIdExt<Block = reth_primitives::Block>
+        + Clone
+        + Unpin
+        + 'static,
     Pool: TransactionPool + Unpin + 'static,
     Tasks: TaskSpawner + Clone + Unpin + 'static,
     Builder: PayloadBuilder<Pool, Client> + Unpin + 'static,
@@ -81,7 +84,7 @@ where
         let hash = parent_block.hash();
         let header = SealedHeader::new(parent_block.header().clone(), hash);
 
-        let config = PayloadConfig::new(Arc::new(header), Bytes::default(), attributes);
+        let config = PayloadConfig::new(Arc::new(header), attributes);
         Ok(EmptyBlockPayloadJob {
             client: self.client.clone(),
             _pool: self.pool.clone(),

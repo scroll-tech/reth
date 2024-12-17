@@ -3,12 +3,10 @@ mod set;
 mod static_file;
 mod user;
 
-use crate::PrunerError;
+use crate::{PruneLimiter, PrunerError};
 use alloy_primitives::{BlockNumber, TxNumber};
 use reth_provider::{errors::provider::ProviderResult, BlockReader, PruneCheckpointWriter};
-use reth_prune_types::{
-    PruneCheckpoint, PruneLimiter, PruneMode, PrunePurpose, PruneSegment, SegmentOutput,
-};
+use reth_prune_types::{PruneCheckpoint, PruneMode, PrunePurpose, PruneSegment, SegmentOutput};
 pub use set::SegmentSet;
 pub use static_file::{
     Headers as StaticFileHeaders, Receipts as StaticFileReceipts,
@@ -148,6 +146,7 @@ impl PruneInput {
 mod tests {
     use super::*;
     use alloy_primitives::B256;
+    use reth_primitives_traits::BlockBody;
     use reth_provider::{
         providers::BlockchainProvider2,
         test_utils::{create_test_provider_factory, MockEthProvider},
@@ -245,7 +244,7 @@ mod tests {
 
         // Calculate the total number of transactions
         let num_txs =
-            blocks.iter().map(|block| block.body.transactions().count() as u64).sum::<u64>();
+            blocks.iter().map(|block| block.body.transactions().len() as u64).sum::<u64>();
 
         assert_eq!(range, 0..=num_txs - 1);
     }
@@ -292,7 +291,7 @@ mod tests {
 
         // Calculate the total number of transactions
         let num_txs =
-            blocks.iter().map(|block| block.body.transactions().count() as u64).sum::<u64>();
+            blocks.iter().map(|block| block.body.transactions().len() as u64).sum::<u64>();
 
         assert_eq!(range, 0..=num_txs - 1,);
     }
@@ -327,7 +326,7 @@ mod tests {
         // Get the last tx number
         // Calculate the total number of transactions
         let num_txs =
-            blocks.iter().map(|block| block.body.transactions().count() as u64).sum::<u64>();
+            blocks.iter().map(|block| block.body.transactions().len() as u64).sum::<u64>();
         let max_range = num_txs - 1;
 
         // Create a prune input with a previous checkpoint that is the last tx number

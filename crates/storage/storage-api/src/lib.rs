@@ -55,6 +55,9 @@ pub use chain_info::*;
 mod withdrawals;
 pub use withdrawals::*;
 
+mod ommers;
+pub use ommers::*;
+
 mod database_provider;
 pub use database_provider::*;
 
@@ -70,3 +73,9 @@ pub use stats::*;
 
 mod legacy;
 pub use legacy::*;
+
+mod primitives;
+pub use primitives::*;
+
+mod block_indices;
+pub use block_indices::*;

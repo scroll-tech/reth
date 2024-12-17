@@ -15,8 +15,9 @@ extern crate alloc;
 use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::Header;
 use alloy_primitives::{Address, U256};
-use reth_evm::{ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
-use reth_optimism_chainspec::{DecodeError, OpChainSpec};
+use op_alloy_consensus::EIP1559ParamError;
+use reth_evm::{env::EvmEnv, ConfigureEvm, ConfigureEvmEnv, NextBlockEnvAttributes};
+use reth_optimism_chainspec::OpChainSpec;
 use reth_primitives::{transaction::FillTxEnv, Head, TransactionSigned};
 use reth_revm::{
     inspector_handle_register,
@@ -57,7 +58,8 @@ impl OpEvmConfig {
 
 impl ConfigureEvmEnv for OpEvmConfig {
     type Header = Header;
-    type Error = DecodeError;
+    type Transaction = TransactionSigned;
+    type Error = EIP1559ParamError;
 
     fn fill_tx_env(&self, tx_env: &mut TxEnv, transaction: &TransactionSigned, sender: Address) {
         transaction.fill_tx_env(tx_env, sender);
@@ -136,7 +138,7 @@ impl ConfigureEvmEnv for OpEvmConfig {
         &self,
         parent: &Self::Header,
         attributes: NextBlockEnvAttributes,
-    ) -> Result<(CfgEnvWithHandlerCfg, BlockEnv), Self::Error> {
+    ) -> Result<EvmEnv, Self::Error> {
         // configure evm env based on parent block
         let cfg = CfgEnv::default().with_chain_id(self.chain_spec.chain().id());
 
@@ -156,22 +158,22 @@ impl ConfigureEvmEnv for OpEvmConfig {
             timestamp: U256::from(attributes.timestamp),
             difficulty: U256::ZERO,
             prevrandao: Some(attributes.prev_randao),
-            gas_limit: U256::from(parent.gas_limit),
+            gas_limit: U256::from(attributes.gas_limit),
             // calculate basefee based on parent block's gas usage
             basefee: self.chain_spec.next_block_base_fee(parent, attributes.timestamp)?,
             // calculate excess gas based on parent block's blob gas usage
             blob_excess_gas_and_price,
         };
 
-        let cfg_with_handler_cfg;
+        let cfg_env_with_handler_cfg;
         {
-            cfg_with_handler_cfg = CfgEnvWithHandlerCfg {
+            cfg_env_with_handler_cfg = CfgEnvWithHandlerCfg {
                 cfg_env: cfg,
                 handler_cfg: HandlerCfg { spec_id, is_optimism: true },
             };
         }
 
-        Ok((cfg_with_handler_cfg, block_env))
+        Ok((cfg_env_with_handler_cfg, block_env).into())
     }
 }
 
@@ -213,14 +215,13 @@ mod tests {
     use reth_optimism_chainspec::BASE_MAINNET;
     use reth_optimism_primitives::OpPrimitives;
     use reth_primitives::{Account, Log, Receipt, Receipts, SealedBlockWithSenders, TxType};
-
     use reth_revm::{
         db::{BundleState, CacheDB, EmptyDBTyped},
         inspectors::NoOpInspector,
         primitives::{AccountInfo, BlockEnv, CfgEnv, SpecId},
         JournaledState,
     };
-    use revm_primitives::{CfgEnvWithHandlerCfg, EnvWithHandlerCfg, HandlerCfg};
+    use revm_primitives::{EnvWithHandlerCfg, HandlerCfg};
     use std::{
         collections::{HashMap, HashSet},
         sync::Arc,
@@ -232,12 +233,6 @@ mod tests {
 
     #[test]
     fn test_fill_cfg_and_block_env() {
-        // Create a new configuration environment
-        let mut cfg_env = CfgEnvWithHandlerCfg::new_with_spec_id(CfgEnv::default(), SpecId::LATEST);
-
-        // Create a default block environment
-        let mut block_env = BlockEnv::default();
-
         // Create a default header
         let header = Header::default();
 
@@ -254,14 +249,15 @@ mod tests {
         // Define the total difficulty as zero (default)
         let total_difficulty = U256::ZERO;
 
-        // Use the `OpEvmConfig` to fill the `cfg_env` and `block_env` based on the ChainSpec,
+        // Use the `OpEvmConfig` to create the `cfg_env` and `block_env` based on the ChainSpec,
         // Header, and total difficulty
-        OpEvmConfig::new(Arc::new(OpChainSpec { inner: chain_spec.clone() }))
-            .fill_cfg_and_block_env(&mut cfg_env, &mut block_env, &header, total_difficulty);
+        let EvmEnv { cfg_env_with_handler_cfg, .. } =
+            OpEvmConfig::new(Arc::new(OpChainSpec { inner: chain_spec.clone() }))
+                .cfg_and_block_env(&header, total_difficulty);
 
         // Assert that the chain ID in the `cfg_env` is correctly set to the chain ID of the
         // ChainSpec
-        assert_eq!(cfg_env.chain_id, chain_spec.chain().id());
+        assert_eq!(cfg_env_with_handler_cfg.chain_id, chain_spec.chain().id());
     }
 
     #[test]

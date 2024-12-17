@@ -5,7 +5,10 @@ use crate::{
     CanonStateSubscriptions,
 };
 use alloy_consensus::{Header, Transaction as _, TxEip1559, EMPTY_ROOT_HASH};
-use alloy_eips::{eip1559::INITIAL_BASE_FEE, eip7685::Requests};
+use alloy_eips::{
+    eip1559::{ETHEREUM_BLOCK_GAS_LIMIT, INITIAL_BASE_FEE},
+    eip7685::Requests,
+};
 use alloy_primitives::{Address, BlockNumber, B256, U256};
 use alloy_signer::SignerSync;
 use alloy_signer_local::PrivateKeySigner;
@@ -14,9 +17,11 @@ use reth_chainspec::{ChainSpec, EthereumHardfork, MIN_TRANSACTION_GAS};
 use reth_execution_types::{Chain, ExecutionOutcome};
 use reth_primitives::{
     proofs::{calculate_receipt_root, calculate_transaction_root, calculate_withdrawals_root},
-    BlockBody, NodePrimitives, Receipt, Receipts, SealedBlock, SealedBlockWithSenders,
-    SealedHeader, Transaction, TransactionSigned, TransactionSignedEcRecovered,
+    BlockBody, EthPrimitives, NodePrimitives, Receipt, Receipts, RecoveredTx, SealedBlock,
+    SealedBlockWithSenders, SealedHeader, Transaction, TransactionSigned,
 };
+use reth_primitives_traits::Account;
+use reth_storage_api::NodePrimitivesProvider;
 use reth_trie::{root::state_root_unhashed, updates::TrieUpdates, HashedPostState};
 use revm::{db::BundleState, primitives::AccountInfo};
 use std::{
@@ -89,7 +94,7 @@ impl TestBlockBuilder {
     ) -> SealedBlockWithSenders {
         let mut rng = thread_rng();
 
-        let mock_tx = |nonce: u64| -> TransactionSignedEcRecovered {
+        let mock_tx = |nonce: u64| -> RecoveredTx {
             let tx = Transaction::Eip1559(TxEip1559 {
                 chain_id: self.chain_spec.chain.id(),
                 nonce,
@@ -107,7 +112,7 @@ impl TestBlockBuilder {
 
         let num_txs = rng.gen_range(0..5);
         let signer_balance_decrease = Self::single_tx_cost() * U256::from(num_txs);
-        let transactions: Vec<TransactionSignedEcRecovered> = (0..num_txs)
+        let transactions: Vec<RecoveredTx> = (0..num_txs)
             .map(|_| {
                 let tx = mock_tx(self.signer_build_account_info.nonce);
                 self.signer_build_account_info.nonce += 1;
@@ -136,22 +141,22 @@ impl TestBlockBuilder {
             number,
             parent_hash,
             gas_used: transactions.len() as u64 * MIN_TRANSACTION_GAS,
-            gas_limit: self.chain_spec.max_gas_limit,
             mix_hash: B256::random(),
+            gas_limit: ETHEREUM_BLOCK_GAS_LIMIT,
             base_fee_per_gas: Some(INITIAL_BASE_FEE),
-            transactions_root: calculate_transaction_root(&transactions),
+            transactions_root: calculate_transaction_root(
+                &transactions.clone().into_iter().map(|tx| tx.into_signed()).collect::<Vec<_>>(),
+            ),
             receipts_root: calculate_receipt_root(&receipts),
             beneficiary: Address::random(),
             state_root: state_root_unhashed(HashMap::from([(
                 self.signer,
-                (
-                    AccountInfo {
-                        balance: initial_signer_balance - signer_balance_decrease,
-                        nonce: num_txs,
-                        ..Default::default()
-                    },
-                    EMPTY_ROOT_HASH,
-                ),
+                Account {
+                    balance: initial_signer_balance - signer_balance_decrease,
+                    nonce: num_txs,
+                    ..Default::default()
+                }
+                .into_trie_account(EMPTY_ROOT_HASH),
             )])),
             // use the number as the timestamp so it is monotonically increasing
             timestamp: number +
@@ -310,6 +315,10 @@ impl TestCanonStateSubscriptions {
         let event = CanonStateNotification::Reorg { old, new };
         self.canon_notif_tx.lock().as_mut().unwrap().retain(|tx| tx.send(event.clone()).is_ok())
     }
+}
+
+impl NodePrimitivesProvider for TestCanonStateSubscriptions {
+    type Primitives = EthPrimitives;
 }
 
 impl CanonStateSubscriptions for TestCanonStateSubscriptions {

@@ -1,10 +1,11 @@
-use crate::DBProvider;
+use crate::{DBProvider, StorageLocation};
 use alloy_primitives::BlockNumber;
+use reth_chainspec::{ChainSpecProvider, EthereumHardforks};
 use reth_db::{
-    cursor::DbCursorRW,
+    cursor::{DbCursorRO, DbCursorRW},
     models::{StoredBlockOmmers, StoredBlockWithdrawals},
     tables,
-    transaction::DbTxMut,
+    transaction::{DbTx, DbTxMut},
     DbTxUnwindExt,
 };
 use reth_primitives_traits::{Block, BlockBody, FullNodePrimitives};
@@ -21,6 +22,7 @@ pub trait BlockBodyWriter<Provider, Body: BlockBody> {
         &self,
         provider: &Provider,
         bodies: Vec<(BlockNumber, Option<Body>)>,
+        write_to: StorageLocation,
     ) -> ProviderResult<()>;
 
     /// Removes all block bodies above the given block number from the database.
@@ -28,6 +30,7 @@ pub trait BlockBodyWriter<Provider, Body: BlockBody> {
         &self,
         provider: &Provider,
         block: BlockNumber,
+        remove_from: StorageLocation,
     ) -> ProviderResult<()>;
 }
 
@@ -38,6 +41,39 @@ pub trait ChainStorageWriter<Provider, Primitives: FullNodePrimitives>:
 }
 impl<T, Provider, Primitives: FullNodePrimitives> ChainStorageWriter<Provider, Primitives> for T where
     T: BlockBodyWriter<Provider, <Primitives::Block as Block>::Body>
+{
+}
+
+/// Input for reading a block body. Contains a header of block being read and a list of pre-fetched
+/// transactions.
+pub type ReadBodyInput<'a, B> =
+    (&'a <B as Block>::Header, Vec<<<B as Block>::Body as BlockBody>::Transaction>);
+
+/// Trait that implements how block bodies are read from the storage.
+///
+/// Note: Within the current abstraction, transactions persistence is handled separately, thus this
+/// trait is provided with transactions read beforehand and is expected to construct the block body
+/// from those transactions and additional data read from elsewhere.
+#[auto_impl::auto_impl(&, Arc)]
+pub trait BlockBodyReader<Provider> {
+    /// The block type.
+    type Block: Block;
+
+    /// Receives a list of block headers along with block transactions and returns the block bodies.
+    fn read_block_bodies(
+        &self,
+        provider: &Provider,
+        inputs: Vec<ReadBodyInput<'_, Self::Block>>,
+    ) -> ProviderResult<Vec<<Self::Block as Block>::Body>>;
+}
+
+/// Trait that implements how chain-specific types are read from storage.
+pub trait ChainStorageReader<Provider, Primitives: FullNodePrimitives>:
+    BlockBodyReader<Provider, Block = Primitives::Block>
+{
+}
+impl<T, Provider, Primitives: FullNodePrimitives> ChainStorageReader<Provider, Primitives> for T where
+    T: BlockBodyReader<Provider, Block = Primitives::Block>
 {
 }
 
@@ -53,6 +89,7 @@ where
         &self,
         provider: &Provider,
         bodies: Vec<(u64, Option<reth_primitives::BlockBody>)>,
+        _write_to: StorageLocation,
     ) -> ProviderResult<()> {
         let mut ommers_cursor = provider.tx_ref().cursor_write::<tables::BlockOmmers>()?;
         let mut withdrawals_cursor =
@@ -82,10 +119,55 @@ where
         &self,
         provider: &Provider,
         block: BlockNumber,
+        _remove_from: StorageLocation,
     ) -> ProviderResult<()> {
         provider.tx_ref().unwind_table_by_num::<tables::BlockWithdrawals>(block)?;
         provider.tx_ref().unwind_table_by_num::<tables::BlockOmmers>(block)?;
 
         Ok(())
+    }
+}
+
+impl<Provider> BlockBodyReader<Provider> for EthStorage
+where
+    Provider: DBProvider + ChainSpecProvider<ChainSpec: EthereumHardforks>,
+{
+    type Block = reth_primitives::Block;
+
+    fn read_block_bodies(
+        &self,
+        provider: &Provider,
+        inputs: Vec<ReadBodyInput<'_, Self::Block>>,
+    ) -> ProviderResult<Vec<<Self::Block as Block>::Body>> {
+        // TODO: Ideally storage should hold its own copy of chain spec
+        let chain_spec = provider.chain_spec();
+
+        let mut ommers_cursor = provider.tx_ref().cursor_read::<tables::BlockOmmers>()?;
+        let mut withdrawals_cursor = provider.tx_ref().cursor_read::<tables::BlockWithdrawals>()?;
+
+        let mut bodies = Vec::with_capacity(inputs.len());
+
+        for (header, transactions) in inputs {
+            // If we are past shanghai, then all blocks should have a withdrawal list,
+            // even if empty
+            let withdrawals = if chain_spec.is_shanghai_active_at_timestamp(header.timestamp) {
+                withdrawals_cursor
+                    .seek_exact(header.number)?
+                    .map(|(_, w)| w.withdrawals)
+                    .unwrap_or_default()
+                    .into()
+            } else {
+                None
+            };
+            let ommers = if chain_spec.final_paris_total_difficulty(header.number).is_some() {
+                Vec::new()
+            } else {
+                ommers_cursor.seek_exact(header.number)?.map(|(_, o)| o.ommers).unwrap_or_default()
+            };
+
+            bodies.push(reth_primitives::BlockBody { transactions, ommers, withdrawals });
+        }
+
+        Ok(bodies)
     }
 }

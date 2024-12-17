@@ -1,28 +1,25 @@
-use std::{
-    cmp::Ordering,
-    task::{ready, Context, Poll},
-};
-
+use super::missing_static_data_error;
 use futures_util::TryStreamExt;
 use reth_codecs::Compact;
-use reth_primitives_traits::BlockBody;
-use tracing::*;
-
-use alloy_primitives::TxNumber;
 use reth_db::{tables, transaction::DbTx};
 use reth_db_api::{cursor::DbCursorRO, transaction::DbTxMut};
 use reth_network_p2p::bodies::{downloader::BodyDownloader, response::BlockResponse};
 use reth_primitives::StaticFileSegment;
+use reth_primitives_traits::{Block, BlockBody, BlockHeader};
 use reth_provider::{
-    providers::{StaticFileProvider, StaticFileWriter},
-    BlockReader, BlockWriter, DBProvider, ProviderError, StaticFileProviderFactory, StatsReader,
-    StorageLocation,
+    providers::StaticFileWriter, BlockReader, BlockWriter, DBProvider, ProviderError,
+    StaticFileProviderFactory, StatsReader, StorageLocation,
 };
 use reth_stages_api::{
     EntitiesCheckpoint, ExecInput, ExecOutput, Stage, StageCheckpoint, StageError, StageId,
     UnwindInput, UnwindOutput,
 };
 use reth_storage_errors::provider::ProviderResult;
+use std::{
+    cmp::Ordering,
+    task::{ready, Context, Poll},
+};
+use tracing::*;
 
 /// The body stage downloads block bodies.
 ///
@@ -59,7 +56,7 @@ pub struct BodyStage<D: BodyDownloader> {
     /// The body downloader.
     downloader: D,
     /// Block response buffer.
-    buffer: Option<Vec<BlockResponse<D::Body>>>,
+    buffer: Option<Vec<BlockResponse<D::Header, D::Body>>>,
 }
 
 impl<D: BodyDownloader> BodyStage<D> {
@@ -128,6 +125,7 @@ impl<D: BodyDownloader> BodyStage<D> {
                             next_static_file_tx_num.saturating_sub(1),
                             &static_file_provider,
                             provider,
+                            StaticFileSegment::Transactions,
                         )?)
                     }
                 } else {
@@ -135,6 +133,7 @@ impl<D: BodyDownloader> BodyStage<D> {
                         next_static_file_tx_num.saturating_sub(1),
                         &static_file_provider,
                         provider,
+                        StaticFileSegment::Transactions,
                     )?)
                 }
             }
@@ -151,8 +150,8 @@ where
         + StaticFileProviderFactory
         + StatsReader
         + BlockReader
-        + BlockWriter<Body = D::Body>,
-    D: BodyDownloader<Body: BlockBody<Transaction: Compact>>,
+        + BlockWriter<Block: Block<Header = D::Header, Body = D::Body>>,
+    D: BodyDownloader<Header: BlockHeader, Body: BlockBody<Transaction: Compact>>,
 {
     /// Return the id of the stage
     fn id(&self) -> StageId {
@@ -242,42 +241,6 @@ where
     }
 }
 
-/// Called when database is ahead of static files. Attempts to find the first block we are missing
-/// transactions for.
-fn missing_static_data_error<Provider>(
-    last_tx_num: TxNumber,
-    static_file_provider: &StaticFileProvider<Provider::Primitives>,
-    provider: &Provider,
-) -> Result<StageError, ProviderError>
-where
-    Provider: BlockReader + StaticFileProviderFactory,
-{
-    let mut last_block = static_file_provider
-        .get_highest_static_file_block(StaticFileSegment::Transactions)
-        .unwrap_or_default();
-
-    // To be extra safe, we make sure that the last tx num matches the last block from its indices.
-    // If not, get it.
-    loop {
-        if let Some(indices) = provider.block_body_indices(last_block)? {
-            if indices.last_tx_num() <= last_tx_num {
-                break
-            }
-        }
-        if last_block == 0 {
-            break
-        }
-        last_block -= 1;
-    }
-
-    let missing_block = Box::new(provider.sealed_header(last_block + 1)?.unwrap_or_default());
-
-    Ok(StageError::MissingStaticFileData {
-        block: missing_block,
-        segment: StaticFileSegment::Transactions,
-    })
-}
-
 // TODO(alexey): ideally, we want to measure Bodies stage progress in bytes, but it's hard to know
 //  beforehand how many bytes we need to download. So the good solution would be to measure the
 //  progress in gas as a proxy to size. Execution stage uses a similar approach.
@@ -296,17 +259,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use assert_matches::assert_matches;
-
-    use reth_provider::StaticFileProviderFactory;
-    use reth_stages_api::StageUnitCheckpoint;
-    use test_utils::*;
-
+    use super::*;
     use crate::test_utils::{
         stage_test_suite_ext, ExecuteStageTestRunner, StageTestRunner, UnwindStageTestRunner,
     };
-
-    use super::*;
+    use assert_matches::assert_matches;
+    use reth_provider::StaticFileProviderFactory;
+    use reth_stages_api::StageUnitCheckpoint;
+    use test_utils::*;
 
     stage_test_suite_ext!(BodyTestRunner, body);
 
@@ -522,7 +482,7 @@ mod tests {
                 UnwindStageTestRunner,
             },
         };
-        use alloy_consensus::Header;
+        use alloy_consensus::{BlockHeader, Header};
         use alloy_primitives::{BlockNumber, TxNumber, B256};
         use futures_util::Stream;
         use reth_db::{static_file::HeaderWithHashMask, tables};
@@ -802,6 +762,7 @@ mod tests {
         }
 
         impl BodyDownloader for TestBodyDownloader {
+            type Header = Header;
             type Body = BlockBody;
 
             fn set_download_range(
@@ -824,7 +785,7 @@ mod tests {
         }
 
         impl Stream for TestBodyDownloader {
-            type Item = BodyDownloaderResult<BlockBody>;
+            type Item = BodyDownloaderResult<Header, BlockBody>;
             fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
                 let this = self.get_mut();
 

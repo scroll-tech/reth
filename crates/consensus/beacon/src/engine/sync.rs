@@ -4,13 +4,15 @@ use crate::{
     engine::metrics::EngineSyncMetrics, BeaconConsensusEngineEvent,
     ConsensusEngineLiveSyncProgress, EthBeaconConsensus,
 };
+use alloy_consensus::Header;
 use alloy_primitives::{BlockNumber, B256};
 use futures::FutureExt;
 use reth_network_p2p::{
     full_block::{FetchFullBlockFuture, FetchFullBlockRangeFuture, FullBlockClient},
-    EthBlockClient,
+    BlockClient,
 };
-use reth_primitives::{EthPrimitives, NodePrimitives, SealedBlock};
+use reth_node_types::{BodyTy, HeaderTy};
+use reth_primitives::{BlockBody, EthPrimitives, NodePrimitives, SealedBlock};
 use reth_provider::providers::ProviderNodeTypes;
 use reth_stages_api::{ControlFlow, Pipeline, PipelineError, PipelineTarget, PipelineWithResult};
 use reth_tasks::TaskSpawner;
@@ -34,7 +36,7 @@ use tracing::trace;
 pub(crate) struct EngineSyncController<N, Client>
 where
     N: ProviderNodeTypes,
-    Client: EthBlockClient,
+    Client: BlockClient,
 {
     /// A downloader that can download full blocks from the network.
     full_block_client: FullBlockClient<Client>,
@@ -50,10 +52,10 @@ where
     /// In-flight full block _range_ requests in progress.
     inflight_block_range_requests: Vec<FetchFullBlockRangeFuture<Client>>,
     /// Sender for engine events.
-    event_sender: EventSender<BeaconConsensusEngineEvent>,
+    event_sender: EventSender<BeaconConsensusEngineEvent<N::Primitives>>,
     /// Buffered blocks from downloads - this is a min-heap of blocks, using the block number for
     /// ordering. This means the blocks will be popped from the heap with ascending block numbers.
-    range_buffered_blocks: BinaryHeap<Reverse<OrderedSealedBlock>>,
+    range_buffered_blocks: BinaryHeap<Reverse<OrderedSealedBlock<HeaderTy<N>, BodyTy<N>>>>,
     /// Max block after which the consensus engine would terminate the sync. Used for debugging
     /// purposes.
     max_block: Option<BlockNumber>,
@@ -64,7 +66,7 @@ where
 impl<N, Client> EngineSyncController<N, Client>
 where
     N: ProviderNodeTypes,
-    Client: EthBlockClient + 'static,
+    Client: BlockClient,
 {
     /// Create a new instance
     pub(crate) fn new(
@@ -73,7 +75,7 @@ where
         pipeline_task_spawner: Box<dyn TaskSpawner>,
         max_block: Option<BlockNumber>,
         chain_spec: Arc<N::ChainSpec>,
-        event_sender: EventSender<BeaconConsensusEngineEvent>,
+        event_sender: EventSender<BeaconConsensusEngineEvent<N::Primitives>>,
     ) -> Self {
         Self {
             full_block_client: FullBlockClient::new(
@@ -91,7 +93,13 @@ where
             metrics: EngineSyncMetrics::default(),
         }
     }
+}
 
+impl<N, Client> EngineSyncController<N, Client>
+where
+    N: ProviderNodeTypes,
+    Client: BlockClient<Header = HeaderTy<N>, Body = BodyTy<N>> + 'static,
+{
     /// Sets the metrics for the active downloads
     fn update_block_download_metrics(&self) {
         self.metrics.active_block_downloads.set(self.inflight_full_block_requests.len() as f64);
@@ -233,7 +241,7 @@ where
     /// Advances the pipeline state.
     ///
     /// This checks for the result in the channel, or returns pending if the pipeline is idle.
-    fn poll_pipeline(&mut self, cx: &mut Context<'_>) -> Poll<EngineSyncEvent> {
+    fn poll_pipeline(&mut self, cx: &mut Context<'_>) -> Poll<EngineSyncEvent<N::Primitives>> {
         let res = match self.pipeline_state {
             PipelineState::Idle(_) => return Poll::Pending,
             PipelineState::Running(ref mut fut) => {
@@ -258,7 +266,7 @@ where
 
     /// This will spawn the pipeline if it is idle and a target is set or if the pipeline is set to
     /// run continuously.
-    fn try_spawn_pipeline(&mut self) -> Option<EngineSyncEvent> {
+    fn try_spawn_pipeline(&mut self) -> Option<EngineSyncEvent<N::Primitives>> {
         match &mut self.pipeline_state {
             PipelineState::Idle(pipeline) => {
                 let target = self.pending_pipeline_target.take()?;
@@ -285,7 +293,7 @@ where
     }
 
     /// Advances the sync process.
-    pub(crate) fn poll(&mut self, cx: &mut Context<'_>) -> Poll<EngineSyncEvent> {
+    pub(crate) fn poll(&mut self, cx: &mut Context<'_>) -> Poll<EngineSyncEvent<N::Primitives>> {
         // try to spawn a pipeline if a target is set
         if let Some(event) = self.try_spawn_pipeline() {
             return Poll::Ready(event)
@@ -345,17 +353,25 @@ where
 
 /// A wrapper type around [`SealedBlock`] that implements the [Ord] trait by block number.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct OrderedSealedBlock(SealedBlock);
+struct OrderedSealedBlock<H = Header, B = BlockBody>(SealedBlock<H, B>);
 
-impl PartialOrd for OrderedSealedBlock {
+impl<H, B> PartialOrd for OrderedSealedBlock<H, B>
+where
+    H: reth_primitives_traits::BlockHeader + 'static,
+    B: reth_primitives_traits::BlockBody + 'static,
+{
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for OrderedSealedBlock {
+impl<H, B> Ord for OrderedSealedBlock<H, B>
+where
+    H: reth_primitives_traits::BlockHeader + 'static,
+    B: reth_primitives_traits::BlockBody + 'static,
+{
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.number.cmp(&other.0.number)
+        self.0.number().cmp(&other.0.number())
     }
 }
 
@@ -411,10 +427,11 @@ impl<N: ProviderNodeTypes> PipelineState<N> {
 mod tests {
     use super::*;
     use alloy_consensus::Header;
+    use alloy_eips::eip1559::ETHEREUM_BLOCK_GAS_LIMIT;
     use assert_matches::assert_matches;
     use futures::poll;
     use reth_chainspec::{ChainSpec, ChainSpecBuilder, MAINNET};
-    use reth_network_p2p::{either::Either, test_utils::TestFullBlockClient};
+    use reth_network_p2p::{either::Either, test_utils::TestFullBlockClient, EthBlockClient};
     use reth_primitives::{BlockBody, SealedHeader};
     use reth_provider::{
         test_utils::{create_test_provider_factory_with_chain_spec, MockNodeTypesWithDB},
@@ -617,7 +634,7 @@ mod tests {
         let client = TestFullBlockClient::default();
         let header = Header {
             base_fee_per_gas: Some(7),
-            gas_limit: chain_spec.max_gas_limit,
+            gas_limit: ETHEREUM_BLOCK_GAS_LIMIT,
             ..Default::default()
         };
         let header = SealedHeader::seal(header);

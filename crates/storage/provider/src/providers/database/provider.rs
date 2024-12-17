@@ -9,23 +9,27 @@ use crate::{
     traits::{
         AccountExtReader, BlockSource, ChangeSetReader, ReceiptProvider, StageCheckpointWriter,
     },
-    writer::UnifiedStorageWriter,
     AccountReader, BlockBodyWriter, BlockExecutionWriter, BlockHashReader, BlockNumReader,
     BlockReader, BlockWriter, BundleStateInit, ChainStateBlockReader, ChainStateBlockWriter,
     DBProvider, EvmEnvProvider, HashingWriter, HeaderProvider, HeaderSyncGap,
     HeaderSyncGapProvider, HistoricalStateProvider, HistoricalStateProviderRef, HistoryWriter,
     LatestStateProvider, LatestStateProviderRef, OriginalValuesKnown, ProviderError,
     PruneCheckpointReader, PruneCheckpointWriter, RevertsInit, StageCheckpointReader,
-    StateChangeWriter, StateProviderBox, StateReader, StateWriter, StaticFileProviderFactory,
-    StatsReader, StorageLocation, StorageReader, StorageTrieWriter, TransactionVariant,
-    TransactionsProvider, TransactionsProviderExt, TrieWriter, WithdrawalsProvider,
+    StateCommitmentProvider, StateProviderBox, StateWriter, StaticFileProviderFactory, StatsReader,
+    StorageLocation, StorageReader, StorageTrieWriter, TransactionVariant, TransactionsProvider,
+    TransactionsProviderExt, TrieWriter, WithdrawalsProvider,
 };
-use alloy_consensus::Header;
+use alloy_consensus::{BlockHeader, Header};
 use alloy_eips::{
+    eip2718::Encodable2718,
     eip4895::{Withdrawal, Withdrawals},
     BlockHashOrNumber,
 };
-use alloy_primitives::{keccak256, Address, BlockHash, BlockNumber, TxHash, TxNumber, B256, U256};
+use alloy_primitives::{
+    keccak256,
+    map::{hash_map, B256HashMap, HashMap, HashSet},
+    Address, BlockHash, BlockNumber, TxHash, TxNumber, B256, U256,
+};
 use itertools::Itertools;
 use rayon::slice::ParallelSliceMut;
 use reth_chainspec::{ChainInfo, ChainSpecProvider, EthChainSpec, EthereumHardforks};
@@ -43,19 +47,22 @@ use reth_db_api::{
     transaction::{DbTx, DbTxMut},
     DatabaseError,
 };
-use reth_evm::ConfigureEvmEnv;
+use reth_evm::{env::EvmEnv, ConfigureEvmEnv};
 use reth_execution_types::{Chain, ExecutionOutcome};
 use reth_network_p2p::headers::downloader::SyncTarget;
-use reth_node_types::{NodeTypes, TxTy};
+use reth_node_types::{BlockTy, BodyTy, HeaderTy, NodeTypes, ReceiptTy, TxTy};
 use reth_primitives::{
-    Account, Block, BlockBody, BlockWithSenders, Bytecode, GotExpected, NodePrimitives, Receipt,
-    SealedBlock, SealedBlockWithSenders, SealedHeader, StaticFileSegment, StorageEntry,
-    TransactionMeta, TransactionSigned, TransactionSignedNoHash,
+    Account, BlockExt, BlockWithSenders, Bytecode, GotExpected, NodePrimitives, SealedBlock,
+    SealedBlockFor, SealedBlockWithSenders, SealedHeader, StaticFileSegment, StorageEntry,
+    TransactionMeta,
 };
-use reth_primitives_traits::{BlockBody as _, SignedTransaction};
+use reth_primitives_traits::{Block as _, BlockBody as _, SignedTransaction};
 use reth_prune_types::{PruneCheckpoint, PruneModes, PruneSegment};
 use reth_stages_types::{StageCheckpoint, StageId};
-use reth_storage_api::{StateProvider, StorageChangeSetReader, TryIntoHistoricalStateProvider};
+use reth_storage_api::{
+    BlockBodyIndicesProvider, BlockBodyReader, NodePrimitivesProvider, OmmersProvider,
+    StateProvider, StorageChangeSetReader, TryIntoHistoricalStateProvider,
+};
 use reth_storage_errors::provider::{ProviderResult, RootMismatch};
 use reth_trie::{
     prefix_set::{PrefixSet, PrefixSetMut, TriePrefixSets},
@@ -63,13 +70,12 @@ use reth_trie::{
     HashedPostStateSorted, Nibbles, StateRoot, StoredNibbles,
 };
 use reth_trie_db::{DatabaseStateRoot, DatabaseStorageTrieCursor};
-use revm::{
-    db::states::{PlainStateReverts, PlainStorageChangeset, PlainStorageRevert, StateChangeset},
-    primitives::{BlockEnv, CfgEnvWithHandlerCfg},
+use revm::db::states::{
+    PlainStateReverts, PlainStorageChangeset, PlainStorageRevert, StateChangeset,
 };
 use std::{
     cmp::Ordering,
-    collections::{hash_map, BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt::Debug,
     ops::{Deref, DerefMut, Range, RangeBounds, RangeInclusive},
     sync::{mpsc, Arc},
@@ -155,10 +161,10 @@ impl<TX, N: NodeTypes> DatabaseProvider<TX, N> {
 }
 
 impl<TX: DbTx + 'static, N: NodeTypes> DatabaseProvider<TX, N> {
-    /// State provider for latest block
-    pub fn latest<'a>(&'a self) -> ProviderResult<Box<dyn StateProvider + 'a>> {
+    /// State provider for latest state
+    pub fn latest<'a>(&'a self) -> Box<dyn StateProvider + 'a> {
         trace!(target: "providers::db", "Returning latest state provider");
-        Ok(Box::new(LatestStateProviderRef::new(self)))
+        Box::new(LatestStateProviderRef::new(self))
     }
 
     /// Storage provider for state at that given block hash
@@ -203,11 +209,19 @@ impl<TX: DbTx + 'static, N: NodeTypes> DatabaseProvider<TX, N> {
 
         Ok(Box::new(state_provider))
     }
+
+    #[cfg(feature = "test-utils")]
+    /// Sets the prune modes for provider.
+    pub fn set_prune_modes(&mut self, prune_modes: PruneModes) {
+        self.prune_modes = prune_modes;
+    }
+}
+
+impl<TX, N: NodeTypes> NodePrimitivesProvider for DatabaseProvider<TX, N> {
+    type Primitives = N::Primitives;
 }
 
 impl<TX, N: NodeTypes> StaticFileProviderFactory for DatabaseProvider<TX, N> {
-    type Primitives = N::Primitives;
-
     /// Returns a static file provider
     fn static_file_provider(&self) -> StaticFileProvider<Self::Primitives> {
         self.static_file_provider.clone()
@@ -281,7 +295,7 @@ impl<TX: DbTx + DbTxMut + 'static, N: NodeTypesForProvider> DatabaseProvider<TX,
 
         // Unwind storage hashes. Add changed account and storage keys to corresponding prefix
         // sets.
-        let mut storage_prefix_sets = HashMap::<B256, PrefixSet>::default();
+        let mut storage_prefix_sets = B256HashMap::<PrefixSet>::default();
         let storage_entries = self.unwind_storage_hashing(changed_storages.iter().copied())?;
         for (hashed_address, hashed_slots) in storage_entries {
             account_prefix_set.insert(Nibbles::unpack(hashed_address));
@@ -306,13 +320,13 @@ impl<TX: DbTx + DbTxMut + 'static, N: NodeTypesForProvider> DatabaseProvider<TX,
         let (new_state_root, trie_updates) = StateRoot::from_tx(&self.tx)
             .with_prefix_sets(prefix_sets)
             .root_with_updates()
-            .map_err(Into::<reth_db::DatabaseError>::into)?;
+            .map_err(reth_db::DatabaseError::from)?;
 
         let parent_number = range.start().saturating_sub(1);
         let parent_state_root = self
             .header_by_number(parent_number)?
             .ok_or_else(|| ProviderError::HeaderNotFound(parent_number.into()))?
-            .state_root;
+            .state_root();
 
         // state root should be always correct as we are reverting state.
         // but for sake of double verification we will check it again.
@@ -327,6 +341,34 @@ impl<TX: DbTx + DbTxMut + 'static, N: NodeTypesForProvider> DatabaseProvider<TX,
             })))
         }
         self.write_trie_updates(&trie_updates)?;
+
+        Ok(())
+    }
+
+    /// Removes receipts from all transactions starting with provided number (inclusive).
+    fn remove_receipts_from(
+        &self,
+        from_tx: TxNumber,
+        last_block: BlockNumber,
+        remove_from: StorageLocation,
+    ) -> ProviderResult<()> {
+        if remove_from.database() {
+            // iterate over block body and remove receipts
+            self.remove::<tables::Receipts<ReceiptTy<N>>>(from_tx..)?;
+        }
+
+        if remove_from.static_files() && !self.prune_modes.has_receipts_pruning() {
+            let static_file_receipt_num =
+                self.static_file_provider.get_highest_static_file_tx(StaticFileSegment::Receipts);
+
+            let to_delete = static_file_receipt_num
+                .map(|static_num| (static_num + 1).saturating_sub(from_tx))
+                .unwrap_or_default();
+
+            self.static_file_provider
+                .latest_writer(StaticFileSegment::Receipts)?
+                .prune_receipts(to_delete, last_block)?;
+        }
 
         Ok(())
     }
@@ -374,13 +416,21 @@ impl<TX: DbTx + 'static, N: NodeTypes> TryIntoHistoricalStateProvider for Databa
     }
 }
 
-impl<Tx: DbTx + DbTxMut + 'static, N: NodeTypesForProvider + 'static> DatabaseProvider<Tx, N> {
+impl<TX: DbTx + 'static, N: NodeTypes> StateCommitmentProvider for DatabaseProvider<TX, N> {
+    type StateCommitment = N::StateCommitment;
+}
+
+impl<
+        Tx: DbTx + DbTxMut + 'static,
+        N: NodeTypesForProvider<Primitives: NodePrimitives<BlockHeader = Header>>,
+    > DatabaseProvider<Tx, N>
+{
     // TODO: uncomment below, once `reth debug_cmd` has been feature gated with dev.
     // #[cfg(any(test, feature = "test-utils"))]
     /// Inserts an historical block. **Used for setting up test environments**
     pub fn insert_historical_block(
         &self,
-        block: SealedBlockWithSenders<Header, <Self as BlockWriter>::Body>,
+        block: SealedBlockWithSenders<<Self as BlockWriter>::Block>,
     ) -> ProviderResult<StoredBlockBodyIndices> {
         let ttd = if block.number == 0 {
             block.difficulty
@@ -455,7 +505,7 @@ where
     Ok(Vec::new())
 }
 
-impl<TX: DbTx + 'static, N: NodeTypes> DatabaseProvider<TX, N> {
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
     /// Creates a provider with an inner read-only transaction.
     pub const fn new(
         tx: TX,
@@ -514,23 +564,12 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
         construct_block: BF,
     ) -> ProviderResult<Option<B>>
     where
-        N::ChainSpec: EthereumHardforks,
-        H: AsRef<Header>,
+        H: AsRef<HeaderTy<N>>,
         HF: FnOnce(BlockNumber) -> ProviderResult<Option<H>>,
-        BF: FnOnce(
-            H,
-            Vec<TransactionSigned>,
-            Vec<Address>,
-            Vec<Header>,
-            Option<Withdrawals>,
-        ) -> ProviderResult<Option<B>>,
+        BF: FnOnce(H, BodyTy<N>, Vec<Address>) -> ProviderResult<Option<B>>,
     {
         let Some(block_number) = self.convert_hash_or_number(id)? else { return Ok(None) };
         let Some(header) = header_by_number(block_number)? else { return Ok(None) };
-
-        let ommers = self.ommers(block_number.into())?.unwrap_or_default();
-        let withdrawals =
-            self.withdrawals_by_block(block_number.into(), header.as_ref().timestamp)?;
 
         // Get the block body
         //
@@ -548,9 +587,14 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
             (self.transactions_by_tx_range(tx_range.clone())?, self.senders_by_tx_range(tx_range)?)
         };
 
-        let body = transactions.into_iter().map(Into::into).collect();
+        let body = self
+            .storage
+            .reader()
+            .read_block_bodies(self, vec![(header.as_ref(), transactions)])?
+            .pop()
+            .ok_or(ProviderError::InvalidStorageOutput)?;
 
-        construct_block(header, body, senders, ommers, withdrawals)
+        construct_block(header, body, senders)
     }
 
     /// Returns a range of blocks from the database.
@@ -569,10 +613,9 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
         mut assemble_block: F,
     ) -> ProviderResult<Vec<R>>
     where
-        N::ChainSpec: EthereumHardforks,
-        H: AsRef<Header>,
+        H: AsRef<HeaderTy<N>>,
         HF: FnOnce(RangeInclusive<BlockNumber>) -> ProviderResult<Vec<H>>,
-        F: FnMut(H, Range<TxNumber>, Vec<Header>, Option<Withdrawals>) -> ProviderResult<R>,
+        F: FnMut(H, BodyTy<N>, Range<TxNumber>) -> ProviderResult<R>,
     {
         if range.is_empty() {
             return Ok(Vec::new())
@@ -582,48 +625,39 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
         let mut blocks = Vec::with_capacity(len);
 
         let headers = headers_range(range)?;
-        let mut ommers_cursor = self.tx.cursor_read::<tables::BlockOmmers>()?;
-        let mut withdrawals_cursor = self.tx.cursor_read::<tables::BlockWithdrawals>()?;
+        let mut tx_cursor = self.tx.cursor_read::<tables::Transactions<TxTy<N>>>()?;
         let mut block_body_cursor = self.tx.cursor_read::<tables::BlockBodyIndices>()?;
 
+        let mut present_headers = Vec::new();
         for header in headers {
-            let header_ref = header.as_ref();
             // If the body indices are not found, this means that the transactions either do
             // not exist in the database yet, or they do exit but are
             // not indexed. If they exist but are not indexed, we don't
             // have enough information to return the block anyways, so
             // we skip the block.
             if let Some((_, block_body_indices)) =
-                block_body_cursor.seek_exact(header_ref.number)?
+                block_body_cursor.seek_exact(header.as_ref().number())?
             {
                 let tx_range = block_body_indices.tx_num_range();
-
-                // If we are past shanghai, then all blocks should have a withdrawal list,
-                // even if empty
-                let withdrawals =
-                    if self.chain_spec.is_shanghai_active_at_timestamp(header_ref.timestamp) {
-                        withdrawals_cursor
-                            .seek_exact(header_ref.number)?
-                            .map(|(_, w)| w.withdrawals)
-                            .unwrap_or_default()
-                            .into()
-                    } else {
-                        None
-                    };
-                let ommers =
-                    if self.chain_spec.final_paris_total_difficulty(header_ref.number).is_some() {
-                        Vec::new()
-                    } else {
-                        ommers_cursor
-                            .seek_exact(header_ref.number)?
-                            .map(|(_, o)| o.ommers)
-                            .unwrap_or_default()
-                    };
-
-                if let Ok(b) = assemble_block(header, tx_range, ommers, withdrawals) {
-                    blocks.push(b);
-                }
+                present_headers.push((header, tx_range));
             }
+        }
+
+        let mut inputs = Vec::new();
+        for (header, tx_range) in &present_headers {
+            let transactions = if tx_range.is_empty() {
+                Vec::new()
+            } else {
+                self.transactions_by_tx_range_with_cursor(tx_range.clone(), &mut tx_cursor)?
+            };
+
+            inputs.push((header.as_ref(), transactions));
+        }
+
+        let bodies = self.storage.reader().read_block_bodies(self, inputs)?;
+
+        for ((header, tx_range), body) in present_headers.into_iter().zip(bodies) {
+            blocks.push(assemble_block(header, body, tx_range)?);
         }
 
         Ok(blocks)
@@ -646,37 +680,24 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
         assemble_block: BF,
     ) -> ProviderResult<Vec<B>>
     where
-        N::ChainSpec: EthereumHardforks,
-        H: AsRef<Header>,
+        H: AsRef<HeaderTy<N>>,
         HF: Fn(RangeInclusive<BlockNumber>) -> ProviderResult<Vec<H>>,
-        BF: Fn(
-            H,
-            Vec<TransactionSigned>,
-            Vec<Header>,
-            Option<Withdrawals>,
-            Vec<Address>,
-        ) -> ProviderResult<B>,
+        BF: Fn(H, BodyTy<N>, Vec<Address>) -> ProviderResult<B>,
     {
-        let mut tx_cursor = self.tx.cursor_read::<tables::Transactions<TxTy<N>>>()?;
         let mut senders_cursor = self.tx.cursor_read::<tables::TransactionSenders>()?;
 
-        self.block_range(range, headers_range, |header, tx_range, ommers, withdrawals| {
-            let (body, senders) = if tx_range.is_empty() {
-                (Vec::new(), Vec::new())
+        self.block_range(range, headers_range, |header, body, tx_range| {
+            let senders = if tx_range.is_empty() {
+                Vec::new()
             } else {
-                let body = self
-                    .transactions_by_tx_range_with_cursor(tx_range.clone(), &mut tx_cursor)?
-                    .into_iter()
-                    .map(Into::into)
-                    .collect::<Vec<TransactionSigned>>();
                 // fetch senders from the senders table
                 let known_senders =
                     senders_cursor
                         .walk_range(tx_range.clone())?
                         .collect::<Result<HashMap<_, _>, _>>()?;
 
-                let mut senders = Vec::with_capacity(body.len());
-                for (tx_num, tx) in tx_range.zip(body.iter()) {
+                let mut senders = Vec::with_capacity(body.transactions().len());
+                for (tx_num, tx) in tx_range.zip(body.transactions()) {
                     match known_senders.get(&tx_num) {
                         None => {
                             // recover the sender from the transaction if not found
@@ -689,99 +710,11 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> DatabaseProvider<TX, N> {
                     }
                 }
 
-                (body, senders)
+                senders
             };
 
-            assemble_block(header, body, ommers, withdrawals, senders)
+            assemble_block(header, body, senders)
         })
-    }
-
-    /// Return the last N blocks of state, recreating the [`ExecutionOutcome`].
-    ///
-    /// 1. Iterate over the [`BlockBodyIndices`][tables::BlockBodyIndices] table to get all the
-    ///    transaction ids.
-    /// 2. Iterate over the [`StorageChangeSets`][tables::StorageChangeSets] table and the
-    ///    [`AccountChangeSets`][tables::AccountChangeSets] tables in reverse order to reconstruct
-    ///    the changesets.
-    ///    - In order to have both the old and new values in the changesets, we also access the
-    ///      plain state tables.
-    /// 3. While iterating over the changeset tables, if we encounter a new account or storage slot,
-    ///    we:
-    ///     1. Take the old value from the changeset
-    ///     2. Take the new value from the plain state
-    ///     3. Save the old value to the local state
-    /// 4. While iterating over the changeset tables, if we encounter an account/storage slot we
-    ///    have seen before we:
-    ///     1. Take the old value from the changeset
-    ///     2. Take the new value from the local state
-    ///     3. Set the local state to the value in the changeset
-    ///
-    /// If the range is empty, or there are no blocks for the given range, then this returns `None`.
-    pub fn get_state(
-        &self,
-        range: RangeInclusive<BlockNumber>,
-    ) -> ProviderResult<Option<ExecutionOutcome>> {
-        if range.is_empty() {
-            return Ok(None)
-        }
-        let start_block_number = *range.start();
-
-        // We are not removing block meta as it is used to get block changesets.
-        let block_bodies = self.get::<tables::BlockBodyIndices>(range.clone())?;
-
-        // get transaction receipts
-        let Some(from_transaction_num) = block_bodies.first().map(|bodies| bodies.1.first_tx_num())
-        else {
-            return Ok(None)
-        };
-        let Some(to_transaction_num) = block_bodies.last().map(|bodies| bodies.1.last_tx_num())
-        else {
-            return Ok(None)
-        };
-
-        let storage_range = BlockNumberAddress::range(range.clone());
-
-        let storage_changeset = self.get::<tables::StorageChangeSets>(storage_range)?;
-        let account_changeset = self.get::<tables::AccountChangeSets>(range)?;
-
-        // This is not working for blocks that are not at tip. as plain state is not the last
-        // state of end range. We should rename the functions or add support to access
-        // History state. Accessing history state can be tricky but we are not gaining
-        // anything.
-        let mut plain_accounts_cursor = self.tx.cursor_read::<tables::PlainAccountState>()?;
-        let mut plain_storage_cursor = self.tx.cursor_dup_read::<tables::PlainStorageState>()?;
-
-        let (state, reverts) = self.populate_bundle_state(
-            account_changeset,
-            storage_changeset,
-            &mut plain_accounts_cursor,
-            &mut plain_storage_cursor,
-        )?;
-
-        // iterate over block body and create ExecutionResult
-        let mut receipt_iter =
-            self.get::<tables::Receipts>(from_transaction_num..=to_transaction_num)?.into_iter();
-
-        let mut receipts = Vec::with_capacity(block_bodies.len());
-        // loop break if we are at the end of the blocks.
-        for (_, block_body) in block_bodies {
-            let mut block_receipts = Vec::with_capacity(block_body.tx_count as usize);
-            for _ in block_body.tx_num_range() {
-                if let Some((_, receipt)) = receipt_iter.next() {
-                    block_receipts.push(Some(receipt));
-                }
-            }
-            receipts.push(block_receipts);
-        }
-
-        Ok(Some(ExecutionOutcome::new_init(
-            state,
-            reverts,
-            Vec::new(),
-            receipts.into(),
-            start_block_number,
-            Vec::new(),
-        )))
     }
 
     /// Populate a [`BundleStateInit`] and [`RevertsInit`] using cursors over the
@@ -1011,12 +944,16 @@ impl<TX: DbTx, N: NodeTypes> ChangeSetReader for DatabaseProvider<TX, N> {
     }
 }
 
-impl<TX: DbTx + 'static, N: NodeTypes> HeaderSyncGapProvider for DatabaseProvider<TX, N> {
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> HeaderSyncGapProvider
+    for DatabaseProvider<TX, N>
+{
+    type Header = HeaderTy<N>;
+
     fn sync_gap(
         &self,
         tip: watch::Receiver<B256>,
         highest_uninterrupted_block: BlockNumber,
-    ) -> ProviderResult<HeaderSyncGap> {
+    ) -> ProviderResult<HeaderSyncGap<Self::Header>> {
         let static_file_provider = self.static_file_provider();
 
         // Make sure Headers static file is at the same height. If it's further, this
@@ -1055,10 +992,10 @@ impl<TX: DbTx + 'static, N: NodeTypes> HeaderSyncGapProvider for DatabaseProvide
     }
 }
 
-impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> HeaderProvider
-    for DatabaseProvider<TX, N>
-{
-    fn header(&self, block_hash: &BlockHash) -> ProviderResult<Option<Header>> {
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> HeaderProvider for DatabaseProvider<TX, N> {
+    type Header = HeaderTy<N>;
+
+    fn header(&self, block_hash: &BlockHash) -> ProviderResult<Option<Self::Header>> {
         if let Some(num) = self.block_number(*block_hash)? {
             Ok(self.header_by_number(num)?)
         } else {
@@ -1066,12 +1003,12 @@ impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> HeaderProvi
         }
     }
 
-    fn header_by_number(&self, num: BlockNumber) -> ProviderResult<Option<Header>> {
+    fn header_by_number(&self, num: BlockNumber) -> ProviderResult<Option<Self::Header>> {
         self.static_file_provider.get_with_static_file_or_database(
             StaticFileSegment::Headers,
             num,
             |static_file| static_file.header_by_number(num),
-            || Ok(self.tx.get::<tables::Headers>(num)?),
+            || Ok(self.tx.get::<tables::Headers<Self::Header>>(num)?),
         )
     }
 
@@ -1098,17 +1035,25 @@ impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> HeaderProvi
         )
     }
 
-    fn headers_range(&self, range: impl RangeBounds<BlockNumber>) -> ProviderResult<Vec<Header>> {
+    fn headers_range(
+        &self,
+        range: impl RangeBounds<BlockNumber>,
+    ) -> ProviderResult<Vec<Self::Header>> {
         self.static_file_provider.get_range_with_static_file_or_database(
             StaticFileSegment::Headers,
             to_range(range),
             |static_file, range, _| static_file.headers_range(range),
-            |range, _| self.cursor_read_collect::<tables::Headers>(range).map_err(Into::into),
+            |range, _| {
+                self.cursor_read_collect::<tables::Headers<Self::Header>>(range).map_err(Into::into)
+            },
             |_| true,
         )
     }
 
-    fn sealed_header(&self, number: BlockNumber) -> ProviderResult<Option<SealedHeader>> {
+    fn sealed_header(
+        &self,
+        number: BlockNumber,
+    ) -> ProviderResult<Option<SealedHeader<Self::Header>>> {
         self.static_file_provider.get_with_static_file_or_database(
             StaticFileSegment::Headers,
             number,
@@ -1129,15 +1074,17 @@ impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> HeaderProvi
     fn sealed_headers_while(
         &self,
         range: impl RangeBounds<BlockNumber>,
-        predicate: impl FnMut(&SealedHeader) -> bool,
-    ) -> ProviderResult<Vec<SealedHeader>> {
+        predicate: impl FnMut(&SealedHeader<Self::Header>) -> bool,
+    ) -> ProviderResult<Vec<SealedHeader<Self::Header>>> {
         self.static_file_provider.get_range_with_static_file_or_database(
             StaticFileSegment::Headers,
             to_range(range),
             |static_file, range, predicate| static_file.sealed_headers_while(range, predicate),
             |range, mut predicate| {
                 let mut headers = vec![];
-                for entry in self.tx.cursor_read::<tables::Headers>()?.walk_range(range)? {
+                for entry in
+                    self.tx.cursor_read::<tables::Headers<Self::Header>>()?.walk_range(range)?
+                {
                     let (number, header) = entry?;
                     let hash = self
                         .block_hash(number)?
@@ -1214,7 +1161,13 @@ impl<TX: DbTx + 'static, N: NodeTypes> BlockNumReader for DatabaseProvider<TX, N
 }
 
 impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvider<TX, N> {
-    fn find_block_by_hash(&self, hash: B256, source: BlockSource) -> ProviderResult<Option<Block>> {
+    type Block = BlockTy<N>;
+
+    fn find_block_by_hash(
+        &self,
+        hash: B256,
+        source: BlockSource,
+    ) -> ProviderResult<Option<Self::Block>> {
         if source.is_canonical() {
             self.block(hash.into())
         } else {
@@ -1227,63 +1180,45 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvid
     /// If the header for this block is not found, this returns `None`.
     /// If the header is found, but the transactions either do not exist, or are not indexed, this
     /// will return None.
-    fn block(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Block>> {
+    fn block(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Self::Block>> {
         if let Some(number) = self.convert_hash_or_number(id)? {
             if let Some(header) = self.header_by_number(number)? {
-                let withdrawals = self.withdrawals_by_block(number.into(), header.timestamp)?;
-                let ommers = self.ommers(number.into())?.unwrap_or_default();
                 // If the body indices are not found, this means that the transactions either do not
                 // exist in the database yet, or they do exit but are not indexed.
                 // If they exist but are not indexed, we don't have enough
                 // information to return the block anyways, so we return `None`.
-                let transactions = match self.transactions_by_block(number.into())? {
-                    Some(transactions) => transactions.into_iter().map(Into::into).collect(),
-                    None => return Ok(None),
+                let Some(transactions) = self.transactions_by_block(number.into())? else {
+                    return Ok(None)
                 };
 
-                return Ok(Some(Block {
-                    header,
-                    body: BlockBody { transactions, ommers, withdrawals },
-                }))
+                let body = self
+                    .storage
+                    .reader()
+                    .read_block_bodies(self, vec![(&header, transactions)])?
+                    .pop()
+                    .ok_or(ProviderError::InvalidStorageOutput)?;
+
+                return Ok(Some(Self::Block::new(header, body)))
             }
         }
 
         Ok(None)
     }
 
-    fn pending_block(&self) -> ProviderResult<Option<SealedBlock>> {
+    fn pending_block(&self) -> ProviderResult<Option<SealedBlockFor<Self::Block>>> {
         Ok(None)
     }
 
-    fn pending_block_with_senders(&self) -> ProviderResult<Option<SealedBlockWithSenders>> {
+    fn pending_block_with_senders(
+        &self,
+    ) -> ProviderResult<Option<SealedBlockWithSenders<Self::Block>>> {
         Ok(None)
     }
 
-    fn pending_block_and_receipts(&self) -> ProviderResult<Option<(SealedBlock, Vec<Receipt>)>> {
+    fn pending_block_and_receipts(
+        &self,
+    ) -> ProviderResult<Option<(SealedBlockFor<Self::Block>, Vec<Self::Receipt>)>> {
         Ok(None)
-    }
-
-    /// Returns the ommers for the block with matching id from the database.
-    ///
-    /// If the block is not found, this returns `None`.
-    /// If the block exists, but doesn't contain ommers, this returns `None`.
-    fn ommers(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Vec<Header>>> {
-        if let Some(number) = self.convert_hash_or_number(id)? {
-            // If the Paris (Merge) hardfork block is known and block is after it, return empty
-            // ommers.
-            if self.chain_spec.final_paris_total_difficulty(number).is_some() {
-                return Ok(Some(Vec::new()))
-            }
-
-            let ommers = self.tx.get::<tables::BlockOmmers>(number)?.map(|o| o.ommers);
-            return Ok(ommers)
-        }
-
-        Ok(None)
-    }
-
-    fn block_body_indices(&self, num: u64) -> ProviderResult<Option<StoredBlockBodyIndices>> {
-        Ok(self.tx.get::<tables::BlockBodyIndices>(num)?)
     }
 
     /// Returns the block with senders with matching number or hash from database.
@@ -1298,13 +1233,13 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvid
         &self,
         id: BlockHashOrNumber,
         transaction_kind: TransactionVariant,
-    ) -> ProviderResult<Option<BlockWithSenders>> {
+    ) -> ProviderResult<Option<BlockWithSenders<Self::Block>>> {
         self.block_with_senders(
             id,
             transaction_kind,
             |block_number| self.header_by_number(block_number),
-            |header, transactions, senders, ommers, withdrawals| {
-                Block { header, body: BlockBody { transactions, ommers, withdrawals } }
+            |header, body, senders| {
+                Self::Block::new(header, body)
                     // Note: we're using unchecked here because we know the block contains valid txs
                     // wrt to its height and can ignore the s value check so pre
                     // EIP-2 txs are allowed
@@ -1319,13 +1254,13 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvid
         &self,
         id: BlockHashOrNumber,
         transaction_kind: TransactionVariant,
-    ) -> ProviderResult<Option<SealedBlockWithSenders>> {
+    ) -> ProviderResult<Option<SealedBlockWithSenders<Self::Block>>> {
         self.block_with_senders(
             id,
             transaction_kind,
             |block_number| self.sealed_header(block_number),
-            |header, transactions, senders, ommers, withdrawals| {
-                SealedBlock { header, body: BlockBody { transactions, ommers, withdrawals } }
+            |header, body, senders| {
+                SealedBlock { header, body }
                     // Note: we're using unchecked here because we know the block contains valid txs
                     // wrt to its height and can ignore the s value check so pre
                     // EIP-2 txs are allowed
@@ -1336,34 +1271,23 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvid
         )
     }
 
-    fn block_range(&self, range: RangeInclusive<BlockNumber>) -> ProviderResult<Vec<Block>> {
-        let mut tx_cursor = self.tx.cursor_read::<tables::Transactions<TxTy<N>>>()?;
+    fn block_range(&self, range: RangeInclusive<BlockNumber>) -> ProviderResult<Vec<Self::Block>> {
         self.block_range(
             range,
             |range| self.headers_range(range),
-            |header, tx_range, ommers, withdrawals| {
-                let transactions = if tx_range.is_empty() {
-                    Vec::new()
-                } else {
-                    self.transactions_by_tx_range_with_cursor(tx_range, &mut tx_cursor)?
-                        .into_iter()
-                        .map(Into::into)
-                        .collect()
-                };
-                Ok(Block { header, body: BlockBody { transactions, ommers, withdrawals } })
-            },
+            |header, body, _| Ok(Self::Block::new(header, body)),
         )
     }
 
     fn block_with_senders_range(
         &self,
         range: RangeInclusive<BlockNumber>,
-    ) -> ProviderResult<Vec<BlockWithSenders>> {
+    ) -> ProviderResult<Vec<BlockWithSenders<Self::Block>>> {
         self.block_with_senders_range(
             range,
             |range| self.headers_range(range),
-            |header, transactions, ommers, withdrawals, senders| {
-                Block { header, body: BlockBody { transactions, ommers, withdrawals } }
+            |header, body, senders| {
+                Self::Block::new(header, body)
                     .try_with_senders_unchecked(senders)
                     .map_err(|_| ProviderError::SenderRecoveryError)
             },
@@ -1373,16 +1297,13 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockReader for DatabaseProvid
     fn sealed_block_with_senders_range(
         &self,
         range: RangeInclusive<BlockNumber>,
-    ) -> ProviderResult<Vec<SealedBlockWithSenders>> {
+    ) -> ProviderResult<Vec<SealedBlockWithSenders<Self::Block>>> {
         self.block_with_senders_range(
             range,
             |range| self.sealed_headers_range(range),
-            |header, transactions, ommers, withdrawals, senders| {
-                SealedBlockWithSenders::new(
-                    SealedBlock { header, body: BlockBody { transactions, ommers, withdrawals } },
-                    senders,
-                )
-                .ok_or(ProviderError::SenderRecoveryError)
+            |header, body, senders| {
+                SealedBlockWithSenders::new(SealedBlock { header, body }, senders)
+                    .ok_or(ProviderError::SenderRecoveryError)
             },
         )
     }
@@ -1402,7 +1323,7 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> TransactionsProviderExt
             tx_range,
             |static_file, range, _| static_file.transaction_hashes_by_range(range),
             |tx_range, _| {
-                let mut tx_cursor = self.tx.cursor_read::<tables::Transactions>()?;
+                let mut tx_cursor = self.tx.cursor_read::<tables::Transactions<TxTy<N>>>()?;
                 let tx_range_size = tx_range.clone().count();
                 let tx_walker = tx_cursor.walk_range(tx_range)?;
 
@@ -1411,12 +1332,15 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> TransactionsProviderExt
                 let mut transaction_count = 0;
 
                 #[inline]
-                fn calculate_hash(
-                    entry: Result<(TxNumber, TransactionSignedNoHash), DatabaseError>,
+                fn calculate_hash<T>(
+                    entry: Result<(TxNumber, T), DatabaseError>,
                     rlp_buf: &mut Vec<u8>,
-                ) -> Result<(B256, TxNumber), Box<ProviderError>> {
+                ) -> Result<(B256, TxNumber), Box<ProviderError>>
+                where
+                    T: Encodable2718,
+                {
                     let (tx_id, tx) = entry.map_err(|e| Box::new(e.into()))?;
-                    tx.transaction.eip2718_encode(&tx.signature, rlp_buf);
+                    tx.encode_2718(rlp_buf);
                     Ok((keccak256(rlp_buf), tx_id))
                 }
 
@@ -1518,9 +1442,9 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> TransactionsProvider for Datab
                                 index,
                                 block_hash,
                                 block_number,
-                                base_fee: header.base_fee_per_gas,
-                                excess_blob_gas: header.excess_blob_gas,
-                                timestamp: header.timestamp,
+                                base_fee: header.base_fee_per_gas(),
+                                excess_blob_gas: header.excess_blob_gas(),
+                                timestamp: header.timestamp(),
                             };
 
                             return Ok(Some((transaction, meta)))
@@ -1603,16 +1527,18 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> TransactionsProvider for Datab
 }
 
 impl<TX: DbTx + 'static, N: NodeTypesForProvider> ReceiptProvider for DatabaseProvider<TX, N> {
-    fn receipt(&self, id: TxNumber) -> ProviderResult<Option<Receipt>> {
+    type Receipt = ReceiptTy<N>;
+
+    fn receipt(&self, id: TxNumber) -> ProviderResult<Option<Self::Receipt>> {
         self.static_file_provider.get_with_static_file_or_database(
             StaticFileSegment::Receipts,
             id,
             |static_file| static_file.receipt(id),
-            || Ok(self.tx.get::<tables::Receipts>(id)?),
+            || Ok(self.tx.get::<tables::Receipts<Self::Receipt>>(id)?),
         )
     }
 
-    fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
+    fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Self::Receipt>> {
         if let Some(id) = self.transaction_id(hash)? {
             self.receipt(id)
         } else {
@@ -1620,7 +1546,10 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> ReceiptProvider for DatabasePr
         }
     }
 
-    fn receipts_by_block(&self, block: BlockHashOrNumber) -> ProviderResult<Option<Vec<Receipt>>> {
+    fn receipts_by_block(
+        &self,
+        block: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<Self::Receipt>>> {
         if let Some(number) = self.convert_hash_or_number(block)? {
             if let Some(body) = self.block_body_indices(number)? {
                 let tx_range = body.tx_num_range();
@@ -1637,12 +1566,15 @@ impl<TX: DbTx + 'static, N: NodeTypesForProvider> ReceiptProvider for DatabasePr
     fn receipts_by_tx_range(
         &self,
         range: impl RangeBounds<TxNumber>,
-    ) -> ProviderResult<Vec<Receipt>> {
+    ) -> ProviderResult<Vec<Self::Receipt>> {
         self.static_file_provider.get_range_with_static_file_or_database(
             StaticFileSegment::Receipts,
             to_range(range),
             |static_file, range, _| static_file.receipts_by_tx_range(range),
-            |range, _| self.cursor_read_collect::<tables::Receipts>(range).map_err(Into::into),
+            |range, _| {
+                self.cursor_read_collect::<tables::Receipts<Self::Receipt>>(range)
+                    .map_err(Into::into)
+            },
             |_| true,
         )
     }
@@ -1678,69 +1610,51 @@ impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> Withdrawals
     }
 }
 
-impl<TX: DbTx + 'static, N: NodeTypes<ChainSpec: EthereumHardforks>> EvmEnvProvider
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> OmmersProvider for DatabaseProvider<TX, N> {
+    /// Returns the ommers for the block with matching id from the database.
+    ///
+    /// If the block is not found, this returns `None`.
+    /// If the block exists, but doesn't contain ommers, this returns `None`.
+    fn ommers(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Vec<Self::Header>>> {
+        if let Some(number) = self.convert_hash_or_number(id)? {
+            // If the Paris (Merge) hardfork block is known and block is after it, return empty
+            // ommers.
+            if self.chain_spec.final_paris_total_difficulty(number).is_some() {
+                return Ok(Some(Vec::new()))
+            }
+
+            let ommers =
+                self.tx.get::<tables::BlockOmmers<Self::Header>>(number)?.map(|o| o.ommers);
+            return Ok(ommers)
+        }
+
+        Ok(None)
+    }
+}
+
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> BlockBodyIndicesProvider
     for DatabaseProvider<TX, N>
 {
-    fn fill_env_at<EvmConfig>(
-        &self,
-        cfg: &mut CfgEnvWithHandlerCfg,
-        block_env: &mut BlockEnv,
-        at: BlockHashOrNumber,
-        evm_config: EvmConfig,
-    ) -> ProviderResult<()>
-    where
-        EvmConfig: ConfigureEvmEnv<Header = Header>,
-    {
-        let hash = self.convert_number(at)?.ok_or(ProviderError::HeaderNotFound(at))?;
-        let header = self.header(&hash)?.ok_or(ProviderError::HeaderNotFound(at))?;
-        self.fill_env_with_header(cfg, block_env, &header, evm_config)
+    fn block_body_indices(&self, num: u64) -> ProviderResult<Option<StoredBlockBodyIndices>> {
+        Ok(self.tx.get::<tables::BlockBodyIndices>(num)?)
     }
+}
 
-    fn fill_env_with_header<EvmConfig>(
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> EvmEnvProvider<HeaderTy<N>>
+    for DatabaseProvider<TX, N>
+{
+    fn env_with_header<EvmConfig>(
         &self,
-        cfg: &mut CfgEnvWithHandlerCfg,
-        block_env: &mut BlockEnv,
-        header: &Header,
+        header: &HeaderTy<N>,
         evm_config: EvmConfig,
-    ) -> ProviderResult<()>
+    ) -> ProviderResult<EvmEnv>
     where
-        EvmConfig: ConfigureEvmEnv<Header = Header>,
+        EvmConfig: ConfigureEvmEnv<Header = HeaderTy<N>>,
     {
         let total_difficulty = self
-            .header_td_by_number(header.number)?
-            .ok_or_else(|| ProviderError::HeaderNotFound(header.number.into()))?;
-        evm_config.fill_cfg_and_block_env(cfg, block_env, header, total_difficulty);
-        Ok(())
-    }
-
-    fn fill_cfg_env_at<EvmConfig>(
-        &self,
-        cfg: &mut CfgEnvWithHandlerCfg,
-        at: BlockHashOrNumber,
-        evm_config: EvmConfig,
-    ) -> ProviderResult<()>
-    where
-        EvmConfig: ConfigureEvmEnv<Header = Header>,
-    {
-        let hash = self.convert_number(at)?.ok_or(ProviderError::HeaderNotFound(at))?;
-        let header = self.header(&hash)?.ok_or(ProviderError::HeaderNotFound(at))?;
-        self.fill_cfg_env_with_header(cfg, &header, evm_config)
-    }
-
-    fn fill_cfg_env_with_header<EvmConfig>(
-        &self,
-        cfg: &mut CfgEnvWithHandlerCfg,
-        header: &Header,
-        evm_config: EvmConfig,
-    ) -> ProviderResult<()>
-    where
-        EvmConfig: ConfigureEvmEnv<Header = Header>,
-    {
-        let total_difficulty = self
-            .header_td_by_number(header.number)?
-            .ok_or_else(|| ProviderError::HeaderNotFound(header.number.into()))?;
-        evm_config.fill_cfg_env(cfg, header, total_difficulty);
-        Ok(())
+            .header_td_by_number(header.number())?
+            .ok_or_else(|| ProviderError::HeaderNotFound(header.number().into()))?;
+        Ok(evm_config.cfg_and_block_env(header, total_difficulty))
     }
 }
 
@@ -1867,9 +1781,77 @@ impl<TX: DbTx + 'static, N: NodeTypes> StorageReader for DatabaseProvider<TX, N>
     }
 }
 
-impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
+impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateWriter
     for DatabaseProvider<TX, N>
 {
+    type Receipt = ReceiptTy<N>;
+
+    fn write_state(
+        &self,
+        execution_outcome: ExecutionOutcome<Self::Receipt>,
+        is_value_known: OriginalValuesKnown,
+        write_receipts_to: StorageLocation,
+    ) -> ProviderResult<()> {
+        let (plain_state, reverts) =
+            execution_outcome.bundle.to_plain_state_and_reverts(is_value_known);
+
+        self.write_state_reverts(reverts, execution_outcome.first_block)?;
+        self.write_state_changes(plain_state)?;
+
+        let mut bodies_cursor = self.tx.cursor_read::<tables::BlockBodyIndices>()?;
+
+        let has_receipts_pruning = self.prune_modes.has_receipts_pruning() ||
+            execution_outcome.receipts.iter().flatten().any(|receipt| receipt.is_none());
+
+        // Prepare receipts cursor if we are going to write receipts to the database
+        //
+        // We are writing to database if requested or if there's any kind of receipt pruning
+        // configured
+        let mut receipts_cursor = (write_receipts_to.database() || has_receipts_pruning)
+            .then(|| self.tx.cursor_write::<tables::Receipts<Self::Receipt>>())
+            .transpose()?;
+
+        // Prepare receipts static writer if we are going to write receipts to static files
+        //
+        // We are writing to static files if requested and if there's no receipt pruning configured
+        let mut receipts_static_writer = (write_receipts_to.static_files() &&
+            !has_receipts_pruning)
+            .then(|| {
+                self.static_file_provider
+                    .get_writer(execution_outcome.first_block, StaticFileSegment::Receipts)
+            })
+            .transpose()?;
+
+        for (idx, receipts) in execution_outcome.receipts.into_iter().enumerate() {
+            let block_number = execution_outcome.first_block + idx as u64;
+
+            // Increment block number for receipts static file writer
+            if let Some(writer) = receipts_static_writer.as_mut() {
+                writer.increment_block(block_number)?;
+            }
+
+            let first_tx_index = bodies_cursor
+                .seek_exact(block_number)?
+                .map(|(_, indices)| indices.first_tx_num())
+                .ok_or(ProviderError::BlockBodyIndicesNotFound(block_number))?;
+
+            for (idx, receipt) in receipts.into_iter().enumerate() {
+                let receipt_idx = first_tx_index + idx as u64;
+                if let Some(receipt) = receipt {
+                    if let Some(writer) = &mut receipts_static_writer {
+                        writer.append_receipt(receipt_idx, &receipt)?;
+                    }
+
+                    if let Some(cursor) = &mut receipts_cursor {
+                        cursor.append(receipt_idx, receipt)?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     fn write_state_reverts(
         &self,
         reverts: PlainStateReverts,
@@ -2059,9 +2041,15 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
     ///     1. Take the old value from the changeset
     ///     2. Take the new value from the local state
     ///     3. Set the local state to the value in the changeset
-    fn remove_state(&self, range: RangeInclusive<BlockNumber>) -> ProviderResult<()> {
+    fn remove_state_above(
+        &self,
+        block: BlockNumber,
+        remove_receipts_from: StorageLocation,
+    ) -> ProviderResult<()> {
+        let range = block + 1..=self.last_block_number()?;
+
         if range.is_empty() {
-            return Ok(())
+            return Ok(());
         }
 
         // We are not removing block meta as it is used to get block changesets.
@@ -2070,8 +2058,6 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
         // get transaction receipts
         let from_transaction_num =
             block_bodies.first().expect("already checked if there are blocks").1.first_tx_num();
-        let to_transaction_num =
-            block_bodies.last().expect("already checked if there are blocks").1.last_tx_num();
 
         let storage_range = BlockNumberAddress::range(range.clone());
 
@@ -2124,8 +2110,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
             }
         }
 
-        // iterate over block body and remove receipts
-        self.remove::<tables::Receipts>(from_transaction_num..=to_transaction_num)?;
+        self.remove_receipts_from(from_transaction_num, block, remove_receipts_from)?;
 
         Ok(())
     }
@@ -2151,7 +2136,13 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
     ///     1. Take the old value from the changeset
     ///     2. Take the new value from the local state
     ///     3. Set the local state to the value in the changeset
-    fn take_state(&self, range: RangeInclusive<BlockNumber>) -> ProviderResult<ExecutionOutcome> {
+    fn take_state_above(
+        &self,
+        block: BlockNumber,
+        remove_receipts_from: StorageLocation,
+    ) -> ProviderResult<ExecutionOutcome<Self::Receipt>> {
+        let range = block + 1..=self.last_block_number()?;
+
         if range.is_empty() {
             return Ok(ExecutionOutcome::default())
         }
@@ -2219,21 +2210,44 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateChangeWriter
             }
         }
 
-        // iterate over block body and create ExecutionResult
-        let mut receipt_iter =
-            self.take::<tables::Receipts>(from_transaction_num..=to_transaction_num)?.into_iter();
+        // Collect receipts into tuples (tx_num, receipt) to correctly handle pruned receipts
+        let mut receipts_iter = self
+            .static_file_provider
+            .get_range_with_static_file_or_database(
+                StaticFileSegment::Receipts,
+                from_transaction_num..to_transaction_num + 1,
+                |static_file, range, _| {
+                    static_file
+                        .receipts_by_tx_range(range.clone())
+                        .map(|r| range.into_iter().zip(r).collect())
+                },
+                |range, _| {
+                    self.tx
+                        .cursor_read::<tables::Receipts<Self::Receipt>>()?
+                        .walk_range(range)?
+                        .map(|r| r.map_err(Into::into))
+                        .collect()
+                },
+                |_| true,
+            )?
+            .into_iter()
+            .peekable();
 
         let mut receipts = Vec::with_capacity(block_bodies.len());
         // loop break if we are at the end of the blocks.
         for (_, block_body) in block_bodies {
             let mut block_receipts = Vec::with_capacity(block_body.tx_count as usize);
-            for _ in block_body.tx_num_range() {
-                if let Some((_, receipt)) = receipt_iter.next() {
-                    block_receipts.push(Some(receipt));
+            for num in block_body.tx_num_range() {
+                if receipts_iter.peek().is_some_and(|(n, _)| *n == num) {
+                    block_receipts.push(receipts_iter.next().map(|(_, r)| r));
+                } else {
+                    block_receipts.push(None);
                 }
             }
             receipts.push(block_receipts);
         }
+
+        self.remove_receipts_from(from_transaction_num, block, remove_receipts_from)?;
 
         Ok(ExecutionOutcome::new_init(
             state,
@@ -2301,7 +2315,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> StorageTrieWriter for DatabaseP
     /// updates by the hashed address, writing in sorted order.
     fn write_storage_trie_updates(
         &self,
-        storage_tries: &HashMap<B256, StorageTrieUpdates>,
+        storage_tries: &B256HashMap<StorageTrieUpdates>,
     ) -> ProviderResult<usize> {
         let mut num_entries = 0;
         let mut storage_tries = Vec::from_iter(storage_tries);
@@ -2406,7 +2420,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> HashingWriter for DatabaseProvi
 
         // Apply values to HashedState, and remove the account if it's None.
         let mut hashed_storage_keys: HashMap<B256, BTreeSet<B256>> =
-            HashMap::with_capacity(hashed_storages.len());
+            HashMap::with_capacity_and_hasher(hashed_storages.len(), Default::default());
         let mut hashed_storage = self.tx.cursor_dup_write::<tables::HashedStorages>()?;
         for (hashed_address, key, value) in hashed_storages.into_iter().rev() {
             hashed_storage_keys.entry(hashed_address).or_default().insert(key);
@@ -2540,7 +2554,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> HashingWriter for DatabaseProvi
             let (state_root, trie_updates) = StateRoot::from_tx(&self.tx)
                 .with_prefix_sets(prefix_sets)
                 .root_with_updates()
-                .map_err(Into::<reth_db::DatabaseError>::into)?;
+                .map_err(reth_db::DatabaseError::from)?;
             if state_root != expected_state_root {
                 return Err(ProviderError::StateRootMismatch(Box::new(RootMismatch {
                     root: GotExpected { got: state_root, expected: expected_state_root },
@@ -2692,32 +2706,26 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> HistoryWriter for DatabaseProvi
     }
 }
 
-impl<TX: DbTx + 'static, N: NodeTypesForProvider> StateReader for DatabaseProvider<TX, N> {
-    fn get_state(&self, block: BlockNumber) -> ProviderResult<Option<ExecutionOutcome>> {
-        self.get_state(block..=block)
-    }
-}
-
 impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockExecutionWriter
     for DatabaseProvider<TX, N>
 {
     fn take_block_and_execution_above(
         &self,
         block: BlockNumber,
-        remove_transactions_from: StorageLocation,
-    ) -> ProviderResult<Chain> {
+        remove_from: StorageLocation,
+    ) -> ProviderResult<Chain<Self::Primitives>> {
         let range = block + 1..=self.last_block_number()?;
 
         self.unwind_trie_state_range(range.clone())?;
 
         // get execution res
-        let execution_state = self.take_state(range.clone())?;
+        let execution_state = self.take_state_above(block, remove_from)?;
 
         let blocks = self.sealed_block_with_senders_range(range)?;
 
         // remove block bodies it is needed for both get block range and get block execution results
         // that is why it is deleted afterwards.
-        self.remove_blocks_above(block, remove_transactions_from)?;
+        self.remove_blocks_above(block, remove_from)?;
 
         // Update pipeline progress
         self.update_pipeline_stages(block, true)?;
@@ -2728,18 +2736,18 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockExecu
     fn remove_block_and_execution_above(
         &self,
         block: BlockNumber,
-        remove_transactions_from: StorageLocation,
+        remove_from: StorageLocation,
     ) -> ProviderResult<()> {
         let range = block + 1..=self.last_block_number()?;
 
-        self.unwind_trie_state_range(range.clone())?;
+        self.unwind_trie_state_range(range)?;
 
         // remove execution res
-        self.remove_state(range)?;
+        self.remove_state_above(block, remove_from)?;
 
         // remove block bodies it is needed for both get block range and get block execution results
         // that is why it is deleted afterwards.
-        self.remove_blocks_above(block, remove_transactions_from)?;
+        self.remove_blocks_above(block, remove_from)?;
 
         // Update pipeline progress
         self.update_pipeline_stages(block, true)?;
@@ -2751,7 +2759,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockExecu
 impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWriter
     for DatabaseProvider<TX, N>
 {
-    type Body = <<N::Primitives as NodePrimitives>::Block as reth_primitives_traits::Block>::Body;
+    type Block = BlockTy<N>;
+    type Receipt = ReceiptTy<N>;
 
     /// Inserts the block into the database, always modifying the following tables:
     /// * [`CanonicalHeaders`](tables::CanonicalHeaders)
@@ -2775,35 +2784,44 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
     /// [`TransactionHashNumbers`](tables::TransactionHashNumbers).
     fn insert_block(
         &self,
-        block: SealedBlockWithSenders<Header, Self::Body>,
-        write_transactions_to: StorageLocation,
+        block: SealedBlockWithSenders<Self::Block>,
+        write_to: StorageLocation,
     ) -> ProviderResult<StoredBlockBodyIndices> {
-        let block_number = block.number;
+        let block_number = block.number();
 
         let mut durations_recorder = metrics::DurationsRecorder::default();
 
-        self.tx.put::<tables::CanonicalHeaders>(block_number, block.hash())?;
-        durations_recorder.record_relative(metrics::Action::InsertCanonicalHeaders);
-
-        // Put header with canonical hashes.
-        self.tx.put::<tables::Headers>(block_number, block.header.as_ref().clone())?;
-        durations_recorder.record_relative(metrics::Action::InsertHeaders);
-
-        self.tx.put::<tables::HeaderNumbers>(block.hash(), block_number)?;
-        durations_recorder.record_relative(metrics::Action::InsertHeaderNumbers);
-
         // total difficulty
         let ttd = if block_number == 0 {
-            block.difficulty
+            block.difficulty()
         } else {
             let parent_block_number = block_number - 1;
             let parent_ttd = self.header_td_by_number(parent_block_number)?.unwrap_or_default();
             durations_recorder.record_relative(metrics::Action::GetParentTD);
-            parent_ttd + block.difficulty
+            parent_ttd + block.difficulty()
         };
 
-        self.tx.put::<tables::HeaderTerminalDifficulties>(block_number, ttd.into())?;
-        durations_recorder.record_relative(metrics::Action::InsertHeaderTerminalDifficulties);
+        if write_to.database() {
+            self.tx.put::<tables::CanonicalHeaders>(block_number, block.hash())?;
+            durations_recorder.record_relative(metrics::Action::InsertCanonicalHeaders);
+
+            // Put header with canonical hashes.
+            self.tx
+                .put::<tables::Headers<HeaderTy<N>>>(block_number, block.header.as_ref().clone())?;
+            durations_recorder.record_relative(metrics::Action::InsertHeaders);
+
+            self.tx.put::<tables::HeaderTerminalDifficulties>(block_number, ttd.into())?;
+            durations_recorder.record_relative(metrics::Action::InsertHeaderTerminalDifficulties);
+        }
+
+        if write_to.static_files() {
+            let mut writer =
+                self.static_file_provider.get_writer(block_number, StaticFileSegment::Headers)?;
+            writer.append_header(&block.header, ttd, &block.hash())?;
+        }
+
+        self.tx.put::<tables::HeaderNumbers>(block.hash(), block_number)?;
+        durations_recorder.record_relative(metrics::Action::InsertHeaderNumbers);
 
         let mut next_tx_num = self
             .tx
@@ -2832,10 +2850,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             next_tx_num += 1;
         }
 
-        self.append_block_bodies(
-            vec![(block_number, Some(block.block.body))],
-            write_transactions_to,
-        )?;
+        self.append_block_bodies(vec![(block_number, Some(block.block.body))], write_to)?;
 
         debug!(
             target: "providers::db",
@@ -2849,13 +2864,13 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
 
     fn append_block_bodies(
         &self,
-        bodies: Vec<(BlockNumber, Option<Self::Body>)>,
-        write_transactions_to: StorageLocation,
+        bodies: Vec<(BlockNumber, Option<BodyTy<N>>)>,
+        write_to: StorageLocation,
     ) -> ProviderResult<()> {
         let Some(from_block) = bodies.first().map(|(block, _)| *block) else { return Ok(()) };
 
         // Initialize writer if we will be writing transactions to staticfiles
-        let mut tx_static_writer = write_transactions_to
+        let mut tx_static_writer = write_to
             .static_files()
             .then(|| {
                 self.static_file_provider.get_writer(from_block, StaticFileSegment::Transactions)
@@ -2866,16 +2881,12 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
         let mut tx_block_cursor = self.tx.cursor_write::<tables::TransactionBlocks>()?;
 
         // Initialize cursor if we will be writing transactions to database
-        let mut tx_cursor = write_transactions_to
+        let mut tx_cursor = write_to
             .database()
-            .then(|| {
-                self.tx.cursor_write::<tables::Transactions<
-                    <Self::Body as reth_primitives_traits::BlockBody>::Transaction,
-                >>()
-            })
+            .then(|| self.tx.cursor_write::<tables::Transactions<TxTy<N>>>())
             .transpose()?;
 
-        // Get id for the next tx_num of zero if there are no transactions.
+        // Get id for the next tx_num or zero if there are no transactions.
         let mut next_tx_num = tx_block_cursor.last()?.map(|(id, _)| id + 1).unwrap_or_default();
 
         for (block_number, body) in &bodies {
@@ -2923,7 +2934,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             );
         }
 
-        self.storage.writer().write_block_bodies(self, bodies)?;
+        self.storage.writer().write_block_bodies(self, bodies, write_to)?;
 
         Ok(())
     }
@@ -2931,7 +2942,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
     fn remove_blocks_above(
         &self,
         block: BlockNumber,
-        remove_transactions_from: StorageLocation,
+        remove_from: StorageLocation,
     ) -> ProviderResult<()> {
         let mut canonical_headers_cursor = self.tx.cursor_write::<tables::CanonicalHeaders>()?;
         let mut rev_headers = canonical_headers_cursor.walk_back(None)?;
@@ -2943,7 +2954,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             self.tx.delete::<tables::HeaderNumbers>(hash, None)?;
             rev_headers.delete_current()?;
         }
-        self.remove::<tables::Headers>(block + 1..)?;
+        self.remove::<tables::Headers<HeaderTy<N>>>(block + 1..)?;
         self.remove::<tables::HeaderTerminalDifficulties>(block + 1..)?;
 
         // First transaction to be removed
@@ -2963,7 +2974,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             .1
             .last_tx_num();
 
-        if unwind_tx_from < unwind_tx_to {
+        if unwind_tx_from <= unwind_tx_to {
             for (hash, _) in self.transaction_hashes_by_range(unwind_tx_from..(unwind_tx_to + 1))? {
                 self.tx.delete::<tables::TransactionHashNumbers>(hash, None)?;
             }
@@ -2971,7 +2982,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
 
         self.remove::<tables::TransactionSenders>(unwind_tx_from..)?;
 
-        self.remove_bodies_above(block, remove_transactions_from)?;
+        self.remove_bodies_above(block, remove_from)?;
 
         Ok(())
     }
@@ -2979,9 +2990,9 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
     fn remove_bodies_above(
         &self,
         block: BlockNumber,
-        remove_transactions_from: StorageLocation,
+        remove_from: StorageLocation,
     ) -> ProviderResult<()> {
-        self.storage.writer().remove_block_bodies_above(self, block)?;
+        self.storage.writer().remove_block_bodies_above(self, block, remove_from)?;
 
         // First transaction to be removed
         let unwind_tx_from = self
@@ -2993,11 +3004,11 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
         self.remove::<tables::BlockBodyIndices>(block + 1..)?;
         self.remove::<tables::TransactionBlocks>(unwind_tx_from..)?;
 
-        if remove_transactions_from.database() {
-            self.remove::<tables::Transactions>(unwind_tx_from..)?;
+        if remove_from.database() {
+            self.remove::<tables::Transactions<TxTy<N>>>(unwind_tx_from..)?;
         }
 
-        if remove_transactions_from.static_files() {
+        if remove_from.static_files() {
             let static_file_tx_num = self
                 .static_file_provider
                 .get_highest_static_file_tx(StaticFileSegment::Transactions);
@@ -3017,8 +3028,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
     /// TODO(joshie): this fn should be moved to `UnifiedStorageWriter` eventually
     fn append_blocks_with_state(
         &self,
-        blocks: Vec<SealedBlockWithSenders<Header, Self::Body>>,
-        execution_outcome: ExecutionOutcome,
+        blocks: Vec<SealedBlockWithSenders<Self::Block>>,
+        execution_outcome: ExecutionOutcome<Self::Receipt>,
         hashed_state: HashedPostStateSorted,
         trie_updates: TrieUpdates,
     ) -> ProviderResult<()> {
@@ -3027,10 +3038,10 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             return Ok(())
         }
 
-        let first_number = blocks.first().unwrap().number;
+        let first_number = blocks.first().unwrap().number();
 
         let last = blocks.last().unwrap();
-        let last_block_number = last.number;
+        let last_block_number = last.number();
 
         let mut durations_recorder = metrics::DurationsRecorder::default();
 
@@ -3040,12 +3051,7 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider + 'static> BlockWrite
             durations_recorder.record_relative(metrics::Action::InsertBlock);
         }
 
-        // Write state and changesets to the database.
-        // Must be written after blocks because of the receipt lookup.
-        // TODO: should _these_ be moved to storagewriter? seems like storagewriter should be
-        // _above_ db provider
-        let mut storage_writer = UnifiedStorageWriter::from_database(self);
-        storage_writer.write_to_storage(execution_outcome, OriginalValuesKnown::No)?;
+        self.write_state(execution_outcome, OriginalValuesKnown::No, StorageLocation::Database)?;
         durations_recorder.record_relative(metrics::Action::InsertState);
 
         // insert hashes and intermediate merkle nodes
@@ -3093,7 +3099,7 @@ impl<TX: DbTxMut, N: NodeTypes> PruneCheckpointWriter for DatabaseProvider<TX, N
     }
 }
 
-impl<TX: DbTx + 'static, N: NodeTypes> StatsReader for DatabaseProvider<TX, N> {
+impl<TX: DbTx + 'static, N: NodeTypesForProvider> StatsReader for DatabaseProvider<TX, N> {
     fn count_entries<T: Table>(&self) -> ProviderResult<usize> {
         let db_entries = self.tx.entries::<T>()?;
         let static_file_entries = match self.static_file_provider.count_entries::<T>() {

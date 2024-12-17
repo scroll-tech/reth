@@ -9,6 +9,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 mod error;
+
+use core::fmt;
+
+use alloy_consensus::BlockHeader;
+use alloy_rpc_types_engine::{ExecutionPayload, ExecutionPayloadSidecar, PayloadError};
 pub use error::BeaconOnNewPayloadError;
 
 mod forkchoice;
@@ -24,6 +29,9 @@ pub use reth_payload_primitives::{
     BuiltPayload, EngineApiMessageVersion, EngineObjectValidationError, PayloadOrAttributes,
     PayloadTypes,
 };
+use reth_payload_primitives::{InvalidPayloadAttributesError, PayloadAttributes};
+use reth_primitives::SealedBlockFor;
+use reth_primitives_traits::Block;
 use serde::{de::DeserializeOwned, ser::Serialize};
 
 /// This type defines the versioned types of the engine API.
@@ -74,8 +82,28 @@ pub trait EngineTypes:
         + 'static;
 }
 
-/// Type that validates the payloads sent to the engine.
-pub trait EngineValidator<Types: EngineTypes>: Clone + Send + Sync + Unpin + 'static {
+/// Type that validates an [`ExecutionPayload`].
+pub trait PayloadValidator: fmt::Debug + Send + Sync + Unpin + 'static {
+    /// The block type used by the engine.
+    type Block: Block;
+
+    /// Ensures that the given payload does not violate any consensus rules that concern the block's
+    /// layout.
+    ///
+    /// This function must convert the payload into the executable block and pre-validate its
+    /// fields.
+    ///
+    /// Implementers should ensure that the checks are done in the order that conforms with the
+    /// engine-API specification.
+    fn ensure_well_formed_payload(
+        &self,
+        payload: ExecutionPayload,
+        sidecar: ExecutionPayloadSidecar,
+    ) -> Result<SealedBlockFor<Self::Block>, PayloadError>;
+}
+
+/// Type that validates the payloads processed by the engine.
+pub trait EngineValidator<Types: EngineTypes>: PayloadValidator {
     /// Validates the presence or exclusion of fork-specific fields based on the payload attributes
     /// and the message version.
     fn validate_version_specific_fields(
@@ -90,4 +118,24 @@ pub trait EngineValidator<Types: EngineTypes>: Clone + Send + Sync + Unpin + 'st
         version: EngineApiMessageVersion,
         attributes: &<Types as PayloadTypes>::PayloadAttributes,
     ) -> Result<(), EngineObjectValidationError>;
+
+    /// Validates the payload attributes with respect to the header.
+    ///
+    /// By default, this enforces that the payload attributes timestamp is greater than the
+    /// timestamp according to:
+    ///   > 7. Client software MUST ensure that payloadAttributes.timestamp is greater than
+    ///   > timestamp
+    ///   > of a block referenced by forkchoiceState.headBlockHash.
+    ///
+    /// See also [engine api spec](https://github.com/ethereum/execution-apis/tree/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine)
+    fn validate_payload_attributes_against_header(
+        &self,
+        attr: &<Types as PayloadTypes>::PayloadAttributes,
+        header: &<Self::Block as Block>::Header,
+    ) -> Result<(), InvalidPayloadAttributesError> {
+        if attr.timestamp() <= header.timestamp() {
+            return Err(InvalidPayloadAttributesError::InvalidTimestamp);
+        }
+        Ok(())
+    }
 }
