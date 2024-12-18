@@ -92,12 +92,12 @@ impl StaticFileTargets {
         ]
         .iter()
         .all(|(target_block_range, highest_static_fileted_block)| {
-            target_block_range.is_none_or(|target_block_range| {
+            target_block_range.map(|target_block_range| {
                 *target_block_range.start() ==
                     highest_static_fileted_block.map_or(0, |highest_static_fileted_block| {
                         highest_static_fileted_block + 1
                     })
-            })
+            }).unwrap_or(true)
         })
     }
 }
