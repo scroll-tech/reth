@@ -112,7 +112,7 @@ impl<T> BlockBatchRecord<T> {
 
     /// Returns the [`BundleRetention`] for the given block based on the configured prune modes.
     pub fn bundle_retention(&self, block_number: BlockNumber) -> BundleRetention {
-        if self.tip.is_none_or(|tip| {
+        if self.tip.map(|tip| {
             !self
                 .prune_modes
                 .account_history
@@ -121,7 +121,7 @@ impl<T> BlockBatchRecord<T> {
                     .prune_modes
                     .storage_history
                     .is_some_and(|mode| mode.should_prune(block_number, tip))
-        }) {
+        }).unwrap_or(true) {
             BundleRetention::Reverts
         } else {
             BundleRetention::PlainState
