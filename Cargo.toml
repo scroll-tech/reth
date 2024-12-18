@@ -150,7 +150,7 @@ members = [
     "examples/txpool-tracing/",
     "examples/custom-beacon-withdrawals",
     "testing/ef-tests/",
-    "testing/testing-utils",
+    "testing/testing-utils", "crates/zstd",
 ]
 default-members = ["bin/reth"]
 exclude = ["book/sources"]
@@ -533,7 +533,7 @@ thiserror = { version = "2.0.0", default-features = false }
 tracing = "0.1.0"
 tracing-appender = "0.2"
 url = { version = "2.3", default-features = false }
-zstd = "0.13"
+zstd = { path = "crates/zstd" }
 byteorder = "1"
 
 # metrics

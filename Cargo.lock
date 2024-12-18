@@ -1109,7 +1109,7 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "tokio",
- "zstd",
+ "zstd 0.13.2",
  "zstd-safe",
 ]
 
@@ -8116,7 +8116,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.7",
  "tracing",
- "zstd",
+ "zstd 1.1.4",
 ]
 
 [[package]]
@@ -9689,7 +9689,7 @@ dependencies = [
 name = "reth-zstd-compressors"
 version = "1.1.4"
 dependencies = [
- "zstd",
+ "zstd 1.1.4",
 ]
 
 [[package]]
@@ -12333,6 +12333,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcf2b778a664581e31e389454a7072dab1647606d44f7feea22cd5abb9c9f3f9"
 dependencies = [
  "zstd-safe",
+]
+
+[[package]]
+name = "zstd"
+version = "1.1.4"
+dependencies = [
+ "zstd 0.13.2",
 ]
 
 [[package]]
