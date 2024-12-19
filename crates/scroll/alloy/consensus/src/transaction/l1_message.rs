@@ -251,13 +251,13 @@ impl Sealable for TxL1Message {
     }
 }
 
-// TODO(scroll): Ensure this is consistent with scroll implementation.
-
 /// Deposit transactions don't have a signature, however, we include an empty signature in the
 /// response for better compatibility.
 ///
-/// This function can be used as `serialize_with` serde attribute for the [`TxDeposit`] and will
-/// flatten [`TxDeposit::signature`] into response.
+/// This function can be used as `serialize_with` serde attribute for the [`TxL1Message`] and will
+/// flatten [`TxL1Message::signature`] into response.
+///
+/// https://github.com/scroll-tech/go-ethereum/blob/develop/core/types/l1_message_tx.go#L51
 #[cfg(feature = "serde")]
 pub fn serde_l1_message_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
     value: &T,
@@ -276,138 +276,119 @@ pub fn serde_l1_message_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
     SerdeHelper { value, signature: TxL1Message::signature() }.serialize(serializer)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::TxL1Message;
-//     use alloy_primitives::{address, bytes, hex, Bytes, U256};
-//     use arbitrary::Arbitrary;
-//     use bytes::BytesMut;
-//     use rand::Rng;
+#[cfg(test)]
+mod tests {
+    use super::TxL1Message;
+    use alloy_primitives::{address, bytes, hex, Bytes, U256};
+    use arbitrary::Arbitrary;
+    use bytes::BytesMut;
+    use rand::Rng;
 
-//     // #[test]
-//     // fn test_bincode_roundtrip() {
-//     //     let mut bytes = [0u8; 1024];
-//     //     rand::thread_rng().fill(bytes.as_mut_slice());
-//     //     let tx = TxL1Message::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
+    #[test]
+    fn test_bincode_roundtrip() {
+        let mut bytes = [0u8; 1024];
+        rand::thread_rng().fill(bytes.as_mut_slice());
+        let tx = TxL1Message::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
-//     //     let encoded = bincode::serialize(&tx).unwrap();
-//     //     let decoded: TxL1Message = bincode::deserialize(&encoded).unwrap();
-//     //     assert_eq!(decoded, tx);
-//     // }
+        let encoded = bincode::serialize(&tx).unwrap();
+        let decoded: TxL1Message = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded, tx);
+    }
 
-//     #[test]
-//     fn test_eip2718_encode() {
-//         let tx =
-//             TxL1Message {
-//                 queue_index: 947883,
-//                 gas_limit: 2000000,
-//                 to: address!("781e90f1c8fc4611c9b7497c3b47f99ef6969cbc"),
-//                 value: U256::ZERO,
-//                 sender: address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"),
-//                 input:
-// bytes!("8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-// ),             }
-//             ;
-//         let bytes =
-// Bytes::from_static(&hex!("
-// 7ef9015a830e76ab831e848094781e90f1c8fc4611c9b7497c3b47f99ef6969cbc80b901248ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000947885bcbd5cecef1336b5300fb5186a12ddd8c478"
-// ));
+    #[test]
+    fn test_eip2718_encode() {
+        let tx =
+            TxL1Message {
+                queue_index: 947883,
+                gas_limit: 2000000,
+                to: address!("781e90f1c8fc4611c9b7497c3b47f99ef6969cbc"),
+                value: U256::ZERO,
+                sender: address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"),
+                input:
+bytes!("8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+),             }
+            ;
+        let bytes =
+Bytes::from_static(&hex!("
+7ef9015a830e76ab831e848094781e90f1c8fc4611c9b7497c3b47f99ef6969cbc80b901248ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000947885bcbd5cecef1336b5300fb5186a12ddd8c478"
+));
 
-//         let mut encoded = BytesMut::default();
-//         tx.eip2718_encode(&mut encoded);
+        let mut encoded = BytesMut::default();
+        tx.eip2718_encode(&mut encoded);
 
-//         assert_eq!(encoded, bytes.as_ref())
-//     }
+        assert_eq!(encoded, bytes.as_ref())
+    }
 
-//     // #[test]
-//     // fn test_compaction_backwards_compatibility() {
-//     //     assert_eq!(TxL1Message::bitflag_encoded_bytes(), 2);
-//     //     validate_bitflag_backwards_compat!(TxL1Message, UnusedBits::NotZero);
-//     // }
-// }
+    #[test]
+    fn test_compaction_backwards_compatibility() {
+        assert_eq!(TxL1Message::bitflag_encoded_bytes(), 2);
+        validate_bitflag_backwards_compat!(TxL1Message, UnusedBits::NotZero);
+    }
+}
 
-/// Bincode-compatible [`TxDeposit`] serde implementation.
+/// Bincode-compatible [`TxL1Message`] serde implementation.
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub(super) mod serde_bincode_compat {
+    extern crate alloc;
     use alloc::borrow::Cow;
-    use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
+    use alloy_primitives::{Address, Bytes, U256};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use serde_with::{DeserializeAs, SerializeAs};
 
-    /// Bincode-compatible [`super::TxDeposit`] serde implementation.
-    ///
-    /// Intended to use with the [`serde_with::serde_as`] macro in the following way:
-    /// ```rust
-    /// use op_alloy_consensus::{serde_bincode_compat, TxDeposit};
-    /// use serde::{Deserialize, Serialize};
-    /// use serde_with::serde_as;
-    ///
-    /// #[serde_as]
-    /// #[derive(Serialize, Deserialize)]
-    /// struct Data {
-    ///     #[serde_as(as = "serde_bincode_compat::TxDeposit")]
-    ///     transaction: TxDeposit,
-    /// }
-    /// ```
+    /// Bincode-compatible [`super::TxL1Message`] serde implementation.
     #[derive(Debug, Serialize, Deserialize)]
-    pub struct TxDeposit<'a> {
-        source_hash: B256,
-        from: Address,
+    pub struct TxL1Message<'a> {
         #[serde(default)]
-        to: TxKind,
+        queue_index: u64,
         #[serde(default)]
-        mint: Option<u128>,
-        value: U256,
         gas_limit: u64,
-        is_system_transaction: bool,
+        to: Address,
+        value: U256,
+        sender: Address,
         input: Cow<'a, Bytes>,
     }
 
-    impl<'a> From<&'a super::TxDeposit> for TxDeposit<'a> {
-        fn from(value: &'a super::TxDeposit) -> Self {
+    impl<'a> From<&'a super::TxL1Message> for TxL1Message<'a> {
+        fn from(value: &'a super::TxL1Message) -> Self {
             Self {
-                source_hash: value.source_hash,
-                from: value.from,
-                to: value.to,
-                mint: value.mint,
-                value: value.value,
+                queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
-                is_system_transaction: value.is_system_transaction,
+                to: value.to,
+                value: value.value,
+                sender: value.sender,
                 input: Cow::Borrowed(&value.input),
             }
         }
     }
 
-    impl<'a> From<TxDeposit<'a>> for super::TxDeposit {
-        fn from(value: TxDeposit<'a>) -> Self {
+    impl<'a> From<TxL1Message<'a>> for super::TxL1Message {
+        fn from(value: TxL1Message<'a>) -> Self {
             Self {
-                source_hash: value.source_hash,
-                from: value.from,
-                to: value.to,
-                mint: value.mint,
-                value: value.value,
+                queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
-                is_system_transaction: value.is_system_transaction,
+                to: value.to,
+                value: value.value,
+                sender: value.sender,
                 input: value.input.into_owned(),
             }
         }
     }
 
-    impl SerializeAs<super::TxDeposit> for TxDeposit<'_> {
-        fn serialize_as<S>(source: &super::TxDeposit, serializer: S) -> Result<S::Ok, S::Error>
+    impl SerializeAs<super::TxL1Message> for TxL1Message<'_> {
+        fn serialize_as<S>(source: &super::TxL1Message, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            TxDeposit::from(source).serialize(serializer)
+            TxL1Message::from(source).serialize(serializer)
         }
     }
 
-    impl<'de> DeserializeAs<'de, super::TxDeposit> for TxDeposit<'de> {
-        fn deserialize_as<D>(deserializer: D) -> Result<super::TxDeposit, D::Error>
+    impl<'de> DeserializeAs<'de, super::TxL1Message> for TxL1Message<'de> {
+        fn deserialize_as<D>(deserializer: D) -> Result<super::TxL1Message, D::Error>
         where
             D: Deserializer<'de>,
         {
-            TxDeposit::deserialize(deserializer).map(Into::into)
+            TxL1Message::deserialize(deserializer).map(Into::into)
         }
     }
 
@@ -418,7 +399,7 @@ pub(super) mod serde_bincode_compat {
         use serde::{Deserialize, Serialize};
         use serde_with::serde_as;
 
-        use super::super::{serde_bincode_compat, TxDeposit};
+        use super::super::{serde_bincode_compat, TxL1Message};
 
         #[test]
         fn test_tx_deposit_bincode_roundtrip() {
@@ -426,13 +407,13 @@ pub(super) mod serde_bincode_compat {
             #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
             struct Data {
                 #[serde_as(as = "serde_bincode_compat::TxDeposit")]
-                transaction: TxDeposit,
+                transaction: TxL1Message,
             }
 
             let mut bytes = [0u8; 1024];
             rand::thread_rng().fill(bytes.as_mut_slice());
             let data = Data {
-                transaction: TxDeposit::arbitrary(&mut arbitrary::Unstructured::new(&bytes))
+                transaction: TxL1Message::arbitrary(&mut arbitrary::Unstructured::new(&bytes))
                     .unwrap(),
             };
 

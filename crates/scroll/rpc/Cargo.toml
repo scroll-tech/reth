@@ -29,15 +29,11 @@ reth-node-builder.workspace = true
 reth-chainspec.workspace = true
 
 #scroll
+reth-scroll-chainspec.workspace = true
 scroll-alloy-rpc-types.workspace = true
-
-# op-reth
-reth-optimism-chainspec.workspace = true
-reth-optimism-consensus.workspace = true
-reth-optimism-evm.workspace = true
-reth-optimism-payload-builder.workspace = true
-reth-optimism-primitives.workspace = true
-reth-optimism-forks.workspace = true
+scroll-alloy-network.workspace = true
+reth-scroll-consensus.workspace = true
+scroll-alloy-consensus.workspace = true
 
 # ethereum
 alloy-eips.workspace = true

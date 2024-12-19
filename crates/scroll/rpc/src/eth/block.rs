@@ -1,27 +1,28 @@
 //! Loads and formats Scroll block RPC response.
 
-use crate::{OpEthApi, OpEthApiError, OpReceiptBuilder};
 use alloy_rpc_types_eth::BlockId;
-use op_alloy_network::Network;
-use op_alloy_rpc_types::OpTransactionReceipt;
 use reth_chainspec::ChainSpecProvider;
-use reth_optimism_chainspec::OpChainSpec;
 use reth_primitives::TransactionMeta;
 use reth_provider::HeaderProvider;
 use reth_rpc_eth_api::{
     helpers::{EthBlocks, LoadBlock, LoadPendingBlock, LoadReceipt, SpawnBlocking},
     RpcNodeCore, RpcReceipt,
 };
+use reth_rpc_eth_types::EthReceiptBuilder;
+use reth_scroll_chainspec::ScrollChainSpec;
 
+use scroll_alloy_network::Network;
 use scroll_alloy_rpc_types::ScrollTransactionReceipt;
 
-impl<N> EthBlocks for OpEthApi<N>
+use crate::{ScrollEthApi, ScrollEthApiError};
+
+impl<N> EthBlocks for ScrollEthApi<N>
 where
     Self: LoadBlock<
-        Error = OpEthApiError,
+        Error = ScrollEthApiError,
         NetworkTypes: Network<ReceiptResponse = ScrollTransactionReceipt>,
     >,
-    N: RpcNodeCore<Provider: ChainSpecProvider<ChainSpec = OpChainSpec> + HeaderProvider>,
+    N: RpcNodeCore<Provider: ChainSpecProvider<ChainSpec = ScrollChainSpec> + HeaderProvider>,
 {
     async fn block_receipts(
         &self,
@@ -36,9 +37,6 @@ where
             let block_hash = block.hash();
             let excess_blob_gas = block.excess_blob_gas;
             let timestamp = block.timestamp;
-
-            let l1_block_info =
-                reth_optimism_evm::extract_l1_info(&block.body).map_err(OpEthApiError::from)?;
 
             return block
                 .body
@@ -57,15 +55,8 @@ where
                         timestamp,
                     };
 
-                    Ok(OpReceiptBuilder::new(
-                        &self.inner.provider().chain_spec(),
-                        tx,
-                        meta,
-                        receipt,
-                        &receipts,
-                        l1_block_info.clone(),
-                    )?
-                    .build())
+                    EthReceiptBuilder::new(&tx, meta, receipt, &receipts)
+                        .map(|builder| builder.build())
                 })
                 .collect::<Result<Vec<_>, Self::Error>>()
                 .map(Some)
@@ -75,7 +66,7 @@ where
     }
 }
 
-impl<N> LoadBlock for OpEthApi<N>
+impl<N> LoadBlock for ScrollEthApi<N>
 where
     Self: LoadPendingBlock + SpawnBlocking,
     N: RpcNodeCore,
