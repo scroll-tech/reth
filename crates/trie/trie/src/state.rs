@@ -28,10 +28,10 @@ impl HashedPostState {
     /// Hashes all changed accounts and storage entries that are currently stored in the bundle
     /// state.
     pub fn from_bundle_state<'a, KH: KeyHasher>(
-        state: impl IntoParallelIterator<Item = (&'a Address, &'a BundleAccount)>,
+        state: impl IntoIterator<Item = (&'a Address, &'a BundleAccount)>,
     ) -> Self {
         let hashed = state
-            .into_par_iter()
+            .into_iter()
             .map(|(address, account)| {
                 let hashed_address = KH::hash_key(address);
                 let hashed_account = account.info.as_ref().map(Into::into);
