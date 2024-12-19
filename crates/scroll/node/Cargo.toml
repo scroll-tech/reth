@@ -29,6 +29,7 @@ reth-provider.workspace = true
 reth-rpc.workspace = true
 reth-tracing.workspace = true
 reth-transaction-pool.workspace = true
+reth-trie-db.workspace = true
 
 # alloy
 alloy-rpc-types-engine.workspace = true

@@ -24,7 +24,7 @@ use reth_node_core::{
 use reth_node_metrics::recorder::install_prometheus_recorder;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_evm::ScrollExecutorProvider;
-use reth_scroll_node::ScrollNode;
+use reth_scroll_node::ScrollNodeBmpt;
 use reth_tracing::FileWorkerGuard;
 use std::{ffi::OsString, fmt, future::Future, sync::Arc};
 use tracing::info;
@@ -117,24 +117,25 @@ where
 
         let runner = CliRunner::default();
         match self.command {
+            //TODO(scroll): make all these commands generic over the node
             Commands::Node(command) => {
                 runner.run_command_until_exit(|ctx| command.execute(ctx, launcher))
             }
             Commands::Init(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNodeBmpt>())
             }
             Commands::InitState(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNodeBmpt>())
             }
             Commands::Import(command) => runner.run_blocking_until_ctrl_c(
-                command.execute::<ScrollNode, _, _>(ScrollExecutorProvider::scroll),
+                command.execute::<ScrollNodeBmpt, _, _>(ScrollExecutorProvider::scroll),
             ),
             Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
             Commands::Db(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNodeBmpt>())
             }
             Commands::Stage(command) => runner.run_command_until_exit(|ctx| {
-                command.execute::<ScrollNode, _, _, EthNetworkPrimitives>(
+                command.execute::<ScrollNodeBmpt, _, _, EthNetworkPrimitives>(
                     ctx,
                     ScrollExecutorProvider::scroll,
                 )
@@ -144,9 +145,11 @@ where
             }
             Commands::Config(command) => runner.run_until_ctrl_c(command.execute()),
             Commands::Recover(command) => {
-                runner.run_command_until_exit(|ctx| command.execute::<ScrollNode>(ctx))
+                runner.run_command_until_exit(|ctx| command.execute::<ScrollNodeBmpt>(ctx))
             }
-            Commands::Prune(command) => runner.run_until_ctrl_c(command.execute::<ScrollNode>()),
+            Commands::Prune(command) => {
+                runner.run_until_ctrl_c(command.execute::<ScrollNodeBmpt>())
+            }
         }
     }
 
