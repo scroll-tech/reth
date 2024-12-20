@@ -9859,6 +9859,7 @@ dependencies = [
  "reth-metrics",
  "reth-primitives",
  "reth-provider",
+ "reth-storage-errors",
  "reth-trie",
  "reth-trie-common",
  "reth-trie-db",

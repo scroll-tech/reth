@@ -1,10 +1,12 @@
 #[cfg(feature = "metrics")]
 use crate::metrics::ParallelStateRootMetrics;
-use crate::{stats::ParallelTrieTracker, storage_root_targets::StorageRootTargets};
+use crate::{
+    db::ParallelDatabaseStateRoot, stats::ParallelTrieTracker,
+    storage_root_targets::StorageRootTargets,
+};
 use alloy_primitives::B256;
 use alloy_rlp::{BufMut, Encodable};
 use itertools::Itertools;
-use reth_db::DatabaseError;
 use reth_execution_errors::StorageRootError;
 use reth_provider::{
     providers::ConsistentDbView, BlockReader, DBProvider, DatabaseProviderFactory, ProviderError,
@@ -20,8 +22,10 @@ use reth_trie::{
 };
 use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseTrieCursorFactory};
 use std::{collections::HashMap, sync::Arc};
-use thiserror::Error;
 use tracing::*;
+
+// convenience reexport of ParallelStateRootError
+pub use reth_execution_errors::ParallelStateRootError;
 
 /// Parallel incremental state root calculator.
 ///
@@ -223,29 +227,30 @@ where
     }
 }
 
-/// Error during parallel state root calculation.
-#[derive(Error, Debug)]
-pub enum ParallelStateRootError {
-    /// Error while calculating storage root.
-    #[error(transparent)]
-    StorageRoot(#[from] StorageRootError),
-    /// Provider error.
-    #[error(transparent)]
-    Provider(#[from] ProviderError),
-    /// Other unspecified error.
-    #[error("{_0}")]
-    Other(String),
-}
+impl<P> ParallelDatabaseStateRoot<P> for ParallelStateRoot<P>
+where
+    P: DatabaseProviderFactory<Provider: BlockReader>
+        + StateCommitmentProvider
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
+    fn from_consistent_db_view(view: ConsistentDbView<P>) -> Result<Self, ProviderError> {
+        Ok(Self::new(view, Default::default()))
+    }
 
-impl From<ParallelStateRootError> for ProviderError {
-    fn from(error: ParallelStateRootError) -> Self {
-        match error {
-            ParallelStateRootError::Provider(error) => error,
-            ParallelStateRootError::StorageRoot(StorageRootError::Database(error)) => {
-                Self::Database(error)
-            }
-            ParallelStateRootError::Other(other) => Self::Database(DatabaseError::Other(other)),
-        }
+    fn incremental_root(mut self, input: TrieInput) -> Result<B256, ParallelStateRootError> {
+        self.input = input;
+        Self::incremental_root(self)
+    }
+
+    fn incremental_root_with_updates(
+        mut self,
+        input: TrieInput,
+    ) -> Result<(B256, TrieUpdates), ParallelStateRootError> {
+        self.input = input;
+        Self::incremental_root_with_updates(self)
     }
 }
 

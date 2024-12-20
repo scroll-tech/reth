@@ -10,6 +10,14 @@
 mod storage_root_targets;
 pub use storage_root_targets::StorageRootTargets;
 
+/// Parallel database state root.
+mod db;
+pub use db::ParallelDatabaseStateRoot;
+
+/// Parallel state commitment.
+mod commitment;
+pub use commitment::ParallelStateCommitment;
+
 /// Parallel trie calculation stats.
 pub mod stats;
 

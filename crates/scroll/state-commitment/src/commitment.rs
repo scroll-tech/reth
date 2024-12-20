@@ -1,6 +1,8 @@
-use super::{PoseidonKeyHasher, StateRoot, StorageRoot};
+use super::{ParallelStateRoot, PoseidonKeyHasher, StateRoot, StorageRoot};
 use reth_db::transaction::DbTx;
+use reth_storage_api::{BlockReader, DatabaseProviderFactory, StateCommitmentProvider};
 use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseTrieCursorFactory, StateCommitment};
+use reth_trie_parallel::ParallelStateCommitment;
 
 /// The state commitment type for Scroll's binary Merkle Patricia Trie.
 #[derive(Debug)]
@@ -8,7 +10,6 @@ use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseTrieCursorFactory, State
 pub struct BinaryMerklePatriciaTrie;
 
 impl StateCommitment for BinaryMerklePatriciaTrie {
-    type KeyHasher = PoseidonKeyHasher;
     type StateRoot<'a, TX: DbTx + 'a> =
         StateRoot<DatabaseTrieCursorFactory<'a, TX>, DatabaseHashedCursorFactory<'a, TX>>;
     type StorageRoot<'a, TX: DbTx + 'a> =
@@ -23,4 +24,11 @@ impl StateCommitment for BinaryMerklePatriciaTrie {
         DatabaseTrieCursorFactory<'a, TX>,
         DatabaseHashedCursorFactory<'a, TX>,
     >;
+    type KeyHasher = PoseidonKeyHasher;
+}
+
+impl ParallelStateCommitment for BinaryMerklePatriciaTrie {
+    type ParallelStateRoot<
+        P: DatabaseProviderFactory<Provider: BlockReader> + StateCommitmentProvider + Clone + 'static,
+    > = ParallelStateRoot<P>;
 }

@@ -33,6 +33,40 @@ impl From<StateRootError> for DatabaseError {
     }
 }
 
+/// Error during parallel state root calculation.
+#[derive(Debug, Display, From)]
+pub enum ParallelStateRootError {
+    /// Error while calculating storage root.
+    StorageRoot(StorageRootError),
+    /// Provider error.
+    Provider(ProviderError),
+    /// Other unspecified error.
+    #[display("{_0}")]
+    Other(String),
+}
+
+impl core::error::Error for ParallelStateRootError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            Self::StorageRoot(source) => core::error::Error::source(source),
+            Self::Provider(source) => core::error::Error::source(source),
+            Self::Other(_) => None,
+        }
+    }
+}
+
+impl From<ParallelStateRootError> for ProviderError {
+    fn from(error: ParallelStateRootError) -> Self {
+        match error {
+            ParallelStateRootError::Provider(error) => error,
+            ParallelStateRootError::StorageRoot(StorageRootError::Database(error)) => {
+                Self::Database(error)
+            }
+            ParallelStateRootError::Other(other) => Self::Database(DatabaseError::Other(other)),
+        }
+    }
+}
+
 /// Storage root error.
 #[derive(Display, From, PartialEq, Eq, Clone, Debug)]
 pub enum StorageRootError {
