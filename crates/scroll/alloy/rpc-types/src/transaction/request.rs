@@ -124,7 +124,7 @@ impl ScrollTransactionRequest {
 
 impl From<TxL1Message> for ScrollTransactionRequest {
     fn from(tx_l1_message: TxL1Message) -> Self {
-        let TxL1Message { queue_index: _, gas_limit, to: _, value, sender: from, input } =
+        let TxL1Message { from, queue_index: _, gas_limit, to: _, value, input, nonce, .. } =
             tx_l1_message;
         let to = TxKind::from(tx_l1_message.to);
 
@@ -134,6 +134,7 @@ impl From<TxL1Message> for ScrollTransactionRequest {
             value: Some(value),
             gas: Some(gas_limit),
             input: input.into(),
+            nonce: Some(nonce.to()),
             ..Default::default()
         })
     }

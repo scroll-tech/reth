@@ -22,11 +22,11 @@ pub struct Transaction {
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<ScrollTxEnvelope>,
 
-    /// Nonce for deposit transactions. Only present in RPC responses.
-    pub deposit_nonce: Option<u64>,
+    /// sender for deposit transactions. Only present in RPC responses.
+    pub sender: Option<Address>,
 
-    /// Deposit receipt version for deposit transactions post-canyon
-    pub deposit_receipt_version: Option<u64>,
+    /// queue index for deposit transactions
+    pub queue_index: Option<U256>,
 }
 
 impl alloy_consensus::Transaction for Transaction {
@@ -175,13 +175,10 @@ mod tx_serde {
             with = "alloy_serde::quantity::opt"
         )]
         effective_gas_price: Option<u128>,
-        #[serde(
-            default,
-            rename = "nonce",
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )]
-        deposit_nonce: Option<u64>,
+        #[serde(default, rename = "queueIndex", skip_serializing_if = "Option::is_none")]
+        queue_index: Option<U256>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        sender: Option<Address>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -195,13 +192,6 @@ mod tx_serde {
         block_number: Option<u64>,
         #[serde(default, with = "alloy_serde::quantity::opt")]
         transaction_index: Option<u64>,
-        #[serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )]
-        deposit_receipt_version: Option<u64>,
-
         #[serde(flatten)]
         other: OptionalFields,
     }
@@ -218,13 +208,14 @@ mod tx_serde {
                         effective_gas_price,
                         from,
                     },
-                deposit_receipt_version,
-                deposit_nonce,
+                queue_index,
+                ..
             } = value;
 
             // if inner transaction is a deposit, then don't serialize `from` directly
             let from =
                 if matches!(inner, ScrollTxEnvelope::L1Message(_)) { None } else { Some(from) };
+            let sender = from;
 
             // if inner transaction has its own `gasPrice` don't serialize it in this struct.
             let effective_gas_price = effective_gas_price.filter(|_| inner.gas_price().is_none());
@@ -234,8 +225,7 @@ mod tx_serde {
                 block_hash,
                 block_number,
                 transaction_index,
-                deposit_receipt_version,
-                other: OptionalFields { from, effective_gas_price, deposit_nonce },
+                other: OptionalFields { from, effective_gas_price, queue_index, sender },
             }
         }
     }
@@ -249,7 +239,6 @@ mod tx_serde {
                 block_hash,
                 block_number,
                 transaction_index,
-                deposit_receipt_version,
                 other,
             } = value;
 
@@ -263,10 +252,6 @@ mod tx_serde {
                 return Err(serde_json::Error::custom("missing `from` field"));
             };
 
-            // Only serialize deposit_nonce if inner transaction is l1_message to avoid duplicated
-            // keys
-            let deposit_nonce = other.deposit_nonce.filter(|_| inner.is_l1_message());
-
             let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
 
             Ok(Self {
@@ -278,8 +263,8 @@ mod tx_serde {
                     from,
                     effective_gas_price,
                 },
-                deposit_receipt_version,
-                deposit_nonce,
+                sender: other.sender,
+                queue_index: other.queue_index,
             })
         }
     }
@@ -288,12 +273,13 @@ mod tx_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::U256;
 
     #[test]
     fn can_deserialize_deposit() {
         // cast rpc eth_getTransactionByHash
-        // 0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9 --rpc-url optimism
-        let rpc_tx = r#"{"blockHash":"0x9d86bb313ebeedf4f9f82bf8a19b426be656a365648a7c089b618771311db9f9","blockNumber":"0x798ad0b","hash":"0xbc9329afac05556497441e2b3ee4c5d4da7ca0b2a4c212c212d0739e94a24df9","transactionIndex":"0x0","type":"0x7e","nonce":"0x152ea95","input":"0x440a5e200000146b000f79c50000000000000003000000006725333f000000000141e287000000000000000000000000000000000000000000000000000000012439ee7e0000000000000000000000000000000000000000000000000000000063f363e973e96e7145ff001c81b9562cba7b6104eeb12a2bc4ab9f07c27d45cd81a986620000000000000000000000006887246668a3b87f54deb3b94ba47a6f63f32985","mint":"0x0","sourceHash":"0x04e9a69416471ead93b02f0c279ab11ca0b635db5c1726a56faf22623bafde52","r":"0x0","s":"0x0","v":"0x0","yParity":"0x0","gas":"0xf4240","from":"0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001","to":"0x4200000000000000000000000000000000000015","depositReceiptVersion":"0x1","value":"0x0","gasPrice":"0x0"}"#;
+        // 0x5c1c3785c8bf5d7f1cb714abd1d22e32642887215602c3a14a5e9ee105bad6aa --rpc-url https://rpc.scroll.io
+        let rpc_tx = r#"{"blockHash":"0x018ed80ea8340984a1f4841490284d6e51d71f9e9411feeca41e007a89fbfdff","blockNumber":"0xb81121","from":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","gas":"0x1e8480","gasPrice":"0x0","hash":"0x5c1c3785c8bf5d7f1cb714abd1d22e32642887215602c3a14a5e9ee105bad6aa","input":"0x8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e7ba000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f846ffc1507cbfe98a2b0ba1f06ea7e4eb749c001f78f6cb5540daa556a0566322a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0","to":"0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc","transactionIndex":"0x0","value":"0x0","type":"0x7e","v":"0x0","r":"0x0","s":"0x0","sender":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","queueIndex":"0xe7ba0", "yParity":"0x0"}"#;
 
         let tx = serde_json::from_str::<Transaction>(rpc_tx).unwrap();
 
@@ -301,7 +287,7 @@ mod tests {
             panic!("Expected deposit transaction");
         };
         assert_eq!(tx.from, inner.sender);
-        assert_eq!(tx.deposit_nonce, Some(22211221));
+        assert_eq!(tx.queue_index, Some(U256::from(0xe7ba0)));
         assert_eq!(tx.inner.effective_gas_price, Some(0));
 
         let deserialized = serde_json::to_value(&tx).unwrap();

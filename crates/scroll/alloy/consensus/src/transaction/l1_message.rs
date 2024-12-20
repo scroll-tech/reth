@@ -27,6 +27,8 @@ const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct TxL1Message {
+    /// The L1 sender of the transaction.
+    pub from: Address,
     /// The queue index of the message in the L1 contract queue.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
     pub queue_index: u64,
@@ -42,6 +44,8 @@ pub struct TxL1Message {
     pub sender: Address,
     /// The input of the transaction.
     pub input: Bytes,
+    /// The nonce of the transaction.
+    pub nonce: U256,
 }
 
 impl TxL1Message {
@@ -63,12 +67,14 @@ impl TxL1Message {
     /// - `sender`
     pub fn rlp_decode_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Ok(Self {
+            from: Decodable::decode(buf)?,
             queue_index: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             to: Decodable::decode(buf)?,
             value: Decodable::decode(buf)?,
             input: Decodable::decode(buf)?,
             sender: Decodable::decode(buf)?,
+            nonce: Decodable::decode(buf)?,
         })
     }
 
@@ -295,12 +301,14 @@ mod tests {
     #[test]
     fn test_encode_decode_fields() {
         let original = TxL1Message {
+            from: Address::default(),
             queue_index: 0,
             gas_limit: 0,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: U256::default(),
         };
 
         let mut buffer = BytesMut::new();
@@ -313,12 +321,14 @@ mod tests {
     #[test]
     fn test_encode_with_and_without_header() {
         let tx_deposit = TxL1Message {
+            from: Address::default(),
             queue_index: 0,
             gas_limit: 50000,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: U256::default(),
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -333,12 +343,14 @@ mod tests {
     #[test]
     fn test_payload_length() {
         let tx_deposit = TxL1Message {
+            from: Address::default(),
             queue_index: 0,
             gas_limit: 50000,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: U256::default(),
         };
 
         assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
@@ -357,6 +369,7 @@ pub(super) mod serde_bincode_compat {
     /// Bincode-compatible [`super::TxL1Message`] serde implementation.
     #[derive(Debug, Serialize, Deserialize)]
     pub struct TxL1Message<'a> {
+        from: Address,
         #[serde(default)]
         queue_index: u64,
         #[serde(default)]
@@ -365,17 +378,20 @@ pub(super) mod serde_bincode_compat {
         value: U256,
         sender: Address,
         input: Cow<'a, Bytes>,
+        nonce: U256,
     }
 
     impl<'a> From<&'a super::TxL1Message> for TxL1Message<'a> {
         fn from(value: &'a super::TxL1Message) -> Self {
             Self {
+                from: value.from,
                 queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
                 to: value.to,
                 value: value.value,
                 sender: value.sender,
                 input: Cow::Borrowed(&value.input),
+                nonce: value.nonce,
             }
         }
     }
@@ -383,12 +399,14 @@ pub(super) mod serde_bincode_compat {
     impl<'a> From<TxL1Message<'a>> for super::TxL1Message {
         fn from(value: TxL1Message<'a>) -> Self {
             Self {
+                from: Address::default(),
                 queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
                 to: value.to,
                 value: value.value,
                 sender: value.sender,
                 input: value.input.into_owned(),
+                nonce: value.nonce,
             }
         }
     }
