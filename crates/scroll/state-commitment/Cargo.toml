@@ -52,9 +52,7 @@ tracing.workspace = true
 reth-db-api.workspace = true
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
 reth-node-types.workspace = true
-reth-scroll-chainspec.workspace = true
 reth-scroll-state-commitment = { workspace = true, features = ["test-utils"] }
-reth-scroll-node = { workspace = true, features = ["scroll"] }
 reth-trie = { workspace = true, features = ["test-utils"] }
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
 reth-provider = { workspace = true, features = ["test-utils"] }
@@ -65,6 +63,7 @@ proptest.workspace = true
 proptest-arbitrary-interop.workspace = true
 
 [features]
+default = ["metrics"]
 scroll = [
     "reth-trie/scroll",
     "reth-primitives-traits/scroll",

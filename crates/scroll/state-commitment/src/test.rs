@@ -34,10 +34,8 @@ proptest! {
         let init_state: BTreeMap<B256, Account> = init_state.into_iter().map(|(hashed_address, (nonce, balance, code))| {
             let hashed_address = b256_clear_last_byte(hashed_address);
             let balance = u256_clear_msb(balance);
-            #[cfg(feature = "scroll")]
             let account_extension = code.map( |(_, code_hash, code_size)| (code_size, b256_clear_first_byte(code_hash)).into()).or_else(|| Some(Default::default()));
             let account = Account { balance, nonce: nonce.into(), bytecode_hash: code.as_ref().map(|(code_hash, _, _)| *code_hash),
-                #[cfg(feature = "scroll")]
                 account_extension
             };
             (hashed_address, account)
@@ -47,7 +45,6 @@ proptest! {
                 let hashed_address = b256_clear_last_byte(hashed_address);
                 let account = update.map(|balance| Account {
                     balance: u256_clear_msb(balance),
-                    #[cfg(feature = "scroll")]
                     account_extension: Some(Default::default()),
                     ..Default::default() });
                 (hashed_address, account)
@@ -261,7 +258,6 @@ proptest! {
             .into_iter()
             .map(|(address, ((nonce, balance, code), storage))| {
                 let balance = u256_clear_msb(balance);
-                #[cfg(feature = "scroll")]
                 let account_extension = code
                     .map(|(_, code_hash, code_size)| {
                         (code_size, b256_clear_first_byte(code_hash)).into()
@@ -271,7 +267,6 @@ proptest! {
                     balance,
                     nonce: nonce.into(),
                     bytecode_hash: code.as_ref().map(|(code_hash, _, _)| *code_hash),
-                    #[cfg(feature = "scroll")]
                     account_extension,
                 };
                 let storage = storage
@@ -333,19 +328,16 @@ fn test_basic_state_root_with_updates_succeeds() {
     let address_3 = Address::with_last_byte(7);
     let account_1 = Account {
         balance: Uint::from(1),
-        #[cfg(feature = "scroll")]
         account_extension: Some(Default::default()),
         ..Default::default()
     };
     let account_2 = Account {
         balance: Uint::from(2),
-        #[cfg(feature = "scroll")]
         account_extension: Some(Default::default()),
         ..Default::default()
     };
     let account_3 = Account {
         balance: Uint::from(3),
-        #[cfg(feature = "scroll")]
         account_extension: Some(Default::default()),
         ..Default::default()
     };

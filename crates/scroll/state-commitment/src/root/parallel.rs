@@ -18,8 +18,7 @@ use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseTrieCursorFactory};
 #[cfg(feature = "metrics")]
 use reth_trie_parallel::metrics::ParallelStateRootMetrics;
 use reth_trie_parallel::{
-    root::ParallelStateRootError, stats::ParallelTrieTracker, ParallelDatabaseStateRoot,
-    StorageRootTargets,
+    root::ParallelStateRootError, stats::ParallelTrieTracker, StorageRootTargets,
 };
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, trace};
@@ -220,32 +219,5 @@ where
         );
 
         Ok((root, trie_updates))
-    }
-}
-
-impl<P> ParallelDatabaseStateRoot<P> for ParallelStateRoot<P>
-where
-    P: DatabaseProviderFactory<Provider: BlockReader>
-        + StateCommitmentProvider
-        + Clone
-        + Send
-        + Sync
-        + 'static,
-{
-    fn from_consistent_db_view(view: ConsistentDbView<P>) -> Result<Self, ProviderError> {
-        Ok(Self::new(view, Default::default()))
-    }
-
-    fn incremental_root(mut self, input: TrieInput) -> Result<B256, ParallelStateRootError> {
-        self.input = input;
-        Self::incremental_root(self)
-    }
-
-    fn incremental_root_with_updates(
-        mut self,
-        input: TrieInput,
-    ) -> Result<(B256, TrieUpdates), ParallelStateRootError> {
-        self.input = input;
-        Self::incremental_root_with_updates(self)
     }
 }
