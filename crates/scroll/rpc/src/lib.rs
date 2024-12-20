@@ -13,9 +13,6 @@
 
 pub mod error;
 pub mod eth;
-pub mod sequencer;
-pub mod witness;
 
 pub use error::{ScrollEthApiError, ScrollInvalidTransactionError, SequencerClientError};
 pub use eth::ScrollEthApi;
-pub use sequencer::SequencerClient;

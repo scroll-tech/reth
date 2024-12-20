@@ -9,7 +9,7 @@ use alloy_primitives::{
 use alloy_rlp::Decodable;
 
 /// L1 message transaction type id, 0x7e in hex.
-pub const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
+const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 
 /// A message transaction sent from the settlement layer to the L2 for execution.
 ///
@@ -152,6 +152,7 @@ impl TxL1Message {
             size_of::<Address>() // sender
     }
 
+    /// Calculates the hash of the [`TxL1Message`] transaction.
     pub fn tx_hash(&self) -> TxHash {
         let mut buf = Vec::with_capacity(self.eip2718_encoded_length());
         self.eip2718_encode(&mut buf);
@@ -257,7 +258,7 @@ impl Sealable for TxL1Message {
 /// This function can be used as `serialize_with` serde attribute for the [`TxL1Message`] and will
 /// flatten [`TxL1Message::signature`] into response.
 ///
-/// https://github.com/scroll-tech/go-ethereum/blob/develop/core/types/l1_message_tx.go#L51
+/// <https://github.com/scroll-tech/go-ethereum/blob/develop/core/types/l1_message_tx.go#L51>.
 #[cfg(feature = "serde")]
 pub fn serde_l1_message_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
     value: &T,
@@ -278,51 +279,69 @@ pub fn serde_l1_message_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
 
 #[cfg(test)]
 mod tests {
-    use super::TxL1Message;
-    use alloy_primitives::{address, bytes, hex, Bytes, U256};
-    use arbitrary::Arbitrary;
-    use bytes::BytesMut;
-    use rand::Rng;
+    use super::*;
+    use alloy_primitives::hex;
+    use alloy_rlp::BytesMut;
 
     #[test]
-    fn test_bincode_roundtrip() {
-        let mut bytes = [0u8; 1024];
-        rand::thread_rng().fill(bytes.as_mut_slice());
-        let tx = TxL1Message::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
-
-        let encoded = bincode::serialize(&tx).unwrap();
-        let decoded: TxL1Message = bincode::deserialize(&encoded).unwrap();
-        assert_eq!(decoded, tx);
+    fn test_rlp_roundtrip() {
+        let bytes = Bytes::from_static(&hex!("7ef9015aa044bae9d41b8380d781187b426c6fe43df5fb2fb57bd4466ef6a701e1f01e015694deaddeaddeaddeaddeaddeaddeaddeaddead000194420000000000000000000000000000000000001580808408f0d18001b90104015d8eb900000000000000000000000000000000000000000000000000000000008057650000000000000000000000000000000000000000000000000000000063d96d10000000000000000000000000000000000000000000000000000000000009f35273d89754a1e0387b89520d989d3be9c37c1f32495a88faf1ea05c61121ab0d1900000000000000000000000000000000000000000000000000000000000000010000000000000000000000002d679b567db6187c0c8323fa982cfb88b74dbcc7000000000000000000000000000000000000000000000000000000000000083400000000000000000000000000000000000000000000000000000000000f4240"));
+        let tx_a = TxL1Message::decode(&mut bytes[1..].as_ref()).unwrap();
+        let mut buf_a = BytesMut::default();
+        tx_a.encode(&mut buf_a);
+        assert_eq!(&buf_a[..], &bytes[1..]);
     }
 
     #[test]
-    fn test_eip2718_encode() {
-        let tx =
-            TxL1Message {
-                queue_index: 947883,
-                gas_limit: 2000000,
-                to: address!("781e90f1c8fc4611c9b7497c3b47f99ef6969cbc"),
-                value: U256::ZERO,
-                sender: address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"),
-                input:
-bytes!("8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-),             }
-            ;
-        let bytes =
-Bytes::from_static(&hex!("
-7ef9015a830e76ab831e848094781e90f1c8fc4611c9b7497c3b47f99ef6969cbc80b901248ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000947885bcbd5cecef1336b5300fb5186a12ddd8c478"
-));
+    fn test_encode_decode_fields() {
+        let original = TxL1Message {
+            queue_index: 0,
+            gas_limit: 0,
+            to: Address::default(),
+            value: U256::default(),
+            sender: Address::default(),
+            input: Bytes::default(),
+        };
 
-        let mut encoded = BytesMut::default();
-        tx.eip2718_encode(&mut encoded);
+        let mut buffer = BytesMut::new();
+        original.rlp_encode_fields(&mut buffer);
+        let decoded = TxL1Message::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
 
-        assert_eq!(encoded, bytes.as_ref())
+        assert_eq!(original, decoded);
     }
 
     #[test]
-    fn test_compaction_backwards_compatibility() {
-        assert_eq!(TxL1Message::bitflag_encoded_bytes(), 2);
-        validate_bitflag_backwards_compat!(TxL1Message, UnusedBits::NotZero);
+    fn test_encode_with_and_without_header() {
+        let tx_deposit = TxL1Message {
+            queue_index: 0,
+            gas_limit: 50000,
+            to: Address::default(),
+            value: U256::default(),
+            sender: Address::default(),
+            input: Bytes::default(),
+        };
+
+        let mut buffer_with_header = BytesMut::new();
+        tx_deposit.encode(&mut buffer_with_header);
+
+        let mut buffer_without_header = BytesMut::new();
+        tx_deposit.rlp_encode_fields(&mut buffer_without_header);
+
+        assert!(buffer_with_header.len() > buffer_without_header.len());
+    }
+
+    #[test]
+    fn test_payload_length() {
+        let tx_deposit = TxL1Message {
+            queue_index: 0,
+            gas_limit: 50000,
+            to: Address::default(),
+            value: U256::default(),
+            sender: Address::default(),
+            input: Bytes::default(),
+        };
+
+        assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
     }
 }
 

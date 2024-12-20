@@ -19,7 +19,6 @@ alloy-consensus.workspace = true
 alloy-primitives = { workspace = true, features = ["rlp"] }
 
 # misc
-thiserror.workspace = true
 derive_more = { workspace = true, features = ["display"] }
 
 # arbitrary
@@ -34,8 +33,6 @@ serde = { workspace = true, features = ["derive"], optional = true }
 rand.workspace = true
 bincode.workspace = true
 serde_json.workspace = true
-alloy-signer.workspace = true
-tokio = { workspace = true, features = ["macros"] }
 arbitrary = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rand"] }
 

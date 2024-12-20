@@ -10430,7 +10430,6 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-serde",
- "alloy-signer",
  "arbitrary",
  "bincode",
  "derive_more",
@@ -10438,8 +10437,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "thiserror 1.0.69",
- "tokio",
 ]
 
 [[package]]
@@ -10464,6 +10461,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
  "alloy-serde",
+ "arbitrary",
  "derive_more",
  "scroll-alloy-consensus",
  "serde",

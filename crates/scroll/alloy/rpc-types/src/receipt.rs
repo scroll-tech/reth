@@ -149,7 +149,7 @@ impl From<ScrollTransactionReceipt> for ScrollReceiptEnvelope<alloy_primitives::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{json, Value};
+    use serde_json::json;
 
     // <https://github.com/alloy-rs/op-alloy/issues/18>
     #[test]

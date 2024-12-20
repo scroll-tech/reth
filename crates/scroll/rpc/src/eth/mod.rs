@@ -40,7 +40,7 @@ pub type EthApiNodeBackend<N> = EthApiInner<
 ///
 /// This wraps a default `Eth` implementation, and provides additional functionality where the
 /// scroll spec deviates from the default (ethereum) spec, e.g. transaction forwarding to the
-/// sequencer, receipts, additional RPC fields for transaction receipts.
+/// receipts, additional RPC fields for transaction receipts.
 ///
 /// This type implements the [`FullEthApi`](reth_rpc_eth_api::helpers::FullEthApi) by implemented
 /// all the `Eth` helper traits and prerequisite traits.
@@ -49,9 +49,6 @@ pub struct ScrollEthApi<N: RpcNodeCore> {
     /// Gateway to node's core components.
     #[deref]
     inner: Arc<EthApiNodeBackend<N>>,
-    /// Sequencer client, configured to forward submitted transactions to sequencer of given Scroll
-    /// network.
-    sequencer_client: Option<SequencerClient>,
 }
 
 impl<N> ScrollEthApi<N>
@@ -65,7 +62,7 @@ where
     >,
 {
     /// Creates a new instance for given context.
-    pub fn new(ctx: &EthApiBuilderCtx<N>, sequencer_http: Option<String>) -> Self {
+    pub fn new(ctx: &EthApiBuilderCtx<N>) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::build().expect("failed to build blocking task pool");
 
@@ -85,7 +82,7 @@ where
             ctx.config.proof_permits,
         );
 
-        Self { inner: Arc::new(inner), sequencer_client: sequencer_http.map(SequencerClient::new) }
+        Self { inner: Arc::new(inner) }
     }
 }
 

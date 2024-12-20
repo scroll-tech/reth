@@ -8,7 +8,7 @@ use derive_more::Display;
 /// Identifier for an Scroll L1 message transaction
 pub const L1_MESSAGE_TX_TYPE_ID: u8 = 126; // 0x7E
 
-/// Scroll `TransactionType` flags as specified in https://docs.scroll.io/en/technology/chain/transactions/.
+/// Scroll `TransactionType` flags as specified in <https://docs.scroll.io/en/technology/chain/transactions/>.
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Display)]
 pub enum ScrollTxType {
@@ -116,6 +116,7 @@ impl Decodable for ScrollTxType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate alloc;
     use alloc::{vec, vec::Vec};
 
     #[test]

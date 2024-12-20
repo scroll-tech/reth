@@ -30,6 +30,7 @@ use crate::{ScrollTxType, TxL1Message};
 )]
 #[cfg_attr(all(any(test, feature = "arbitrary"), feature = "k256"), derive(arbitrary::Arbitrary))]
 #[non_exhaustive]
+
 pub enum ScrollTxEnvelope {
     /// An untagged [`TxLegacy`].
     Legacy(Signed<TxLegacy>),
@@ -144,12 +145,21 @@ impl Transaction for ScrollTxEnvelope {
         }
     }
 
-    fn to(&self) -> Option<Address> {
+    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
         match self {
-            Self::Legacy(tx) => tx.tx().to(),
-            Self::Eip2930(tx) => tx.tx().to(),
-            Self::Eip1559(tx) => tx.tx().to(),
-            Self::L1Message(tx) => tx.to(),
+            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::L1Message(tx) => tx.effective_gas_price(base_fee),
+        }
+    }
+
+    fn is_dynamic_fee(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
+            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
+            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
+            Self::L1Message(tx) => tx.is_dynamic_fee(),
         }
     }
 
@@ -159,6 +169,15 @@ impl Transaction for ScrollTxEnvelope {
             Self::Eip2930(tx) => tx.tx().kind(),
             Self::Eip1559(tx) => tx.tx().kind(),
             Self::L1Message(tx) => tx.kind(),
+        }
+    }
+
+    fn to(&self) -> Option<Address> {
+        match self {
+            Self::Legacy(tx) => tx.tx().to(),
+            Self::Eip2930(tx) => tx.tx().to(),
+            Self::Eip1559(tx) => tx.tx().to(),
+            Self::L1Message(tx) => tx.to(),
         }
     }
 
@@ -213,24 +232,6 @@ impl Transaction for ScrollTxEnvelope {
             Self::Eip2930(tx) => tx.tx().authorization_list(),
             Self::Eip1559(tx) => tx.tx().authorization_list(),
             Self::L1Message(tx) => tx.authorization_list(),
-        }
-    }
-
-    fn is_dynamic_fee(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
-            Self::L1Message(tx) => tx.is_dynamic_fee(),
-        }
-    }
-
-    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
-        match self {
-            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::L1Message(tx) => tx.effective_gas_price(base_fee),
         }
     }
 }
@@ -463,9 +464,10 @@ mod serde_from {
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
     use super::*;
     use alloc::vec;
-    use alloy_primitives::{hex, Address, Bytes, TxKind, B256, U256};
+    use alloy_primitives::{hex, Address, Bytes, U256};
 
     #[test]
     fn test_tx_gas_limit() {

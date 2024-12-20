@@ -1,16 +1,16 @@
 use crate::{ScrollTxEnvelope, ScrollTxType, TxL1Message};
-use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy};
+use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxLegacy};
 use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{Address, Bytes, TxKind};
 
-/// The TypedTransaction enum represents all Ethereum transaction request types, modified for the OP
-/// Stack.
+/// The `TypedTransaction` enum represents all Ethereum transaction request types, modified for
+/// Scroll
 ///
 /// Its variants correspond to specific allowed transactions:
-/// 1. Legacy (pre-EIP2718) [`TxLegacy`]
-/// 2. EIP2930 (state access lists) [`TxEip2930`]
-/// 3. EIP1559 [`TxEip1559`]
-/// 4. L1Message [`TxL1Message`]
+/// 1. `Legacy` (pre-EIP2718) [`TxLegacy`]
+/// 2. `EIP2930` (state access lists) [`TxEip2930`]
+/// 3. `EIP1559` [`TxEip1559`]
+/// 4. `L1Message` [`TxL1Message`]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -300,16 +300,16 @@ mod serde_from {
     #[derive(Debug, serde::Serialize, serde::Deserialize)]
     #[serde(tag = "type")]
     pub(crate) enum TaggedTypedTransaction {
-        /// Legacy transaction
+        /// `Legacy` transaction
         #[serde(rename = "0x00", alias = "0x0")]
         Legacy(TxLegacy),
-        /// EIP-2930 transaction
+        /// `EIP-2930` transaction
         #[serde(rename = "0x01", alias = "0x1")]
         Eip2930(TxEip2930),
-        /// EIP-1559 transaction
+        /// `EIP-1559` transaction
         #[serde(rename = "0x02", alias = "0x2")]
         Eip1559(TxEip1559),
-        /// L1Message transaction
+        /// `L1Message` transaction
         #[serde(
             rename = "0x7e",
             alias = "0x7E",
