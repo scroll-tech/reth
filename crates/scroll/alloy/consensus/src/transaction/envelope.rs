@@ -30,7 +30,6 @@ use crate::{ScrollTxType, TxL1Message};
 )]
 #[cfg_attr(all(any(test, feature = "arbitrary"), feature = "k256"), derive(arbitrary::Arbitrary))]
 #[non_exhaustive]
-
 pub enum ScrollTxEnvelope {
     /// An untagged [`TxLegacy`].
     Legacy(Signed<TxLegacy>),
@@ -145,21 +144,12 @@ impl Transaction for ScrollTxEnvelope {
         }
     }
 
-    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
+    fn to(&self) -> Option<Address> {
         match self {
-            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::L1Message(tx) => tx.effective_gas_price(base_fee),
-        }
-    }
-
-    fn is_dynamic_fee(&self) -> bool {
-        match self {
-            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
-            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
-            Self::L1Message(tx) => tx.is_dynamic_fee(),
+            Self::Legacy(tx) => tx.tx().to(),
+            Self::Eip2930(tx) => tx.tx().to(),
+            Self::Eip1559(tx) => tx.tx().to(),
+            Self::L1Message(tx) => tx.to(),
         }
     }
 
@@ -169,15 +159,6 @@ impl Transaction for ScrollTxEnvelope {
             Self::Eip2930(tx) => tx.tx().kind(),
             Self::Eip1559(tx) => tx.tx().kind(),
             Self::L1Message(tx) => tx.kind(),
-        }
-    }
-
-    fn to(&self) -> Option<Address> {
-        match self {
-            Self::Legacy(tx) => tx.tx().to(),
-            Self::Eip2930(tx) => tx.tx().to(),
-            Self::Eip1559(tx) => tx.tx().to(),
-            Self::L1Message(tx) => tx.to(),
         }
     }
 
@@ -234,6 +215,24 @@ impl Transaction for ScrollTxEnvelope {
             Self::L1Message(tx) => tx.authorization_list(),
         }
     }
+
+    fn is_dynamic_fee(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
+            Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
+            Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
+            Self::L1Message(tx) => tx.is_dynamic_fee(),
+        }
+    }
+
+    fn effective_gas_price(&self, base_fee: Option<u64>) -> u128 {
+        match self {
+            Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::L1Message(tx) => tx.effective_gas_price(base_fee),
+        }
+    }
 }
 
 impl ScrollTxEnvelope {
@@ -285,7 +284,7 @@ impl ScrollTxEnvelope {
         }
     }
 
-    /// Returns the [`TxDeposit`] variant if the transaction is a deposit transaction.
+    /// Returns the [`TxL1Message`] variant if the transaction is a deposit transaction.
     pub const fn as_l1_message(&self) -> Option<&Sealed<TxL1Message>> {
         match self {
             Self::L1Message(tx) => Some(tx),
@@ -293,7 +292,7 @@ impl ScrollTxEnvelope {
         }
     }
 
-    /// Return the [`OpTxType`] of the inner txn.
+    /// Return the [`ScrollTxType`] of the inner txn.
     pub const fn tx_type(&self) -> ScrollTxType {
         match self {
             Self::Legacy(_) => ScrollTxType::Legacy,
