@@ -159,7 +159,6 @@ mod tests {
         "blockNumber": "0x6cfef89",
         "contractAddress": null,
         "cumulativeGasUsed": "0xfa0d",
-        "depositNonce": "0x8a2d11",
         "effectiveGasPrice": "0x0",
         "from": "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0001",
         "gasUsed": "0xfa0d",
@@ -169,8 +168,7 @@ mod tests {
         "to": "0x4200000000000000000000000000000000000015",
         "transactionHash": "0xb7c74afdeb7c89fb9de2c312f49b38cb7a850ba36e064734c5223a477e83fdc9",
         "transactionIndex": "0x0",
-        "type": "0x7e",
-        //TODO replace with scroll receipt
+        "type": "0x7e"
     }"#;
 
         let receipt: ScrollTransactionReceipt = serde_json::from_str(s).unwrap();
