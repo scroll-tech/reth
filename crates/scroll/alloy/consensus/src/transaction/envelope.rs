@@ -478,12 +478,14 @@ mod tests {
     #[test]
     fn test_encode_decode_l1_message() {
         let tx = TxL1Message {
+            from: Default::default(),
             queue_index: 1,
             gas_limit: 2,
             to: Address::left_padding_from(&[3]),
             sender: Address::left_padding_from(&[4]),
             value: U256::from(4_u64),
             input: Bytes::from(vec![5]),
+            nonce: Default::default(),
         };
         let tx_envelope = ScrollTxEnvelope::L1Message(tx.seal_slow());
         let encoded = tx_envelope.encoded_2718();
@@ -496,12 +498,14 @@ mod tests {
     #[cfg(feature = "serde")]
     fn test_serde_roundtrip_deposit() {
         let tx = TxL1Message {
+            from: Default::default(),
             queue_index: 11,
             gas_limit: u64::MAX,
             sender: Address::random(),
             to: Address::random(),
             value: U256::MAX,
             input: Bytes::new(),
+            nonce: Default::default(),
         };
         let tx_envelope = ScrollTxEnvelope::L1Message(tx.seal_slow());
 
