@@ -27,8 +27,6 @@ const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct TxL1Message {
-    /// The L1 sender of the transaction.
-    pub from: Address,
     /// The queue index of the message in the L1 contract queue.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
     pub queue_index: u64,
@@ -44,8 +42,6 @@ pub struct TxL1Message {
     pub sender: Address,
     /// The input of the transaction.
     pub input: Bytes,
-    /// The nonce of the transaction.
-    pub nonce: U256,
 }
 
 impl TxL1Message {
@@ -67,14 +63,12 @@ impl TxL1Message {
     /// - `sender`
     pub fn rlp_decode_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Ok(Self {
-            from: Decodable::decode(buf)?,
             queue_index: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             to: Decodable::decode(buf)?,
             value: Decodable::decode(buf)?,
             input: Decodable::decode(buf)?,
             sender: Decodable::decode(buf)?,
-            nonce: Decodable::decode(buf)?,
         })
     }
 
@@ -291,26 +285,23 @@ mod tests {
 
     #[test]
     fn test_rlp_roundtrip() {
-        let bytes = Bytes::from_static(&hex!("7ef9015aa044bae9d41b8380d781187b426c6fe43df5fb2fb57bd4466ef6a701e1f01e015694deaddeaddeaddeaddeaddeaddeaddeaddead000194420000000000000000000000000000000000001580808408f0d18001b90104015d8eb900000000000000000000000000000000000000000000000000000000008057650000000000000000000000000000000000000000000000000000000063d96d10000000000000000000000000000000000000000000000000000000000009f35273d89754a1e0387b89520d989d3be9c37c1f32495a88faf1ea05c61121ab0d1900000000000000000000000000000000000000000000000000000000000000010000000000000000000000002d679b567db6187c0c8323fa982cfb88b74dbcc7000000000000000000000000000000000000000000000000000000000000083400000000000000000000000000000000000000000000000000000000000f4240"));
+        // <https://scrollscan.com/tx/0xace7103cc22a372c81cda04e15442a721cd3d5d64eda2e1578ba310d91597d97>
+        let bytes = Bytes::from_static(&hex!("7ef9015a830e7991831e848094781e90f1c8fc4611c9b7497c3b47f99ef6969cbc80b901248ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e799100000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f8411b3f3d662006b9bf68884e71f1fc0f8ea04e4cb188354738202c3e34a473b93000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000947885bcbd5cecef1336b5300fb5186a12ddd8c478"));
         let tx_a = TxL1Message::decode(&mut bytes[1..].as_ref()).unwrap();
         let mut buf_a = BytesMut::default();
         tx_a.encode(&mut buf_a);
         assert_eq!(&buf_a[..], &bytes[1..]);
     }
-
     #[test]
     fn test_encode_decode_fields() {
         let original = TxL1Message {
-            from: Address::default(),
-            queue_index: 0,
+            queue_index: 100,
             gas_limit: 0,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
-            nonce: U256::default(),
         };
-
         let mut buffer = BytesMut::new();
         original.rlp_encode_fields(&mut buffer);
         let decoded = TxL1Message::rlp_decode_fields(&mut &buffer[..]).expect("Failed to decode");
@@ -321,14 +312,12 @@ mod tests {
     #[test]
     fn test_encode_with_and_without_header() {
         let tx_deposit = TxL1Message {
-            from: Address::default(),
             queue_index: 0,
             gas_limit: 50000,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
-            nonce: U256::default(),
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -343,14 +332,12 @@ mod tests {
     #[test]
     fn test_payload_length() {
         let tx_deposit = TxL1Message {
-            from: Address::default(),
             queue_index: 0,
             gas_limit: 50000,
             to: Address::default(),
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
-            nonce: U256::default(),
         };
 
         assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
@@ -384,14 +371,14 @@ pub(super) mod serde_bincode_compat {
     impl<'a> From<&'a super::TxL1Message> for TxL1Message<'a> {
         fn from(value: &'a super::TxL1Message) -> Self {
             Self {
-                from: value.from,
+                from: Default::default(),
                 queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
                 to: value.to,
                 value: value.value,
                 sender: value.sender,
                 input: Cow::Borrowed(&value.input),
-                nonce: value.nonce,
+                nonce: Default::default(),
             }
         }
     }
@@ -399,14 +386,12 @@ pub(super) mod serde_bincode_compat {
     impl<'a> From<TxL1Message<'a>> for super::TxL1Message {
         fn from(value: TxL1Message<'a>) -> Self {
             Self {
-                from: Address::default(),
                 queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
                 to: value.to,
                 value: value.value,
                 sender: value.sender,
                 input: value.input.into_owned(),
-                nonce: value.nonce,
             }
         }
     }
