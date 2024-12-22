@@ -37,7 +37,7 @@ pub enum ScrollTxEnvelope {
     Eip2930(Signed<TxEip2930>),
     /// A [`TxEip1559`] tagged with type 2.
     Eip1559(Signed<TxEip1559>),
-    /// A [`L1Message`] tagged with type [`crate::L1_MESSAGE_TX_TYPE`].
+    /// A [`L1Message`] tagged with type 0x7E.
     L1Message(Sealed<TxL1Message>),
 }
 

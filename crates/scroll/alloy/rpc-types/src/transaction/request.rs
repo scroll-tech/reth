@@ -1,6 +1,8 @@
 use alloy_consensus::{
     Sealed, SignableTransaction, Signed, TxEip1559, TxEip4844, TypedTransaction,
 };
+use alloy_eips::eip7702::SignedAuthorization;
+use alloy_network_primitives::TransactionBuilder7702;
 use alloy_primitives::{Address, PrimitiveSignature as Signature, TxKind, U256};
 use alloy_rpc_types_eth::{AccessList, TransactionInput, TransactionRequest};
 use serde::{Deserialize, Serialize};
@@ -124,17 +126,13 @@ impl ScrollTransactionRequest {
 
 impl From<TxL1Message> for ScrollTransactionRequest {
     fn from(tx_l1_message: TxL1Message) -> Self {
-        let TxL1Message { from, queue_index: _, gas_limit, to: _, value, input, nonce, .. } =
-            tx_l1_message;
         let to = TxKind::from(tx_l1_message.to);
-
         Self(TransactionRequest {
-            from: Some(from),
+            from: Some(tx_l1_message.sender),
             to: Some(to),
-            value: Some(value),
-            gas: Some(gas_limit),
-            input: input.into(),
-            nonce: Some(nonce.to()),
+            value: Some(tx_l1_message.value),
+            gas: Some(tx_l1_message.gas_limit),
+            input: tx_l1_message.input.into(),
             ..Default::default()
         })
     }

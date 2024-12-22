@@ -253,8 +253,7 @@ mod tx_serde {
             };
 
             let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
-
-            Ok(Self {
+            let a = Self {
                 inner: alloy_rpc_types_eth::Transaction {
                     inner,
                     block_hash,
@@ -265,7 +264,8 @@ mod tx_serde {
                 },
                 sender: other.sender,
                 queue_index: other.queue_index,
-            })
+            };
+            Ok(a)
         }
     }
 }
@@ -291,7 +291,9 @@ mod tests {
         assert_eq!(tx.inner.effective_gas_price, Some(0));
 
         let deserialized = serde_json::to_value(&tx).unwrap();
+        println!("{:?}", deserialized);
         let expected = serde_json::from_str::<serde_json::Value>(rpc_tx).unwrap();
+        println!("{:?}", expected);
         similar_asserts::assert_eq!(deserialized, expected);
     }
 }

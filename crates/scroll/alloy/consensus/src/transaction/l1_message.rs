@@ -365,20 +365,18 @@ pub(super) mod serde_bincode_compat {
         value: U256,
         sender: Address,
         input: Cow<'a, Bytes>,
-        nonce: U256,
     }
 
     impl<'a> From<&'a super::TxL1Message> for TxL1Message<'a> {
         fn from(value: &'a super::TxL1Message) -> Self {
             Self {
-                from: Default::default(),
+                from: value.sender,
                 queue_index: value.queue_index,
                 gas_limit: value.gas_limit,
                 to: value.to,
                 value: value.value,
                 sender: value.sender,
                 input: Cow::Borrowed(&value.input),
-                nonce: Default::default(),
             }
         }
     }
