@@ -1,11 +1,13 @@
 //! RPC errors specific to Scroll.
 
-use alloy_rpc_types_eth::{error::EthRpcErrorCode, BlockError};
+use alloy_rpc_types_eth::BlockError;
 use jsonrpsee_types::error::INTERNAL_ERROR_CODE;
 use reth_rpc_eth_api::AsEthApiError;
 use reth_rpc_eth_types::EthApiError;
-use reth_rpc_server_types::result::{internal_rpc_err, rpc_err};
+use reth_rpc_server_types::result::internal_rpc_err;
 use revm::primitives::InvalidTransaction;
+
+use reth_scroll_evm::ScrollBlockExecutionError;
 
 /// Scroll specific errors, that extend [`EthApiError`].
 #[derive(Debug, thiserror::Error)]

@@ -1,5 +1,5 @@
 use alloy_consensus::Header;
-use alloy_primitives::{Bytes, TxKind, U256};
+use alloy_primitives::{TxKind, U256};
 use alloy_rpc_types_eth::transaction::TransactionRequest;
 use reth_evm::ConfigureEvm;
 use reth_rpc_eth_api::{

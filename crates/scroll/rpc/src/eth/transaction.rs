@@ -1,17 +1,16 @@
 //! Loads and formats Scroll transaction RPC response.
 
 use alloy_consensus::{Signed, Transaction as _};
-use alloy_primitives::{Bytes, Sealable, Sealed, B256};
+use alloy_primitives::{Sealable, Sealed};
 use alloy_rpc_types_eth::{Transaction, TransactionInfo};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
 use reth_provider::{BlockReaderIdExt, ReceiptProvider, TransactionsProvider};
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    FromEthApiError, FullEthApiTypes, RpcNodeCore, TransactionCompat,
+    FullEthApiTypes, RpcNodeCore, TransactionCompat,
 };
-use reth_rpc_eth_types::utils::recover_raw_transaction;
-use reth_transaction_pool::{PoolTransaction, TransactionOrigin, TransactionPool};
+use reth_transaction_pool::TransactionPool;
 
 use scroll_alloy_consensus::ScrollTxEnvelope;
 
@@ -63,7 +62,7 @@ where
             }
             reth_primitives::Transaction::Eip4844(_) => unreachable!(),
             reth_primitives::Transaction::Eip7702(tx) => unreachable!(),
-            reth_primitives::Transaction::Deposit(tx) => {
+            reth_primitives::Transaction::L1Message(tx) => {
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };
@@ -72,7 +71,7 @@ where
             block_hash, block_number, index: transaction_index, base_fee, ..
         } = tx_info;
 
-        let effective_gas_price = if inner.is_deposit() {
+        let effective_gas_price = if inner.is_l1_message() {
             // For deposits, we must always set the `gasPrice` field to 0 in rpc
             // deposit tx don't have a gas price field, but serde of `Transaction` will take care of
             // it

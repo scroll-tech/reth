@@ -9450,7 +9450,7 @@ dependencies = [
  "reth-rpc-eth-types",
  "reth-rpc-server-types",
  "reth-scroll-chainspec",
- "reth-scroll-consensus",
+ "reth-scroll-evm",
  "reth-scroll-revm",
  "reth-tasks",
  "reth-transaction-pool",

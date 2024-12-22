@@ -1,16 +1,14 @@
 //! Loads and formats Scroll receipt RPC response.
 
-use alloy_eips::eip2718::Encodable2718;
-use alloy_rpc_types_eth::{Log, TransactionReceipt};
 use reth_node_api::{FullNodeComponents, NodeTypes};
-use reth_primitives::{Receipt, TransactionMeta, TransactionSigned, TxType};
+use reth_primitives::{Receipt, TransactionMeta, TransactionSigned};
 use reth_provider::{ChainSpecProvider, ReceiptProvider, TransactionsProvider};
 use reth_rpc_eth_api::{helpers::LoadReceipt, FromEthApiError, RpcReceipt};
-use reth_rpc_eth_types::{receipt::build_receipt, EthApiError};
+use reth_rpc_eth_types::{receipt::build_receipt, EthApiError, EthReceiptBuilder};
 
 use reth_scroll_chainspec::ScrollChainSpec;
 
-use crate::{ScrollEthApi, ScrollEthApiError};
+use crate::ScrollEthApi;
 
 impl<N> LoadReceipt for ScrollEthApi<N>
 where
@@ -34,17 +32,12 @@ where
                 meta.block_hash.into(),
             )))?;
 
-        // todo
-        let l1_block_info =
-            reth_optimism_evm::extract_l1_info(&block.body).map_err(OpEthApiError::from)?;
-
-        Ok(OpReceiptBuilder::new(
+        Ok(EthReceiptBuilder::new(
             &self.inner.provider().chain_spec(),
             &tx,
             meta,
             &receipt,
             &receipts,
-            l1_block_info,
         )?
         .build())
     }

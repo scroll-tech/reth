@@ -32,8 +32,8 @@ reth-chainspec.workspace = true
 reth-scroll-chainspec.workspace = true
 scroll-alloy-rpc-types.workspace = true
 scroll-alloy-network.workspace = true
-reth-scroll-consensus.workspace = true
 scroll-alloy-consensus.workspace = true
+reth-scroll-evm.workspace = true
 
 # ethereum
 alloy-eips.workspace = true
