@@ -4,17 +4,30 @@ use derive_more::Deref;
 use std::{fmt, sync::Arc};
 
 use alloy_consensus::Header;
+use alloy_primitives::U256;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
+use reth_evm::ConfigureEvm;
+use reth_network_api::NetworkInfo;
 use reth_node_builder::EthApiBuilderCtx;
 use reth_primitives::EthPrimitives;
-use reth_provider::BlockReaderIdExt;
+use reth_provider::{
+    BlockNumReader, BlockReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider,
+    EvmEnvProvider, StageCheckpointReader, StateProviderFactory,
+};
 use reth_rpc::eth::{core::EthApiInner, DevSigner};
-use reth_rpc_eth_api::RpcNodeCore;
+use reth_rpc_eth_api::{
+    helpers::{
+        AddDevSigners, EthApiSpec, EthFees, EthSigner, EthState, LoadBlock, LoadFee, LoadState,
+        SpawnBlocking, Trace,
+    },
+    EthApiTypes, RpcNodeCore, RpcNodeCoreExt,
+};
 use reth_rpc_eth_types::{EthStateCache, FeeHistoryCache, GasPriceOracle};
 use reth_tasks::{
     pool::{BlockingTaskGuard, BlockingTaskPool},
     TaskSpawner,
 };
+use reth_transaction_pool::TransactionPool;
 
 use scroll_alloy_network::Scroll;
 
