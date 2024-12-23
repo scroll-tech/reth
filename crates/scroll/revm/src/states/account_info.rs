@@ -1,7 +1,4 @@
-use reth_scroll_primitives::{
-    poseidon::{hash_code, POSEIDON_EMPTY},
-    ScrollPostExecutionContext,
-};
+use reth_scroll_primitives::{poseidon::POSEIDON_EMPTY, ScrollPostExecutionContext};
 use revm::primitives::{AccountInfo, Bytecode, B256, KECCAK_EMPTY, U256};
 
 /// The Scroll account information. Code copy of [`AccountInfo`]. Provides additional `code_size`
@@ -25,22 +22,24 @@ pub struct ScrollAccountInfo {
 }
 
 impl From<(AccountInfo, &ScrollPostExecutionContext)> for ScrollAccountInfo {
-    fn from((info, context): (AccountInfo, &ScrollPostExecutionContext)) -> Self {
-        let context = context.get(&info.code_hash).copied();
-        let (code_size, poseidon_code_hash) = context
-            .or_else(|| {
-                info.code
-                    .as_ref()
-                    .map(|code| (code.len() as u64, hash_code(code.original_byte_slice())))
-            })
-            .unwrap_or((0, POSEIDON_EMPTY));
+    fn from((info, _context): (AccountInfo, &ScrollPostExecutionContext)) -> Self {
+        // TODO(scroll): uncomment once use of the revm sdk pattern is adopted. Tracked in
+        // https://github.com/scroll-tech/reth/issues/97
+        // let context = context.get(&info.code_hash).copied();
+        // let (code_size, poseidon_code_hash) = context
+        //     .or_else(|| {
+        //         info.code
+        //             .as_ref()
+        //             .map(|code| (code.len() as u64, hash_code(code.original_byte_slice())))
+        //     })
+        //     .unwrap_or((0, POSEIDON_EMPTY));
         Self {
             balance: info.balance,
             nonce: info.nonce,
             code_hash: info.code_hash,
             code: info.code,
-            code_size,
-            poseidon_code_hash,
+            code_size: info.code_size as u64,
+            poseidon_code_hash: info.poseidon_code_hash,
         }
     }
 }
@@ -148,12 +147,13 @@ impl ScrollAccountInfo {
         Self { balance, ..Default::default() }
     }
 
+    #[cfg(feature = "scroll")]
     /// Returns a [`ScrollAccountInfo`] with defaults for balance and nonce.
     /// Computes the Keccak and Poseidon hash of the provided bytecode.
     pub fn from_bytecode(bytecode: Bytecode) -> Self {
         let hash = bytecode.hash_slow();
         let code_size = bytecode.len() as u64;
-        let poseidon_code_hash = hash_code(bytecode.bytecode());
+        let poseidon_code_hash = reth_scroll_primitives::poseidon::hash_code(bytecode.bytecode());
 
         Self {
             balance: U256::ZERO,
