@@ -23,7 +23,7 @@ reth-zstd-compressors = { workspace = true, optional = true }
 # ethereum
 alloy-consensus.workspace = true
 alloy-network = { workspace = true, optional = true }
-alloy-primitives = { workspace = true, features = ["rand", "rlp"] }
+alloy-primitives = { workspace = true, features = ["rlp"] }
 alloy-rlp = { workspace = true, features = ["arrayvec"] }
 alloy-rpc-types = { workspace = true, optional = true }
 alloy-serde = { workspace = true, optional = true }
