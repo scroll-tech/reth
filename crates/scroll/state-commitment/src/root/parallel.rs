@@ -87,7 +87,10 @@ where
         let hashed_state_sorted = Arc::new(self.input.state.into_sorted());
         let prefix_sets = self.input.prefix_sets.freeze();
         let storage_root_targets = StorageRootTargets::new(
-            prefix_sets.account_prefix_set.iter().map(|nibbles| B256::from_slice(&nibbles.pack())),
+            prefix_sets
+                .account_prefix_set
+                .iter()
+                .map(|nibbles| B256::from_slice(&nibbles.pack_bits())),
             prefix_sets.storage_prefix_sets,
         );
 
@@ -117,7 +120,7 @@ where
                         DatabaseHashedCursorFactory::new(provider_ro.tx_ref()),
                         &hashed_state_sorted,
                     );
-                    Ok(crate::root::StorageRoot::new_hashed(
+                    Ok(super::StorageRoot::new_hashed(
                         trie_cursor_factory,
                         hashed_state,
                         hashed_address,
@@ -155,7 +158,7 @@ where
             hashed_cursor_factory.hashed_account_cursor().map_err(ProviderError::Database)?,
         );
 
-        let mut hash_builder = crate::root::HashBuilder::default().with_updates(retain_updates);
+        let mut hash_builder = super::HashBuilder::default().with_updates(retain_updates);
         while let Some(node) = account_node_iter.try_next().map_err(ProviderError::Database)? {
             match node {
                 TrieElement::Branch(node) => {
@@ -174,7 +177,7 @@ where
                         // be a possibility of re-adding a non-modified leaf to the hash builder.
                         None => {
                             tracker.inc_missed_leaves();
-                            crate::root::StorageRoot::new_hashed(
+                            super::StorageRoot::new_hashed(
                                 trie_cursor_factory.clone(),
                                 hashed_cursor_factory.clone(),
                                 hashed_address,
