@@ -19,7 +19,7 @@ use reth_trie::{
     prefix_set::{PrefixSetMut, TriePrefixSets},
     trie_cursor::InMemoryTrieCursorFactory,
     updates::TrieUpdates,
-    BitsCompatibility, HashedPostState, HashedStorage, KeyHasher, Nibbles,
+    BitsCompatibility, HashedPostState, HashedStorage, KeyHasher, Nibbles, TrieInput,
 };
 use reth_trie_db::{DatabaseStateRoot, DatabaseStorageRoot, DatabaseTrieCursorFactory};
 use std::collections::BTreeMap;
@@ -248,7 +248,7 @@ proptest! {
     })]
 
     #[test]
-    fn test_parallel_state_root(
+    fn test_parallel_state_root_database(
         state: BTreeMap<Address, ((u32, U256, Option<(B256, B256, u64)>), BTreeMap<B256, U256>)>,
     ) {
         let factory = create_test_provider_factory();
@@ -310,6 +310,75 @@ proptest! {
 
         let got =
             ParallelStateRoot::new(consistent_view, Default::default()).incremental_root().unwrap();
+
+        prop_assert_eq!(
+            expected_state_root,
+            got,
+            "expected_root = {:?}, computed_root = {:?}",
+            expected_state_root,
+            got
+        );
+    }
+
+    #[test]
+    fn test_parallel_state_root_memory(
+        state: BTreeMap<Address, ((u32, U256, Option<(B256, B256, u64)>), BTreeMap<B256, U256>)>,
+    ) {
+        let factory = create_test_provider_factory();
+        let consistent_view = ConsistentDbView::new(factory, None);
+        let mut hashed_state = HashedPostState::default();
+
+        let state = state
+            .into_iter()
+            .map(|(address, ((nonce, balance, code), storage))| {
+                let balance = u256_clear_msb(balance);
+                let account_extension = code
+                    .map(|(_, code_hash, code_size)| {
+                        (code_size, b256_clear_first_byte(code_hash)).into()
+                    })
+                    .or_else(|| Some(Default::default()));
+                let account = Account {
+                    balance,
+                    nonce: nonce.into(),
+                    bytecode_hash: code.as_ref().map(|(code_hash, _, _)| *code_hash),
+                    account_extension,
+                };
+                let storage = storage
+                    .into_iter()
+                    .map(|(slot, value)| {
+                        let slot = b256_clear_first_byte(slot);
+                        let hashed_slot = PoseidonKeyHasher::hash_key(slot);
+                        (hashed_slot, value)
+                    })
+                    .collect::<BTreeMap<_, _>>();
+                let hashed_storage = HashedStorage::from_iter(false, storage.clone().into_iter());
+                let hashed_address = PoseidonKeyHasher::hash_key(address);
+
+                // insert the account and storage in the hashed post state
+                hashed_state.accounts.insert(hashed_address, Some(account));
+                hashed_state.storages.insert(hashed_address, hashed_storage);
+
+                (hashed_address, (account, storage))
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        let expected_state_root = crate::test_utils::state_root(state.into_iter().map(
+            |(hashed_address, (account, storage))| {
+                (
+                    b256_reverse_bits(hashed_address),
+                    (
+                        account,
+                        storage.into_iter().map(|(hashed_slot, value)| {
+                            (b256_reverse_bits(hashed_slot), value)
+                        }),
+                    ),
+                )
+            },
+        ));
+
+        let trie_input = TrieInput::from_state(hashed_state);
+        let got =
+            ParallelStateRoot::new(consistent_view, trie_input).incremental_root().unwrap();
 
         prop_assert_eq!(
             expected_state_root,
