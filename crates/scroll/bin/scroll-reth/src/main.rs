@@ -3,7 +3,7 @@
 #[global_allocator]
 static ALLOC: reth_cli_util::allocator::Allocator = reth_cli_util::allocator::new_allocator();
 
-#[cfg(all(feature = "scroll"))]
+#[cfg(all(feature = "scroll", not(feature = "optimism")))]
 fn main() {
     use clap::Parser;
     use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher};
@@ -44,7 +44,7 @@ fn main() {
     }
 }
 
-#[cfg(not(feature = "scroll"))]
+#[cfg(all(feature = "optimism", not(feature = "scroll")))]
 fn main() {
     eprintln!("Scroll feature is not enabled");
     std::process::exit(1);

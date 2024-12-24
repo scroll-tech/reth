@@ -43,11 +43,11 @@ impl ScrollNodeBmpt {
     {
         ComponentsBuilder::default()
             .node_types::<Node>()
-            .pool(ScrollPoolBuilder::default())
-            .payload(ScrollPayloadBuilder::default())
-            .network(ScrollNetworkBuilder::default())
-            .executor(ScrollExecutorBuilder::default())
-            .consensus(ScrollConsensusBuilder::default())
+            .pool(ScrollPoolBuilder)
+            .payload(ScrollPayloadBuilder)
+            .network(ScrollNetworkBuilder)
+            .executor(ScrollExecutorBuilder)
+            .consensus(ScrollConsensusBuilder)
     }
 }
 
