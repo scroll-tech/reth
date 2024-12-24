@@ -130,3 +130,7 @@ scroll = [
     "reth-scroll-primitives",
     "reth-scroll-storage/scroll"
 ]
+scroll-mpt = [
+    "scroll",
+    "reth-stages/scroll-mpt"
+]

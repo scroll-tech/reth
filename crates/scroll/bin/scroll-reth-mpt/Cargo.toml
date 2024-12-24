@@ -26,9 +26,10 @@ clap = { workspace = true, features = ["derive", "env"] }
 
 [features]
 scroll = [
-	"reth-node-builder/scroll",
+	"reth-node-builder/scroll-mpt",
 	"reth-provider/scroll",
-	"reth-scroll-cli/scroll"
+	"reth-scroll-cli/scroll",
+	"reth-scroll-node/scroll-mpt"
 ]
 optimism = [
 	"reth-provider/optimism",

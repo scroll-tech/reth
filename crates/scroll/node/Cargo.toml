@@ -62,3 +62,4 @@ scroll = [
 	"reth-scroll-state-commitment/scroll",
 	"reth-scroll-evm/scroll",
 ]
+scroll-mpt = ["scroll"]
