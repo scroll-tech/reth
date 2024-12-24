@@ -17,8 +17,8 @@ fn main() {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
 
-    if let Err(err) = Cli::<ScrollChainSpecParser, ScrollRollupArgs>::parse().run(
-        |builder, rollup_args| async move {
+    if let Err(err) = Cli::<ScrollChainSpecParser, ScrollRollupArgs>::parse()
+        .run::<_, _, ScrollNodeBmpt>(|builder, rollup_args| async move {
             let engine_tree_config = TreeConfig::default()
                 .with_persistence_threshold(rollup_args.persistence_threshold)
                 .with_memory_block_buffer_target(rollup_args.memory_block_buffer_target);
@@ -37,8 +37,8 @@ fn main() {
                 .await?;
 
             handle.node_exit_future.await
-        },
-    ) {
+        })
+    {
         eprintln!("Error: {err:?}");
         std::process::exit(1);
     }
