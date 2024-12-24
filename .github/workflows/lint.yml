@@ -107,8 +107,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo hack check --workspace --exclude op-reth --exclude scroll-reth
+      - run: cargo hack check --workspace --exclude op-reth --exclude scroll-reth --exclude scroll-reth-mpt
       - run: cargo check -p op-reth --features "optimism"
+      - run: cargo check -p scroll-reth --features "scroll"
+      - run: cargo check -p scroll-reth-mpt --features "scroll"
 
   msrv:
     name: MSRV / ${{ matrix.network }}
