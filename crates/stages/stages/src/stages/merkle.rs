@@ -275,9 +275,9 @@ where
         // Reset the checkpoint
         self.save_execution_checkpoint(provider, None)?;
 
-        #[cfg(feature = "scroll-mpt")]
+        #[cfg(feature = "skip-state-root-validation")]
         let _ = trie_root;
-        #[cfg(not(feature = "scroll-mpt"))]
+        #[cfg(not(feature = "skip-state-root-validation"))]
         validate_state_root(trie_root, SealedHeader::seal(target_block), to_block)?;
 
         Ok(ExecOutput {

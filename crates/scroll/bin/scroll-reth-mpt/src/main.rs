@@ -44,7 +44,7 @@ fn main() {
     }
 }
 
-#[cfg(all(feature = "optimism", not(feature = "scroll")))]
+#[cfg(any(feature = "optimism", not(feature = "scroll")))]
 fn main() {
     eprintln!("Scroll feature is not enabled");
     std::process::exit(1);

@@ -133,8 +133,7 @@ scroll = [
     "reth-engine-util/scroll",
     "reth-invalid-block-hooks/scroll"
 ]
-scroll-mpt = [
-    "scroll",
-    "reth-stages/scroll-mpt",
-    "reth-engine-tree/scroll-mpt"
+skip-state-root-validation = [
+    "reth-stages/skip-state-root-validation",
+    "reth-engine-tree/skip-state-root-validation"
 ]

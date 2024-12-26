@@ -2286,9 +2286,9 @@ where
             state_provider.state_root_from_state_with_updates(hashed_state.clone())?
         };
 
-        #[cfg(feature = "scroll-mpt")]
+        #[cfg(feature = "skip-state-root-validation")]
         let _ = state_root;
-        #[cfg(not(feature = "scroll-mpt"))]
+        #[cfg(not(feature = "skip-state-root-validation"))]
         if state_root != block.header().state_root() {
             // call post-block hook
             self.invalid_block_hook.on_invalid_block(
