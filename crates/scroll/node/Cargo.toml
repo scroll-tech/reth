@@ -27,7 +27,6 @@ reth-primitives.workspace = true
 reth-primitives-traits.workspace = true
 reth-provider.workspace = true
 reth-rpc.workspace = true
-reth-rpc-types-compat.workspace = true
 reth-tracing.workspace = true
 reth-transaction-pool.workspace = true
 
@@ -45,14 +44,14 @@ alloy-primitives.workspace = true
 
 # misc
 eyre.workspace = true
-tokio.workspace = true
 
 [features]
 optimism = [
 	"reth-db/optimism",
 	"reth-primitives/optimism",
 	"reth-provider/optimism",
-	"reth-scroll-evm/optimism"
+	"reth-scroll-evm/optimism",
+	"reth-scroll-engine/optimism"
 ]
 scroll = [
 	"reth-db/scroll",

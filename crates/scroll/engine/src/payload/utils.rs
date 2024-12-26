@@ -1,3 +1,4 @@
+use alloc::{sync::Arc, vec::Vec};
 use alloy_consensus::EMPTY_OMMER_ROOT_HASH;
 use alloy_eips::eip2718::Decodable2718;
 use alloy_rlp::BufMut;
@@ -8,7 +9,6 @@ use alloy_rpc_types_engine::{
 use reth_primitives::{proofs, Block, BlockBody, Header};
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_forks::ScrollHardfork;
-use std::sync::Arc;
 
 /// Tries to create a new unsealed block from the given payload, sidecar and chain specification.
 pub fn try_into_block<T: Decodable2718>(

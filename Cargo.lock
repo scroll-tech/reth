@@ -9502,14 +9502,12 @@ dependencies = [
  "reth-primitives-traits",
  "reth-provider",
  "reth-rpc",
- "reth-rpc-types-compat",
  "reth-scroll-chainspec",
  "reth-scroll-engine",
  "reth-scroll-evm",
  "reth-scroll-state-commitment",
  "reth-tracing",
  "reth-transaction-pool",
- "tokio",
 ]
 
 [[package]]
