@@ -125,7 +125,7 @@ of communication channel to it.
 
 <details>
 <summary>Click to expand</summary>
-  
+
 ```rust,norun,noplayground,ignore
 {{#include ../../sources/exex/remote/src/exex.rs}}
 ```

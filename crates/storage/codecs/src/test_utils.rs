@@ -21,18 +21,18 @@
 ///        // ... other fields
 ///        ext: Option<TExtension>
 ///    }
-///    
+///
 ///    // Use an extension type for new fields:
 ///    struct TExtension {
 ///        new_field_b: Option<u8>,
 ///    }
-///    
+///
 ///    // Change tests
 ///    validate_bitflag_backwards_compat!(T, UnusedBits::Zero);
 ///    validate_bitflag_backwards_compat!(TExtension, UnusedBits::NotZero);
-/// }   
+/// }
 /// ```
-/// 
+///
 /// ### 2. `Zero` -> `NotZero`
 /// If it becomes `NotZero`, it would break backwards compatibility, so there is not an action item,
 /// and should be handled with care in a case by case scenario.

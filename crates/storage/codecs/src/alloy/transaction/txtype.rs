@@ -55,7 +55,7 @@ impl crate::Compact for TxType {
 mod tests {
     use super::*;
     use rstest::rstest;
-    
+
     use alloy_consensus::constants::{EIP4844_TX_TYPE_ID, EIP7702_TX_TYPE_ID};
     use crate::Compact;
 

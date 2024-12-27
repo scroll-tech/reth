@@ -3,7 +3,7 @@
 The `discv4` crate plays an important role in Reth, enabling discovery of other peers across the network. It is recommended to know how [Kademlia distributed hash tables](https://en.wikipedia.org/wiki/Kademlia) and [Ethereum's node discovery protocol](https://github.com/ethereum/devp2p/blob/master/discv4.md) work before reading through this chapter. While all concepts will be explained through the following sections, reading through the links above will make understanding this chapter much easier! With that note out of the way, let's jump into `discv4`.
 
 ## Starting the Node Discovery Protocol
-As mentioned in the network and stages chapters, when the node is first started up, the `node::Command::execute()` function is called, which initializes the node and starts to run the Reth pipeline. Throughout the initialization of the node, there are many processes that are started. One of the processes that is initialized is the p2p network which starts the node discovery protocol amongst other tasks.  
+As mentioned in the network and stages chapters, when the node is first started up, the `node::Command::execute()` function is called, which initializes the node and starts to run the Reth pipeline. Throughout the initialization of the node, there are many processes that are started. One of the processes that is initialized is the p2p network which starts the node discovery protocol amongst other tasks.
 
 [File: bin/reth/src/node/mod.rs](https://github.com/paradigmxyz/reth/blob/1563506aea09049a85e5cc72c2894f3f7a371581/bin/reth/src/node/mod.rs#L314-L322)
 ```rust ignore
@@ -24,7 +24,7 @@ As mentioned in the network and stages chapters, when the node is first started 
     }
 ```
 
-During this process, a new `NetworkManager` is created through the `NetworkManager::new()` function, which starts the discovery protocol through a handful of newly spawned tasks. Let's take a look at how this actually works under the hood. 
+During this process, a new `NetworkManager` is created through the `NetworkManager::new()` function, which starts the discovery protocol through a handful of newly spawned tasks. Let's take a look at how this actually works under the hood.
 
 [File: crates/net/network/src/manager.rs](https://github.com/paradigmxyz/reth/blob/1563506aea09049a85e5cc72c2894f3f7a371581/crates/net/network/src/manager.rs#L89)
 ```rust ignore
@@ -80,7 +80,7 @@ impl Discovery {
         dns_discovery_config: Option<DnsDiscoveryConfig>,
     ) -> Result<Self, NetworkError> {
         let local_enr = NodeRecord::from_secret_key(discovery_addr, &sk);
-        
+
         let (discv4, discv4_updates, _discv4_service) = if let Some(disc_config) = discv4_config {
             let (discv4, mut discv4_service) =
                 Discv4::bind(discovery_addr, local_enr, sk, disc_config)
@@ -142,10 +142,10 @@ impl Discv4 {
         trace!(target: "discv4",  ?local_addr,"opened UDP socket");
 
         let (to_service, rx) = mpsc::channel(100);
-        
+
         let service =
             Discv4Service::new(socket, local_addr, local_node_record, secret_key, config, Some(rx));
-        
+
         let discv4 = Discv4 { local_addr, to_service };
         Ok((discv4, service))
     }
@@ -281,7 +281,7 @@ If there is not a `Discv4Event` immediately ready, the function continues trigge
 
 To prevent traffic amplification attacks (ie. DNS attacks), implementations must verify that the sender of a query participates in the discovery protocol. The sender of a packet is considered verified if it has sent a valid Pong response with matching ping hash within the last 12 hours. This is called the ["endpoint proof"](https://github.com/ethereum/devp2p/blob/master/discv4.md#endpoint-proof).
 
-Next, the Discv4Service handles all incoming `Discv4Command`s until there are no more commands to be processed. Following this, All `IngressEvent`s are handled, which represent all incoming datagrams related to the discv4 protocol. After all events are handled, the node pings to active nodes in it's network. This process is repeated until all of the `Discv4Event`s in `queued_events` are processed. 
+Next, the Discv4Service handles all incoming `Discv4Command`s until there are no more commands to be processed. Following this, All `IngressEvent`s are handled, which represent all incoming datagrams related to the discv4 protocol. After all events are handled, the node pings to active nodes in it's network. This process is repeated until all of the `Discv4Event`s in `queued_events` are processed.
 
 In Reth, once a new `NetworkState` is initialized as the node starts up and a new task is spawned to handle the network, the `poll()` function is used to advance the state of the network.
 

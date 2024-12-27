@@ -30,7 +30,7 @@ It is assumed that the commit that is being considered for release has been mark
   - This testing infrastructure is going to sync and keep up with a live testnet, and includes monitoring of bandwidth, CPU, disk space etc.
 
 > **Note**
-> 
+>
 > The `v` prefix for the tag is important! If it is missing, the release workflow **will not run**.
 
 When the tag is pushed, the artifacts are built automatically and a draft release is added to the repository. This draft release includes a template that must be filled out, including:

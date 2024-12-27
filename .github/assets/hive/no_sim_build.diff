@@ -11,7 +11,7 @@ index e4bf99b6..2023f7e2 100644
  	"slices"
  	"strings"
 @@ -49,25 +48,8 @@ func (b *Builder) BuildClientImage(ctx context.Context, client libhive.ClientDes
- 
+
  // BuildSimulatorImage builds a docker image of a simulator.
  func (b *Builder) BuildSimulatorImage(ctx context.Context, name string, buildArgs map[string]string) (string, error) {
 -	dir := b.config.Inventory.SimulatorDirectory(name)
@@ -35,18 +35,18 @@ index e4bf99b6..2023f7e2 100644
 -	return tag, err
 +	return tag, nil
  }
- 
+
  // BuildImage creates a container by archiving the given file system,
 diff --git a/internal/libdocker/proxy.go b/internal/libdocker/proxy.go
 index d3a14ae6..8779671e 100644
 --- a/internal/libdocker/proxy.go
 +++ b/internal/libdocker/proxy.go
 @@ -16,7 +16,7 @@ const hiveproxyTag = "hive/hiveproxy"
- 
+
  // Build builds the hiveproxy image.
  func (cb *ContainerBackend) Build(ctx context.Context, b libhive.Builder) error {
 -	return b.BuildImage(ctx, hiveproxyTag, hiveproxy.Source)
 +	return nil
  }
- 
+
  // ServeAPI starts the API server.

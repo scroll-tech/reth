@@ -3,7 +3,7 @@
 The `admin` API allows you to configure your node, including adding and removing peers.
 
 > **Note**
-> 
+>
 > As this namespace can configure your node at runtime, it is generally **not advised** to expose it publicly.
 
 ## `admin_addPeer`

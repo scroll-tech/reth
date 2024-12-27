@@ -305,7 +305,7 @@ The sessions section configures the internal behavior of a single peer-to-peer c
 You can configure the session buffer sizes, which limits the amount of pending events (incoming messages) and commands (outgoing messages) each session can hold before it will start to ignore messages.
 
 > **Note**
-> 
+>
 > These buffers are allocated *per peer*, which means that increasing the buffer sizes can have large impact on memory consumption.
 
 ```toml

@@ -802,7 +802,7 @@ pub enum NetworkEvent<R = PeerRequest> {
 }
 ```
 
-and with  
+and with
 ```rust,ignore
 pub enum PeerEvent {
     /// Closed the peer session.

@@ -17,13 +17,13 @@ This page tries to answer how to deal with the most popular issues.
 
 ## Database
 
-### Docker 
+### Docker
 
 Externally accessing a `datadir` inside a named docker volume will usually come with folder/file ownership/permissions issues.
 
 **It is not recommended** to use the path to the named volume as it will trigger an error code 13. `RETH_DB_PATH: /var/lib/docker/volumes/named_volume/_data/eth/db cargo r --examples db-access --path ` is **DISCOURAGED** and a mounted volume with the right permissions should be used instead.
 
-### Error code 13 
+### Error code 13
 
 `the environment opened in read-only code: 13`
 
@@ -41,7 +41,7 @@ stat /full/path/datadir
 If you're:
 1. Running behind the tip
 2. Have slow canonical commit time according to the `Canonical Commit Latency Time` chart on [Grafana dashboard](./observability.md#prometheus--grafana) (more than 2-3 seconds)
-3. Seeing warnings in your logs such as 
+3. Seeing warnings in your logs such as
    ```console
    2023-11-08T15:17:24.789731Z  WARN providers::db: Transaction insertion took too long block_number=18528075 tx_num=2150227643 hash=0xb7de1d6620efbdd3aa8547c47a0ff09a7fd3e48ba3fd2c53ce94c6683ed66e7c elapsed=6.793759034s
    ```

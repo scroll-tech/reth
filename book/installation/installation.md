@@ -9,7 +9,7 @@ There are three core methods to obtain Reth:
 * [Building from source.](./source.md)
 
 > **Note**
-> 
+>
 > If you have Docker installed, we recommend using the [Docker Compose](./docker.md#using-docker-compose) configuration
 > that will get you Reth, Lighthouse (Consensus Client), Prometheus and Grafana running and syncing with just one command.
 

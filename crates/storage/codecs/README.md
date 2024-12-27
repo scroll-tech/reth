@@ -31,7 +31,7 @@ The general idea behind [`Compact`](src/lib.rs#L30) is to minimize the number of
 
 
 #### Bitflag struct
-`Compact` will generate a companion bitflag struct ([modular_bitfield](https://crates.io/crates/modular_bitfield)) to aid that (eg. `Receipt` and `ReceiptFlags`). **These aid struct fields can represent whatever is necessary**: the presence or absence of a value (eg. `Option<T>`), the number of bytes necessary to read a field (eg. `uint32` might only need 1 byte) or a variant of a serialized field (eg. `TxKind`). **The amount of bits required for each aid field is represented by this function**: [get_bit_size](derive/src/compact/mod.rs#L170). Any field that doesn't store any information in this bitflag struct handles their size on their own (eg. `Vec<T>`). 
+`Compact` will generate a companion bitflag struct ([modular_bitfield](https://crates.io/crates/modular_bitfield)) to aid that (eg. `Receipt` and `ReceiptFlags`). **These aid struct fields can represent whatever is necessary**: the presence or absence of a value (eg. `Option<T>`), the number of bytes necessary to read a field (eg. `uint32` might only need 1 byte) or a variant of a serialized field (eg. `TxKind`). **The amount of bits required for each aid field is represented by this function**: [get_bit_size](derive/src/compact/mod.rs#L170). Any field that doesn't store any information in this bitflag struct handles their size on their own (eg. `Vec<T>`).
 
 This also means that types present in [get_bit_size](derive/src/compact/mod.rs#L170), even though implement the `Compact` trait, they cannot be used as standalone values and need a wrapper type. (eg. `U256` & `CompactU256`).
 

@@ -26,7 +26,7 @@ $ op-reth node --chain optimism --datadir op-mainnet --debug.tip 0x098f87b75c8b8
 
 **Not recommended for now**: [storage consistency issue](https://github.com/paradigmxyz/reth/pull/11099) tldr: sudden crash may break the node.
 
-### Import state 
+### Import state
 
 To sync OP mainnet, the Bedrock datadir needs to be imported to use as starting point.
 Blocks lower than the OP mainnet Bedrock fork, are built on the OVM and cannot be executed on the EVM.
@@ -64,7 +64,7 @@ This step is optional. To run a full node, skip this step. If however receipts a
 corresponding transactions must already be imported (see [step 1](#1-import-blocks)).
 
 Imports a `.rlp` file of receipts, that has been exported with command specified in
-<https://github.com/testinprod-io/op-geth/pull/1> (command for exporting receipts uses custom RLP-encoding). 
+<https://github.com/testinprod-io/op-geth/pull/1> (command for exporting receipts uses custom RLP-encoding).
 
 Import of >100 million OVM receipts, from genesis to Bedrock, completes in 30 minutes.
 

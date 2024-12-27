@@ -1,6 +1,6 @@
 # Non-exhaustive checklist for integrating new changes for an upcoming hard fork/devnet
 
-## Introducing new EIP types or changes to primitive types 
+## Introducing new EIP types or changes to primitive types
 
 - Make required changes to primitive data structures on [alloy](https://github.com/alloy-rs/alloy)
 - All new EIP data structures/constants/helpers etc. go into the `alloy-eips` crate at first.

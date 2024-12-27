@@ -1,5 +1,5 @@
 # Ensures that `Compact` codec changes are backwards compatible.
-# 
+#
 # 1) checkout `main`
 # 2) randomly generate and serialize to disk many different type vectors with `Compact` (eg. Header, Transaction, etc)
 # 3) checkout `pr`
