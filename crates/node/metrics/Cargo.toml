@@ -42,4 +42,4 @@ workspace = true
 jemalloc = ["dep:tikv-jemalloc-ctl"]
 
 [build-dependencies]
-vergen = { version = "8.0.0", features = ["build", "cargo", "git", "gitcl"] }
+vergen = { version = "8.3.2", features = ["build", "cargo", "git", "gitcl"] }

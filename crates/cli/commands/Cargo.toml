@@ -61,7 +61,7 @@ tokio.workspace = true
 
 # misc
 ahash = "0.8"
-human_bytes = "0.4.1"
+human_bytes = "0.4.3"
 eyre.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 serde.workspace = true
@@ -79,8 +79,8 @@ fdlimit.workspace = true
 toml = { workspace = true, features = ["display"] }
 
 # tui
-comfy-table = "7.0"
-crossterm = "0.28.0"
+comfy-table = "7.1"
+crossterm = "0.28.1"
 ratatui = { version = "0.28", default-features = false, features = [
     "crossterm",
 ] }

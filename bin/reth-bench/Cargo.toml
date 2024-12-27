@@ -69,7 +69,7 @@ thiserror.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 
 # for writing data
-csv = "1.3.0"
+csv = "1.3.1"
 
 [dev-dependencies]
 reth-tracing.workspace = true

@@ -413,7 +413,7 @@ impl<N: NetworkPrimitives> NetworkManager<N> {
             client_version: hello_message.client_version,
             protocol_version: hello_message.protocol_version as u64,
             eth_protocol_info: EthProtocolInfo {
-                difficulty: status.total_difficulty,
+                difficulty: Some(status.total_difficulty),
                 head: status.blockhash,
                 network: status.chain.id(),
                 genesis: status.genesis,

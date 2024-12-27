@@ -83,4 +83,4 @@ jemalloc = ["reth-cli-util/jemalloc"]
 asm-keccak = ["reth-primitives/asm-keccak", "alloy-primitives/asm-keccak"]
 
 [build-dependencies]
-vergen = { version = "8.0.0", features = ["build", "cargo", "git", "gitcl"] }
+vergen = { version = "8.3.2", features = ["build", "cargo", "git", "gitcl"] }

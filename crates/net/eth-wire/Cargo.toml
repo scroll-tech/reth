@@ -38,7 +38,7 @@ futures.workspace = true
 tokio-stream.workspace = true
 pin-project.workspace = true
 tracing.workspace = true
-snap = "1.0.5"
+snap = "1.1.1"
 
 # arbitrary utils
 arbitrary = { workspace = true, features = ["derive"], optional = true }

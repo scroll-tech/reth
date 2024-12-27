@@ -88,7 +88,7 @@ alloy-rlp.workspace = true
 
 assert_matches.workspace = true
 criterion.workspace = true
-crossbeam-channel = "0.5.13"
+crossbeam-channel = "0.5.14"
 rand.workspace = true
 
 [[bench]]
