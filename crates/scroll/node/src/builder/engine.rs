@@ -19,7 +19,7 @@ const CLIQUE_IN_TURN_DIFFICULTY: U256 = U256::from_limbs([2, 0, 0, 0]);
 const CLIQUE_NO_TURN_DIFFICULTY: U256 = U256::from_limbs([1, 0, 0, 0]);
 
 /// Builder for [`ScrollEngineValidator`].
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct ScrollEngineValidatorBuilder;
 
 impl<Node, Types> EngineValidatorBuilder<Node> for ScrollEngineValidatorBuilder
