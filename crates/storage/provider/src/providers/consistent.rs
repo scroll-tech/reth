@@ -924,8 +924,7 @@ impl<N: ProviderNodeTypes> TransactionsProvider for ConsistentProvider<N> {
                     .body
                     .transactions()
                     .get(tx_index)
-                    .cloned()
-                    .map(Into::into))
+                    .cloned())
             },
         )
     }
@@ -944,8 +943,7 @@ impl<N: ProviderNodeTypes> TransactionsProvider for ConsistentProvider<N> {
                     .body
                     .transactions()
                     .get(tx_index)
-                    .cloned()
-                    .map(Into::into))
+                    .cloned())
             },
         )
     }

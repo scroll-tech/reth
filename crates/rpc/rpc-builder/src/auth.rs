@@ -77,8 +77,7 @@ impl AuthServerConfig {
             let ipc_server = ipc_server_config.build(ipc_endpoint_str);
             let res = ipc_server
                 .start(module.inner)
-                .await
-                .map_err(reth_ipc::server::IpcServerStartError::from)?;
+                .await?;
             ipc_handle = Some(res);
         }
 

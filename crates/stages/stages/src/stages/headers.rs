@@ -527,7 +527,7 @@ mod tests {
                             // validate the header total difficulty
                             td += header.difficulty;
                             assert_eq!(
-                                provider.header_td_by_number(block_num)?.map(Into::into),
+                                provider.header_td_by_number(block_num)?,
                                 Some(td)
                             );
                         }

@@ -335,8 +335,7 @@ pub trait EthCall: EstimateCall + Call + LoadPendingBlock + LoadBlock + FullEthA
                             tx,
                             &mut db,
                             overrides,
-                        )
-                        .map(Into::into)?;
+                        )?;
                     let (res, _) = this.transact(&mut db, env)?;
 
                     match ensure_success(res.result) {
