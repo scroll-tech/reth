@@ -233,7 +233,10 @@ impl ScrollChainSpec {
             difficulty: self.genesis.difficulty,
             nonce: self.genesis.nonce.into(),
             extra_data: self.genesis.extra_data.clone(),
+            #[cfg(not(feature = "mpt"))]
             state_root: reth_scroll_state_commitment::state_root_ref_unhashed(&self.genesis.alloc),
+            #[cfg(feature = "mpt")]
+            state_root: reth_trie_common::root::state_root_ref_unhashed(&self.genesis.alloc),
             timestamp: self.genesis.timestamp,
             mix_hash: self.genesis.mix_hash,
             beneficiary: self.genesis.coinbase,

@@ -18,8 +18,8 @@ reth-node-builder.workspace = true
 reth-provider.workspace = true
 
 # scroll
-reth-scroll-cli.workspace = true
-reth-scroll-node.workspace = true
+reth-scroll-cli = { workspace = true, features = ["mpt"]}
+reth-scroll-node = { workspace = true, features = ["mpt"] }
 
 # misc
 clap = { workspace = true, features = ["derive", "env"] }

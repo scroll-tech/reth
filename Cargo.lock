@@ -9392,6 +9392,7 @@ dependencies = [
  "reth-primitives-traits",
  "reth-scroll-forks",
  "reth-scroll-state-commitment",
+ "reth-trie-common",
  "serde",
  "serde_json",
 ]

@@ -47,3 +47,4 @@ scroll = [
 	"reth-scroll-evm/scroll",
 	"reth-scroll-node/scroll"
 ]
+mpt = ["reth-scroll-chainspec/mpt"]
