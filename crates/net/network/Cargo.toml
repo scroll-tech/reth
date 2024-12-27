@@ -137,6 +137,13 @@ test-utils = [
 	"reth-primitives-traits/test-utils",
 	"reth-provider/test-utils"
 ]
+scroll = [
+	"reth-chainspec/scroll",
+	"reth-network/scroll",
+	"reth-primitives-traits/scroll",
+	"reth-primitives/scroll",
+	"reth-provider/scroll"
+]
 
 [[bench]]
 name = "broadcast"
