@@ -74,7 +74,10 @@ exclude_crates=(
   reth-scroll-cli # tokio
   reth-scroll-node # tokio
   reth-scroll # tokio
-  reth-scroll-engine # CI fails on tokio but compiles locally
+  reth-scroll-state-commitment # tokio
+  reth-scroll-chainspec # tokio
+  reth-scroll-evm # tokio
+  reth-scroll-engine # tokio
 )
 
 # Array to hold the results
