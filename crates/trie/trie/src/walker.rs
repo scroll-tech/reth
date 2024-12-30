@@ -10,7 +10,7 @@ use reth_trie_common::pack_nibbles;
 #[cfg(feature = "metrics")]
 use crate::metrics::WalkerMetrics;
 
-#[cfg(feature = "scroll")]
+#[cfg(all(feature = "scroll", not(feature = "mpt")))]
 use crate::BitsCompatibility;
 
 /// `TrieWalker` is a structure that enables traversal of a Merkle trie.

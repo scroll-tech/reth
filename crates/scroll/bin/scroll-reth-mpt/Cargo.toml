@@ -18,17 +18,13 @@ reth-node-builder.workspace = true
 reth-provider.workspace = true
 
 # scroll
-reth-scroll-cli = { workspace = true, features = ["mpt"]}
-reth-scroll-node = { workspace = true, features = ["mpt"] }
+reth-scroll-cli = { workspace = true, features = ["mpt", "scroll"] }
+reth-scroll-node = { workspace = true, features = ["mpt", "scroll"] }
 
 # misc
 clap = { workspace = true, features = ["derive", "env"] }
 
 [features]
-scroll = [
-	"reth-provider/scroll",
-	"reth-scroll-cli/scroll",
-]
 skip-state-root-validation = [
 	"reth-node-builder/skip-state-root-validation",
 	"reth-scroll-node/skip-state-root-validation"
