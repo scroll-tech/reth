@@ -207,7 +207,11 @@ mod tests {
     use alloy_consensus::{constants::KECCAK_EMPTY, Header};
     use alloy_eips::eip7685::Requests;
     use alloy_genesis::Genesis;
-    use alloy_primitives::{bytes, Address, LogData, B256, U256};
+    use alloy_primitives::{
+        bytes,
+        map::{HashMap, HashSet},
+        Address, LogData, B256, U256,
+    };
     use reth_chainspec::ChainSpec;
     use reth_evm::execute::ProviderError;
     use reth_execution_types::{
@@ -223,10 +227,7 @@ mod tests {
         JournaledState,
     };
     use revm_primitives::{EnvWithHandlerCfg, HandlerCfg};
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::Arc,
-    };
+    use std::sync::Arc;
 
     fn test_evm_config() -> OpEvmConfig {
         OpEvmConfig::new(BASE_MAINNET.clone())
