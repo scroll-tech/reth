@@ -23,20 +23,20 @@ use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable};
 pub enum ScrollReceiptEnvelope<T = Log> {
     /// Receipt envelope with no type flag.
     #[cfg_attr(feature = "serde", serde(rename = "0x0", alias = "0x00"))]
-    Legacy(ReceiptWithBloom<T>),
+    Legacy(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 1, containing a [EIP-2930] receipt.
     ///
     /// [EIP-2930]: https://eips.ethereum.org/EIPS/eip-2930
     #[cfg_attr(feature = "serde", serde(rename = "0x1", alias = "0x01"))]
-    Eip2930(ReceiptWithBloom<T>),
+    Eip2930(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 2, containing a [EIP-1559] receipt.
     ///
     /// [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
     #[cfg_attr(feature = "serde", serde(rename = "0x2", alias = "0x02"))]
-    Eip1559(ReceiptWithBloom<T>),
+    Eip1559(ReceiptWithBloom<Receipt<T>>),
     /// Receipt envelope with type flag 126, containing a [Scroll-L1-Message] receipt.
     #[cfg_attr(feature = "serde", serde(rename = "0x7e", alias = "0x7E"))]
-    L1Message(ReceiptWithBloom<T>),
+    L1Message(ReceiptWithBloom<Receipt<T>>),
 }
 
 impl ScrollReceiptEnvelope<Log> {
@@ -109,7 +109,7 @@ impl<T> ScrollReceiptEnvelope<T> {
     }
 
     /// Returns the deposit receipt if it is a deposit receipt.
-    pub const fn as_deposit_receipt_with_bloom(&self) -> Option<&ReceiptWithBloom<T>> {
+    pub const fn as_deposit_receipt_with_bloom(&self) -> Option<&ReceiptWithBloom<Receipt<T>>> {
         match self {
             Self::L1Message(t) => Some(t),
             _ => None,
@@ -155,10 +155,12 @@ impl ScrollReceiptEnvelope {
     }
 }
 
-impl<T> TxReceipt<T> for ScrollReceiptEnvelope<T>
+impl<T> TxReceipt for ScrollReceiptEnvelope<T>
 where
     T: Clone + core::fmt::Debug + PartialEq + Eq + Send + Sync,
 {
+    type Log = T;
+
     fn status_or_post_state(&self) -> Eip658Value {
         self.as_receipt().unwrap().status
     }
@@ -260,10 +262,10 @@ where
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         match u.int_in_range(0..=4)? {
-            0 => Ok(Self::Legacy(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            1 => Ok(Self::Eip2930(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            2 => Ok(Self::Eip1559(ReceiptWithBloom::<T>::arbitrary(u)?)),
-            _ => Ok(Self::L1Message(ReceiptWithBloom::<T>::arbitrary(u)?)),
+            0 => Ok(Self::Legacy(ReceiptWithBloom::arbitrary(u)?)),
+            1 => Ok(Self::Eip2930(ReceiptWithBloom::arbitrary(u)?)),
+            2 => Ok(Self::Eip1559(ReceiptWithBloom::arbitrary(u)?)),
+            _ => Ok(Self::L1Message(ReceiptWithBloom::arbitrary(u)?)),
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::{ScrollTxEnvelope, ScrollTxType, TxL1Message};
-use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxLegacy};
+use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxLegacy, Typed2718};
 use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{Address, Bytes, TxKind};
 
@@ -107,6 +107,17 @@ impl ScrollTypedTransaction {
         match self {
             Self::L1Message(tx) => Some(tx),
             _ => None,
+        }
+    }
+}
+
+impl Typed2718 for ScrollTypedTransaction {
+    fn ty(&self) -> u8 {
+        match self {
+            Self::Legacy(_) => ScrollTxType::Legacy as u8,
+            Self::Eip2930(_) => ScrollTxType::Eip2930 as u8,
+            Self::Eip1559(_) => ScrollTxType::Eip1559 as u8,
+            Self::L1Message(_) => ScrollTxType::L1Message as u8,
         }
     }
 }
@@ -220,15 +231,6 @@ impl Transaction for ScrollTypedTransaction {
         }
     }
 
-    fn ty(&self) -> u8 {
-        match self {
-            Self::Legacy(_) => ScrollTxType::Legacy as u8,
-            Self::Eip2930(_) => ScrollTxType::Eip2930 as u8,
-            Self::Eip1559(_) => ScrollTxType::Eip1559 as u8,
-            Self::L1Message(_) => ScrollTxType::L1Message as u8,
-        }
-    }
-
     fn access_list(&self) -> Option<&AccessList> {
         match self {
             Self::Legacy(tx) => tx.access_list(),
@@ -271,6 +273,15 @@ impl Transaction for ScrollTypedTransaction {
             Self::Eip2930(tx) => tx.effective_gas_price(base_fee),
             Self::Eip1559(tx) => tx.effective_gas_price(base_fee),
             Self::L1Message(tx) => tx.effective_gas_price(base_fee),
+        }
+    }
+
+    fn is_create(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.is_create(),
+            Self::Eip2930(tx) => tx.is_create(),
+            Self::Eip1559(tx) => tx.is_create(),
+            Self::L1Message(tx) => tx.is_create(),
         }
     }
 }

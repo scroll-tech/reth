@@ -1,6 +1,7 @@
 //! Scroll L1 message transaction
 
-use alloy_consensus::{Sealable, Transaction};
+use crate::ScrollTxType;
+use alloy_consensus::{Sealable, Transaction, Typed2718};
 use alloy_primitives::{
     keccak256,
     private::alloy_rlp::{Encodable, Header},
@@ -160,6 +161,12 @@ impl TxL1Message {
     }
 }
 
+impl Typed2718 for TxL1Message {
+    fn ty(&self) -> u8 {
+        ScrollTxType::L1Message as u8
+    }
+}
+
 impl Transaction for TxL1Message {
     fn chain_id(&self) -> Option<ChainId> {
         None
@@ -205,16 +212,16 @@ impl Transaction for TxL1Message {
         TxKind::Call(self.to)
     }
 
+    fn is_create(&self) -> bool {
+        false
+    }
+
     fn value(&self) -> U256 {
         self.value
     }
 
     fn input(&self) -> &Bytes {
         &self.input
-    }
-
-    fn ty(&self) -> u8 {
-        L1_MESSAGE_TRANSACTION_TYPE
     }
 
     fn access_list(&self) -> Option<&alloy_eips::eip2930::AccessList> {

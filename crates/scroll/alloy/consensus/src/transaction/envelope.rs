@@ -1,5 +1,6 @@
 use alloy_consensus::{
     transaction::RlpEcdsaTx, Sealable, Sealed, Signed, Transaction, TxEip1559, TxEip2930, TxLegacy,
+    Typed2718,
 };
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
@@ -68,6 +69,17 @@ impl From<TxL1Message> for ScrollTxEnvelope {
 impl From<Sealed<TxL1Message>> for ScrollTxEnvelope {
     fn from(v: Sealed<TxL1Message>) -> Self {
         Self::L1Message(v)
+    }
+}
+
+impl Typed2718 for ScrollTxEnvelope {
+    fn ty(&self) -> u8 {
+        match self {
+            Self::Legacy(tx) => tx.tx().ty(),
+            Self::Eip2930(tx) => tx.tx().ty(),
+            Self::Eip1559(tx) => tx.tx().ty(),
+            Self::L1Message(tx) => tx.ty(),
+        }
     }
 }
 
@@ -180,15 +192,6 @@ impl Transaction for ScrollTxEnvelope {
         }
     }
 
-    fn ty(&self) -> u8 {
-        match self {
-            Self::Legacy(tx) => tx.tx().ty(),
-            Self::Eip2930(tx) => tx.tx().ty(),
-            Self::Eip1559(tx) => tx.tx().ty(),
-            Self::L1Message(tx) => tx.ty(),
-        }
-    }
-
     fn access_list(&self) -> Option<&AccessList> {
         match self {
             Self::Legacy(tx) => tx.tx().access_list(),
@@ -231,6 +234,15 @@ impl Transaction for ScrollTxEnvelope {
             Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
             Self::L1Message(tx) => tx.effective_gas_price(base_fee),
+        }
+    }
+
+    fn is_create(&self) -> bool {
+        match self {
+            Self::Legacy(tx) => tx.tx().is_create(),
+            Self::Eip2930(tx) => tx.tx().is_create(),
+            Self::Eip1559(tx) => tx.tx().is_create(),
+            Self::L1Message(tx) => tx.is_create(),
         }
     }
 }
