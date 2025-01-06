@@ -29,6 +29,8 @@ use std::sync::LazyLock;
 
 extern crate alloc;
 
+use reth_scroll_state_commitment as _;
+
 mod constants;
 pub use constants::{
     SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
