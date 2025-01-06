@@ -23,8 +23,11 @@ jobs:
           - type: optimism
             args: --bin op-reth --workspace --lib --examples --tests --benches --locked
             features: "optimism asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
-          - type: scroll
+          - type: scroll-bmpt
             args: --bin scroll-reth --workspace --lib --examples --tests --benches --locked
+            features: "scroll asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
+          - type: scroll-mpt
+            args: --bin scroll-reth-mpt --workspace --lib --examples --tests --benches --locked
             features: "scroll asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
           - type: book
             args: --manifest-path book/sources/Cargo.toml --workspace --bins
@@ -78,6 +81,22 @@ jobs:
       - name: Run Wasm checks
         run: .github/assets/check_wasm.sh
 
+  riscv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: riscv32imac-unknown-none-elf
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - uses: dcarbone/install-jq-action@v3
+      - name: Run RISC-V checks
+        run: .github/assets/check_rv32imac.sh
+
   crate-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -88,8 +107,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo hack check --workspace --exclude op-reth --exclude scroll-reth
+      - run: cargo hack check --workspace --exclude op-reth --exclude scroll-reth --exclude scroll-reth-mpt
       - run: cargo check -p op-reth --features "optimism"
+      - run: cargo check -p scroll-reth --features "scroll"
+      - run: cargo check -p scroll-reth-mpt --features "scroll"
 
   msrv:
     name: MSRV / ${{ matrix.network }}
@@ -161,8 +182,8 @@ jobs:
           cargo udeps --workspace --lib --examples --tests --benches --all-features --locked \
             --exclude "reth-optimism-*" --exclude op-reth --exclude "example-*" --exclude reth \
             --exclude reth-e2e-test-utils --exclude reth-ethereum-payload-builder --exclude reth-exex-test-utils \
-            --exclude reth-node-ethereum --exclude scroll-reth --exclude reth-scroll-cli --exclude reth-scroll-evm \
-            --exclude reth-scroll-node
+            --exclude reth-node-ethereum --exclude reth-scroll-cli --exclude reth-scroll-evm \
+            --exclude reth-scroll-node --exclude "scroll-reth*" --exclude reth-scroll-engine
 
   book:
     name: book
@@ -216,7 +237,7 @@ jobs:
   features:
     name: features
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@clippy
@@ -245,6 +266,9 @@ jobs:
           zepter --version
           time zepter run check
 
+  deny:
+    uses: ithacaxyz/ci/.github/workflows/deny.yml@main
+
   lint-success:
     name: lint success
     runs-on: ubuntu-latest
@@ -263,6 +287,7 @@ jobs:
       - no-test-deps
       - features
       - feature-propagation
+      - deny
     timeout-minutes: 30
     steps:
       - name: Decide whether the needed jobs succeeded or failed

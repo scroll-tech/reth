@@ -19,20 +19,24 @@ reth-ethereum-engine-primitives.workspace = true
 reth-ethereum-forks.workspace = true
 reth-evm.workspace = true
 reth-network.workspace = true
+reth-node-api.workspace = true
 reth-node-types.workspace = true
 reth-node-builder.workspace = true
 reth-payload-builder = { workspace = true, features = ["test-utils"] }
 reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
 reth-provider.workspace = true
 reth-rpc.workspace = true
 reth-tracing.workspace = true
 reth-transaction-pool.workspace = true
+reth-trie-db.workspace = true
 
 # alloy
 alloy-rpc-types-engine.workspace = true
 
 # scroll
 reth-scroll-chainspec.workspace = true
+reth-scroll-engine.workspace = true
 reth-scroll-evm.workspace = true
 reth-scroll-state-commitment.workspace = true
 
@@ -41,14 +45,14 @@ alloy-primitives.workspace = true
 
 # misc
 eyre.workspace = true
-tokio.workspace = true
 
 [features]
 optimism = [
 	"reth-db/optimism",
 	"reth-primitives/optimism",
 	"reth-provider/optimism",
-	"reth-scroll-evm/optimism"
+	"reth-scroll-evm/optimism",
+	"reth-scroll-engine/optimism"
 ]
 scroll = [
 	"reth-db/scroll",
@@ -58,4 +62,6 @@ scroll = [
 	"reth-evm/scroll",
 	"reth-scroll-state-commitment/scroll",
 	"reth-scroll-evm/scroll",
+	"reth-scroll-engine/scroll"
 ]
+skip-state-root-validation = []

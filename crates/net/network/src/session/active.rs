@@ -23,7 +23,8 @@ use alloy_primitives::Sealable;
 use futures::{stream::Fuse, SinkExt, StreamExt};
 use metrics::Gauge;
 use reth_eth_wire::{
-    errors::{EthHandshakeError, EthStreamError, P2PStreamError},
+    capability::RawCapabilityMessage,
+    errors::{EthHandshakeError, EthStreamError},
     message::{EthBroadcastMessage, RequestPair},
     Capabilities, DisconnectP2P, DisconnectReason, EthMessage, NetworkPrimitives,
 };
@@ -278,6 +279,7 @@ impl<N: NetworkPrimitives> ActiveSession<N> {
             }
             PeerMessage::Other(other) => {
                 debug!(target: "net::session", message_id=%other.id, "Ignoring unsupported message");
+                self.queued_outgoing.push_back(OutgoingMessage::Raw(other));
             }
         }
     }
@@ -388,11 +390,7 @@ impl<N: NetworkPrimitives> ActiveSession<N> {
 
     /// Starts the disconnect process
     fn start_disconnect(&mut self, reason: DisconnectReason) -> Result<(), EthStreamError> {
-        self.conn
-            .inner_mut()
-            .start_disconnect(reason)
-            .map_err(P2PStreamError::from)
-            .map_err(Into::into)
+        self.conn.inner_mut().start_disconnect(reason).map_err(Into::into)
     }
 
     /// Flushes the disconnect message and emits the corresponding message
@@ -559,6 +557,7 @@ impl<N: NetworkPrimitives> Future for ActiveSession<N> {
                     let res = match msg {
                         OutgoingMessage::Eth(msg) => this.conn.start_send_unpin(msg),
                         OutgoingMessage::Broadcast(msg) => this.conn.start_send_broadcast(msg),
+                        OutgoingMessage::Raw(msg) => this.conn.start_send_raw(msg),
                     };
                     if let Err(err) = res {
                         debug!(target: "net::session", %err, remote_peer_id=?this.remote_peer_id, "failed to send message");
@@ -738,6 +737,8 @@ pub(crate) enum OutgoingMessage<N: NetworkPrimitives> {
     Eth(EthMessage<N>),
     /// A message that may be shared by multiple sessions.
     Broadcast(EthBroadcastMessage<N>),
+    /// A raw capability message
+    Raw(RawCapabilityMessage),
 }
 
 impl<N: NetworkPrimitives> From<EthMessage<N>> for OutgoingMessage<N> {
@@ -839,7 +840,7 @@ mod tests {
             f: F,
         ) -> Pin<Box<dyn Future<Output = ()> + Send>>
         where
-            F: FnOnce(EthStream<P2PStream<ECIESStream<TcpStream>>>) -> O + Send + 'static,
+            F: FnOnce(EthStream<P2PStream<ECIESStream<TcpStream>>, N>) -> O + Send + 'static,
             O: Future<Output = ()> + Send + Sync,
         {
             let status = self.status;

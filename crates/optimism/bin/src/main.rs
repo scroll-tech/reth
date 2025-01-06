@@ -1,20 +1,18 @@
 #![allow(missing_docs, rustdoc::missing_crate_level_docs)]
 #![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
-// The `optimism` feature must be enabled to use this crate.
-#![cfg(all(feature = "optimism", not(feature = "scroll")))]
-
-use clap::Parser;
-use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher};
-use reth_optimism_cli::{chainspec::OpChainSpecParser, Cli};
-use reth_optimism_node::{args::RollupArgs, node::OpAddOns, OpNode};
-use reth_provider::providers::BlockchainProvider2;
-
-use tracing as _;
 
 #[global_allocator]
 static ALLOC: reth_cli_util::allocator::Allocator = reth_cli_util::allocator::new_allocator();
 
+// The `optimism` feature must be enabled to use this crate.
+#[cfg(all(feature = "optimism", not(feature = "scroll")))]
 fn main() {
+    use clap::Parser;
+    use reth_node_builder::{engine_tree_config::TreeConfig, EngineNodeLauncher, Node};
+    use reth_optimism_cli::{chainspec::OpChainSpecParser, Cli};
+    use reth_optimism_node::{args::RollupArgs, OpNode};
+    use reth_provider::providers::BlockchainProvider2;
+    use tracing as _;
     reth_cli_util::sigsegv_handler::install();
 
     // Enable backtraces unless a RUST_BACKTRACE value has already been explicitly provided.
@@ -28,16 +26,17 @@ fn main() {
                 tracing::warn!(target: "reth::cli", "Experimental engine is default now, and the --engine.experimental flag is deprecated. To enable the legacy functionality, use --engine.legacy.");
             }
             let use_legacy_engine = rollup_args.legacy;
-            let sequencer_http_arg = rollup_args.sequencer_http.clone();
             match use_legacy_engine {
                 false => {
                     let engine_tree_config = TreeConfig::default()
                         .with_persistence_threshold(rollup_args.persistence_threshold)
                         .with_memory_block_buffer_target(rollup_args.memory_block_buffer_target);
+
+                    let op_node = OpNode::new(rollup_args.clone());
                     let handle = builder
                         .with_types_and_provider::<OpNode, BlockchainProvider2<_>>()
-                        .with_components(OpNode::components(rollup_args))
-                        .with_add_ons(OpAddOns::new(sequencer_http_arg))
+                        .with_components(op_node.components())
+                        .with_add_ons(op_node.add_ons())
                         .launch_with_fn(|builder| {
                             let launcher = EngineNodeLauncher::new(
                                 builder.task_executor().clone(),
@@ -62,4 +61,10 @@ fn main() {
         eprintln!("Error: {err:?}");
         std::process::exit(1);
     }
+}
+
+#[cfg(not(all(feature = "optimism", not(feature = "scroll"))))]
+fn main() {
+    eprintln!("Optimism feature is not enabled");
+    std::process::exit(1);
 }

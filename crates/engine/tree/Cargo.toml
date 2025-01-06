@@ -26,6 +26,7 @@ reth-payload-builder-primitives.workspace = true
 reth-payload-builder.workspace = true
 reth-payload-primitives.workspace = true
 reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
 reth-provider.workspace = true
 reth-prune.workspace = true
 reth-revm.workspace = true
@@ -38,6 +39,7 @@ reth-trie-sparse.workspace = true
 reth-trie.workspace = true
 
 # scroll
+reth-scroll-state-commitment = { workspace = true, optional = true }
 reth-scroll-storage = { workspace = true, optional = true }
 
 # alloy
@@ -97,6 +99,10 @@ rand.workspace = true
 name = "channel_perf"
 harness = false
 
+[[bench]]
+name = "state_root_task"
+harness = false
+
 [features]
 test-utils = [
     "reth-blockchain-tree/test-utils",
@@ -108,6 +114,7 @@ test-utils = [
     "reth-network-p2p/test-utils",
     "reth-payload-builder/test-utils",
     "reth-primitives/test-utils",
+    "reth-primitives-traits/test-utils",
     "reth-provider/test-utils",
     "reth-prune-types",
     "reth-prune-types?/test-utils",
@@ -119,8 +126,13 @@ test-utils = [
     "reth-trie/test-utils",
     "reth-prune-types?/test-utils",
     "reth-trie-db/test-utils",
+    "reth-scroll-state-commitment?/test-utils"
 ]
 scroll = [
     "reth-scroll-primitives",
-    "reth-scroll-storage/scroll"
+    "reth-scroll-storage/scroll",
+    "reth-scroll-state-commitment/scroll"
+]
+skip-state-root-validation = [
+    "reth-stages/skip-state-root-validation"
 ]

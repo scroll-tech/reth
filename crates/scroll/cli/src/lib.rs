@@ -12,9 +12,10 @@ pub use spec::ScrollChainSpecParser;
 
 use clap::{value_parser, Parser};
 use reth_cli::chainspec::ChainSpecParser;
-use reth_cli_commands::node::NoArgs;
+use reth_cli_commands::{common::CliNodeTypes, node::NoArgs};
 use reth_cli_runner::CliRunner;
 use reth_db::DatabaseEnv;
+use reth_eth_wire::EthNetworkPrimitives;
 use reth_node_builder::{NodeBuilder, WithLaunchContext};
 use reth_node_core::{
     args::LogArgs,
@@ -23,7 +24,6 @@ use reth_node_core::{
 use reth_node_metrics::recorder::install_prometheus_recorder;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_evm::ScrollExecutorProvider;
-use reth_scroll_node::ScrollNode;
 use reth_tracing::FileWorkerGuard;
 use std::{ffi::OsString, fmt, future::Future, sync::Arc};
 use tracing::info;
@@ -99,10 +99,11 @@ where
     ///
     /// This accepts a closure that is used to launch the node via the
     /// [`NodeCommand`](reth_cli_commands::node::NodeCommand).
-    pub fn run<L, Fut>(mut self, launcher: L) -> eyre::Result<()>
+    pub fn run<L, Fut, Types>(mut self, launcher: L) -> eyre::Result<()>
     where
         L: FnOnce(WithLaunchContext<NodeBuilder<Arc<DatabaseEnv>, C::ChainSpec>>, Ext) -> Fut,
         Fut: Future<Output = eyre::Result<()>>,
+        Types: CliNodeTypes<ChainSpec = C::ChainSpec>,
     {
         // add network name to logs dir
         self.logs.log_file_directory =
@@ -119,28 +120,29 @@ where
             Commands::Node(command) => {
                 runner.run_command_until_exit(|ctx| command.execute(ctx, launcher))
             }
-            Commands::Init(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
-            }
+            Commands::Init(command) => runner.run_blocking_until_ctrl_c(command.execute::<Types>()),
             Commands::InitState(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+                runner.run_blocking_until_ctrl_c(command.execute::<Types>())
             }
             Commands::Import(command) => runner.run_blocking_until_ctrl_c(
-                command.execute::<ScrollNode, _, _>(ScrollExecutorProvider::scroll),
+                command.execute::<Types, _, _>(ScrollExecutorProvider::scroll),
             ),
             Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
-            Commands::Db(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
-            }
+            Commands::Db(command) => runner.run_blocking_until_ctrl_c(command.execute::<Types>()),
             Commands::Stage(command) => runner.run_command_until_exit(|ctx| {
-                command.execute::<ScrollNode, _, _>(ctx, ScrollExecutorProvider::scroll)
+                command.execute::<Types, _, _, EthNetworkPrimitives>(
+                    ctx,
+                    ScrollExecutorProvider::scroll,
+                )
             }),
-            Commands::P2P(command) => runner.run_until_ctrl_c(command.execute()),
+            Commands::P2P(command) => {
+                runner.run_until_ctrl_c(command.execute::<EthNetworkPrimitives>())
+            }
             Commands::Config(command) => runner.run_until_ctrl_c(command.execute()),
             Commands::Recover(command) => {
-                runner.run_command_until_exit(|ctx| command.execute::<ScrollNode>(ctx))
+                runner.run_command_until_exit(|ctx| command.execute::<Types>(ctx))
             }
-            Commands::Prune(command) => runner.run_until_ctrl_c(command.execute::<ScrollNode>()),
+            Commands::Prune(command) => runner.run_until_ctrl_c(command.execute::<Types>()),
         }
     }
 
