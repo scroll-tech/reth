@@ -526,7 +526,6 @@ impl<N: NetworkPrimitives> NetworkManager<N> {
     /// Depending on the mode of the network:
     ///    - disconnect peer if in POS
     ///    - execute the closure if in POW
-    #[cfg(not(feature = "scroll"))]
     fn within_pow_or_disconnect<F>(&mut self, peer_id: PeerId, only_pow: F)
     where
         F: FnOnce(&mut Self),
@@ -543,22 +542,15 @@ impl<N: NetworkPrimitives> NetworkManager<N> {
     }
 
     /// Handles a received Message from the peer's session.
-    #[allow(clippy::needless_pass_by_ref_mut)]
     fn on_peer_message(&mut self, peer_id: PeerId, msg: PeerMessage<N>) {
         match msg {
             PeerMessage::NewBlockHashes(hashes) => {
-                #[cfg(feature = "scroll")]
-                debug!(target: "net", ?hashes, "incoming NewBlockHashes peer message");
-                #[cfg(not(feature = "scroll"))]
                 self.within_pow_or_disconnect(peer_id, |this| {
                     // update peer's state, to track what blocks this peer has seen
                     this.swarm.state_mut().on_new_block_hashes(peer_id, hashes.0)
                 })
             }
             PeerMessage::NewBlock(block) => {
-                #[cfg(feature = "scroll")]
-                debug!(target: "net", hash = ?block.hash, "incoming NewBlock peer message");
-                #[cfg(not(feature = "scroll"))]
                 self.within_pow_or_disconnect(peer_id, move |this| {
                     this.swarm.state_mut().on_new_block(peer_id, block.hash);
                     // start block import process

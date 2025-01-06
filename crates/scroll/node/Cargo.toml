@@ -63,6 +63,5 @@ scroll = [
 	"reth-scroll-state-commitment/scroll",
 	"reth-scroll-evm/scroll",
 	"reth-scroll-engine/scroll",
-	"reth-network/scroll"
 ]
 skip-state-root-validation = []
