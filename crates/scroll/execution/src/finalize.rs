@@ -76,7 +76,7 @@ impl<DB: EvmStateProvider> FinalizeExecution for State<&mut StateProviderDatabas
     }
 }
 
-#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+#[cfg(any(not(feature = "scroll"), feature = "mpt", feature = "test-utils"))]
 impl<DB: DatabaseRef> FinalizeExecution for State<CacheDB<DB>> {
     type Output = reth_revm::db::BundleState;
 
