@@ -16,16 +16,16 @@ workspace = true
 features = ["serde"]
 
 [dependencies.alloy-consensus]
-version = "0.6.4"
+version = "0.8.3"
 default-features = false
 
 [dependencies.alloy-eips]
-version = "0.6.4"
+version = "0.8.3"
 features = ["serde"]
 default-features = false
 
 [dependencies.alloy-network-primitives]
-version = "0.6.4"
+version = "0.8.3"
 default-features = false
 
 [dependencies.alloy-primitives]
@@ -38,12 +38,12 @@ features = [
 default-features = false
 
 [dependencies.alloy-rpc-types-eth]
-version = "0.6.4"
+version = "0.8.3"
 features = ["serde"]
 default-features = false
 
 [dependencies.alloy-serde]
-version = "0.6.4"
+version = "0.8.3"
 default-features = false
 
 [dependencies.arbitrary]
@@ -73,7 +73,7 @@ features = ["alloc"]
 default-features = false
 
 [dev-dependencies.alloy-consensus]
-version = "0.6.4"
+version = "0.8.3"
 features = ["arbitrary"]
 default-features = false
 
@@ -83,7 +83,7 @@ features = ["arbitrary"]
 default-features = false
 
 [dev-dependencies.alloy-rpc-types-eth]
-version = "0.6.4"
+version = "0.8.3"
 features = ["arbitrary"]
 default-features = false
 

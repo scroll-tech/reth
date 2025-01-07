@@ -1,20 +1,21 @@
-use alloy_consensus::Header;
 use alloy_primitives::{TxKind, U256};
 use alloy_rpc_types_eth::transaction::TransactionRequest;
 use reth_evm::ConfigureEvm;
+use reth_provider::ProviderHeader;
 use reth_rpc_eth_api::{
-    helpers::{estimate::EstimateCall, Call, EthCall, LoadPendingBlock, LoadState, SpawnBlocking},
-    FromEthApiError, IntoEthApiError, RpcNodeCore,
+    helpers::{estimate::EstimateCall, Call, EthCall, LoadBlock, LoadState, SpawnBlocking},
+    FromEthApiError, FullEthApiTypes, IntoEthApiError,
 };
 use reth_rpc_eth_types::{revm_utils::CallFees, RpcInvalidTransactionError};
 use revm::primitives::{BlockEnv, ScrollFields, TxEnv};
 
+use super::ScrollNodeCore;
 use crate::{ScrollEthApi, ScrollEthApiError};
 
 impl<N> EthCall for ScrollEthApi<N>
 where
-    Self: EstimateCall + LoadPendingBlock,
-    N: RpcNodeCore,
+    Self: EstimateCall + LoadBlock + FullEthApiTypes,
+    N: ScrollNodeCore,
 {
 }
 
@@ -22,24 +23,24 @@ impl<N> EstimateCall for ScrollEthApi<N>
 where
     Self: Call,
     Self::Error: From<ScrollEthApiError>,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
 }
 
 impl<N> Call for ScrollEthApi<N>
 where
-    Self: LoadState<Evm: ConfigureEvm<Header = Header>> + SpawnBlocking,
+    Self: LoadState<Evm: ConfigureEvm<Header = ProviderHeader<Self::Provider>>> + SpawnBlocking,
     Self::Error: From<ScrollEthApiError>,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     #[inline]
     fn call_gas_limit(&self) -> u64 {
-        self.inner.gas_cap()
+        self.inner.eth_api.gas_cap()
     }
 
     #[inline]
     fn max_simulate_blocks(&self) -> u64 {
-        self.inner.max_simulate_blocks()
+        self.inner.eth_api.max_simulate_blocks()
     }
 
     fn create_txn_env(

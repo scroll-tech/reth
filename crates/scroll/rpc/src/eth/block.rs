@@ -1,28 +1,32 @@
 //! Loads and formats Scroll block RPC response.
 
-use alloy_rpc_types_eth::BlockId;
+use alloy_consensus::BlockHeader;
+use alloy_rpc_types_eth::{BlockId, TransactionReceipt};
 use reth_chainspec::ChainSpecProvider;
-use reth_primitives::TransactionMeta;
-use reth_provider::HeaderProvider;
+use reth_node_api::BlockBody;
+use reth_primitives::{Receipt, TransactionMeta, TransactionSigned};
+use reth_provider::{BlockReader, HeaderProvider};
 use reth_rpc_eth_api::{
     helpers::{EthBlocks, LoadBlock, LoadPendingBlock, LoadReceipt, SpawnBlocking},
-    RpcNodeCore, RpcReceipt,
+    RpcReceipt,
 };
-use reth_rpc_eth_types::EthReceiptBuilder;
-use reth_scroll_chainspec::ScrollChainSpec;
-
+use reth_rpc_eth_types::{EthApiError, EthReceiptBuilder};
 use scroll_alloy_network::Network;
-use scroll_alloy_rpc_types::ScrollTransactionReceipt;
 
-use crate::{ScrollEthApi, ScrollEthApiError};
+use reth_scroll_chainspec::ScrollChainSpec;
+// use scroll_alloy_rpc_types::ScrollTransactionReceipt;
+
+// use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
+use crate::{eth::ScrollNodeCore, ScrollEthApi};
 
 impl<N> EthBlocks for ScrollEthApi<N>
 where
     Self: LoadBlock<
-        Error = ScrollEthApiError,
-        NetworkTypes: Network<ReceiptResponse = ScrollTransactionReceipt>,
+        Error = EthApiError,
+        NetworkTypes: Network<ReceiptResponse = TransactionReceipt>,
+        Provider: BlockReader<Receipt = Receipt, Transaction = TransactionSigned>,
     >,
-    N: RpcNodeCore<Provider: ChainSpecProvider<ChainSpec = ScrollChainSpec> + HeaderProvider>,
+    N: ScrollNodeCore<Provider: ChainSpecProvider<ChainSpec = ScrollChainSpec> + HeaderProvider>,
 {
     async fn block_receipts(
         &self,
@@ -32,19 +36,19 @@ where
         Self: LoadReceipt,
     {
         if let Some((block, receipts)) = self.load_block_and_receipts(block_id).await? {
-            let block_number = block.number;
-            let base_fee = block.base_fee_per_gas;
+            let block_number = block.number();
+            let base_fee = block.base_fee_per_gas();
             let block_hash = block.hash();
-            let excess_blob_gas = block.excess_blob_gas;
-            let timestamp = block.timestamp;
+            let excess_blob_gas = block.excess_blob_gas();
+            let timestamp = block.timestamp();
 
             return block
                 .body
-                .transactions
-                .into_iter()
+                .transactions()
+                .iter()
                 .zip(receipts.iter())
                 .enumerate()
-                .map(|(idx, (ref tx, receipt))| -> Result<_, _> {
+                .map(|(idx, (tx, receipt))| -> Result<_, _> {
                     let meta = TransactionMeta {
                         tx_hash: tx.hash(),
                         index: idx as u64,
@@ -54,8 +58,7 @@ where
                         excess_blob_gas,
                         timestamp,
                     };
-
-                    EthReceiptBuilder::new(&tx, meta, receipt, &receipts)
+                    EthReceiptBuilder::new(tx, meta, receipt, &receipts)
                         .map(|builder| builder.build())
                 })
                 .collect::<Result<Vec<_>, Self::Error>>()
@@ -69,6 +72,6 @@ where
 impl<N> LoadBlock for ScrollEthApi<N>
 where
     Self: LoadPendingBlock + SpawnBlocking,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
 }

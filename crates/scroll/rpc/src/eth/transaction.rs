@@ -5,31 +5,33 @@ use alloy_primitives::{Sealable, Sealed};
 use alloy_rpc_types_eth::{Transaction, TransactionInfo};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
-use reth_provider::{BlockReaderIdExt, ReceiptProvider, TransactionsProvider};
+use reth_provider::{
+    BlockReader, BlockReaderIdExt, ProviderTx, ReceiptProvider, TransactionsProvider,
+};
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    FullEthApiTypes, RpcNodeCore, TransactionCompat,
+    FullEthApiTypes, RpcNodeCoreExt, TransactionCompat,
 };
 use reth_transaction_pool::TransactionPool;
 
 use scroll_alloy_consensus::ScrollTxEnvelope;
 
-use crate::{ScrollEthApi, ScrollEthApiError};
+use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
 
 impl<N> EthTransactions for ScrollEthApi<N>
 where
     Self: LoadTransaction<Provider: BlockReaderIdExt>,
-    N: RpcNodeCore,
+    N: ScrollNodeCore<Provider: BlockReader<Transaction = ProviderTx<Self::Provider>>>,
 {
-    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner>>> {
-        self.inner.signers()
+    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
+        self.inner.eth_api.signers()
     }
 }
 
 impl<N> LoadTransaction for ScrollEthApi<N>
 where
-    Self: SpawnBlocking + FullEthApiTypes,
-    N: RpcNodeCore<Provider: TransactionsProvider, Pool: TransactionPool>,
+    Self: SpawnBlocking + FullEthApiTypes + RpcNodeCoreExt,
+    N: ScrollNodeCore<Provider: TransactionsProvider, Pool: TransactionPool>,
     Self::Pool: TransactionPool,
 {
 }

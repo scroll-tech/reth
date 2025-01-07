@@ -1,9 +1,7 @@
 //! Scroll-Reth `eth_` endpoint implementation.
 
-use derive_more::Deref;
 use std::{fmt, sync::Arc};
 
-use alloy_consensus::Header;
 use alloy_primitives::U256;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_evm::ConfigureEvm;
@@ -12,7 +10,8 @@ use reth_node_builder::EthApiBuilderCtx;
 use reth_primitives::EthPrimitives;
 use reth_provider::{
     BlockNumReader, BlockReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider,
-    EvmEnvProvider, StageCheckpointReader, StateProviderFactory,
+    EvmEnvProvider, ProviderBlock, ProviderHeader, ProviderReceipt, ProviderTx,
+    StageCheckpointReader, StateProviderFactory,
 };
 use reth_rpc::eth::{core::EthApiInner, DevSigner};
 use reth_rpc_eth_api::{
@@ -47,6 +46,10 @@ pub type EthApiNodeBackend<N> = EthApiInner<
     <N as RpcNodeCore>::Evm,
 >;
 
+/// A helper trait with requirements for [`RpcNodeCore`] to be used in [`ScrollEthApi`].
+pub trait ScrollNodeCore: RpcNodeCore<Provider: BlockReader> {}
+impl<T> ScrollNodeCore for T where T: RpcNodeCore<Provider: BlockReader> {}
+
 /// Scroll-Reth `Eth` API implementation.
 ///
 /// This type provides the functionality for handling `eth_` related requests.
@@ -57,16 +60,15 @@ pub type EthApiNodeBackend<N> = EthApiInner<
 ///
 /// This type implements the [`FullEthApi`](reth_rpc_eth_api::helpers::FullEthApi) by implemented
 /// all the `Eth` helper traits and prerequisite traits.
-#[derive(Deref, Clone)]
-pub struct ScrollEthApi<N: RpcNodeCore> {
+#[derive(Clone)]
+pub struct ScrollEthApi<N: ScrollNodeCore> {
     /// Gateway to node's core components.
-    #[deref]
-    inner: Arc<EthApiNodeBackend<N>>,
+    inner: Arc<ScrollEthApiInner<N>>,
 }
 
 impl<N> ScrollEthApi<N>
 where
-    N: RpcNodeCore<
+    N: ScrollNodeCore<
         Provider: BlockReaderIdExt
                       + ChainSpecProvider
                       + CanonStateSubscriptions<Primitives = EthPrimitives>
@@ -102,7 +104,7 @@ where
 impl<N> EthApiTypes for ScrollEthApi<N>
 where
     Self: Send + Sync,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     type Error = ScrollEthApiError;
     type NetworkTypes = Scroll;
@@ -115,7 +117,7 @@ where
 
 impl<N> RpcNodeCore for ScrollEthApi<N>
 where
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     type Provider = N::Provider;
     type Pool = N::Pool;
@@ -125,17 +127,17 @@ where
 
     #[inline]
     fn pool(&self) -> &Self::Pool {
-        self.inner.pool()
+        self.inner.eth_api.pool()
     }
 
     #[inline]
     fn evm_config(&self) -> &Self::Evm {
-        self.inner.evm_config()
+        self.inner.eth_api.evm_config()
     }
 
     #[inline]
     fn network(&self) -> &Self::Network {
-        self.inner.network()
+        self.inner.eth_api.network()
     }
 
     #[inline]
@@ -145,65 +147,67 @@ where
 
     #[inline]
     fn provider(&self) -> &Self::Provider {
-        self.inner.provider()
+        self.inner.eth_api.provider()
     }
 }
 
 impl<N> RpcNodeCoreExt for ScrollEthApi<N>
 where
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     #[inline]
-    fn cache(&self) -> &EthStateCache {
-        self.inner.cache()
+    fn cache(&self) -> &EthStateCache<ProviderBlock<N::Provider>, ProviderReceipt<N::Provider>> {
+        self.inner.eth_api.cache()
     }
 }
 
 impl<N> EthApiSpec for ScrollEthApi<N>
 where
-    N: RpcNodeCore<
+    N: ScrollNodeCore<
         Provider: ChainSpecProvider<ChainSpec: EthereumHardforks>
                       + BlockNumReader
                       + StageCheckpointReader,
         Network: NetworkInfo,
     >,
 {
+    type Transaction = ProviderTx<Self::Provider>;
+
     #[inline]
     fn starting_block(&self) -> U256 {
-        self.inner.starting_block()
+        self.inner.eth_api.starting_block()
     }
 
     #[inline]
-    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner>>> {
-        self.inner.signers()
+    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
+        self.inner.eth_api.signers()
     }
 }
 
 impl<N> SpawnBlocking for ScrollEthApi<N>
 where
     Self: Send + Sync + Clone + 'static,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     #[inline]
     fn io_task_spawner(&self) -> impl TaskSpawner {
-        self.inner.task_spawner()
+        self.inner.eth_api.task_spawner()
     }
 
     #[inline]
     fn tracing_task_pool(&self) -> &BlockingTaskPool {
-        self.inner.blocking_task_pool()
+        self.inner.eth_api.blocking_task_pool()
     }
 
     #[inline]
     fn tracing_task_guard(&self) -> &BlockingTaskGuard {
-        self.inner.blocking_task_guard()
+        self.inner.eth_api.blocking_task_guard()
     }
 }
 
 impl<N> LoadFee for ScrollEthApi<N>
 where
     Self: LoadBlock<Provider = N::Provider>,
-    N: RpcNodeCore<
+    N: ScrollNodeCore<
         Provider: BlockReaderIdExt
                       + EvmEnvProvider
                       + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
@@ -212,17 +216,17 @@ where
 {
     #[inline]
     fn gas_oracle(&self) -> &GasPriceOracle<Self::Provider> {
-        self.inner.gas_oracle()
+        self.inner.eth_api.gas_oracle()
     }
 
     #[inline]
     fn fee_history_cache(&self) -> &FeeHistoryCache {
-        self.inner.fee_history_cache()
+        self.inner.eth_api.fee_history_cache()
     }
 }
 
 impl<N> LoadState for ScrollEthApi<N> where
-    N: RpcNodeCore<
+    N: ScrollNodeCore<
         Provider: StateProviderFactory + ChainSpecProvider<ChainSpec: EthereumHardforks>,
         Pool: TransactionPool,
     >
@@ -232,39 +236,52 @@ impl<N> LoadState for ScrollEthApi<N> where
 impl<N> EthState for ScrollEthApi<N>
 where
     Self: LoadState + SpawnBlocking,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     #[inline]
     fn max_proof_window(&self) -> u64 {
-        self.inner.eth_proof_window()
+        self.inner.eth_api.eth_proof_window()
     }
 }
 
 impl<N> EthFees for ScrollEthApi<N>
 where
     Self: LoadFee,
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
 }
 
 impl<N> Trace for ScrollEthApi<N>
 where
-    Self: RpcNodeCore<Provider: BlockReader> + LoadState<Evm: ConfigureEvm<Header = Header>>,
-    N: RpcNodeCore,
+    Self: RpcNodeCore<Provider: BlockReader>
+        + LoadState<
+            Evm: ConfigureEvm<
+                Header = ProviderHeader<Self::Provider>,
+                Transaction = ProviderTx<Self::Provider>,
+            >,
+        >,
+    N: ScrollNodeCore,
 {
 }
 
 impl<N> AddDevSigners for ScrollEthApi<N>
 where
-    N: RpcNodeCore,
+    N: ScrollNodeCore,
 {
     fn with_dev_accounts(&self) {
-        *self.inner.signers().write() = DevSigner::random_signers(20)
+        *self.inner.eth_api.signers().write() = DevSigner::random_signers(20)
     }
 }
 
-impl<N: RpcNodeCore> fmt::Debug for ScrollEthApi<N> {
+impl<N: ScrollNodeCore> fmt::Debug for ScrollEthApi<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ScrollEthApi").finish_non_exhaustive()
     }
+}
+
+/// Container type `ScrollEthApi`
+#[allow(missing_debug_implementations)]
+struct ScrollEthApiInner<N: ScrollNodeCore> {
+    /// Gateway to node's core components.
+    eth_api: EthApiNodeBackend<N>,
 }

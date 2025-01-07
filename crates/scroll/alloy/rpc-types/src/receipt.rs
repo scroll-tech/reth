@@ -15,9 +15,6 @@ pub struct ScrollTransactionReceipt {
     #[serde(flatten)]
     pub inner:
         alloy_rpc_types_eth::TransactionReceipt<ScrollReceiptEnvelope<alloy_rpc_types_eth::Log>>,
-    /// The value of EVM execution result.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub return_value: Option<Vec<u8>>,
     /// L1 fee for the transaction.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub l1_fee: Option<u128>,
@@ -90,10 +87,6 @@ impl alloy_network_primitives::ReceiptResponse for ScrollTransactionReceipt {
 #[serde(rename_all = "camelCase")]
 #[doc(alias = "ScrollTxReceiptFields")]
 pub struct ScrollTransactionReceiptFields {
-    /// The value of EVM execution result.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub return_value: Option<Vec<u8>>,
-
     /// L1 fee for the transaction.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "alloy_serde::quantity::opt")]
     pub l1_fee: Option<u128>,
@@ -113,8 +106,8 @@ impl From<ScrollTransactionReceipt> for ScrollReceiptEnvelope<alloy_primitives::
         /// consensus types.
         #[inline(always)]
         fn convert_standard_receipt(
-            receipt: ReceiptWithBloom<alloy_rpc_types_eth::Log>,
-        ) -> ReceiptWithBloom<alloy_primitives::Log> {
+            receipt: ReceiptWithBloom<Receipt<alloy_rpc_types_eth::Log>>,
+        ) -> ReceiptWithBloom<Receipt<alloy_primitives::Log>> {
             let ReceiptWithBloom { logs_bloom, receipt } = receipt;
 
             let consensus_logs = receipt.logs.into_iter().map(|log| log.inner).collect();
