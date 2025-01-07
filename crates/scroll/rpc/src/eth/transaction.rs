@@ -1,32 +1,21 @@
 //! Loads and formats Scroll transaction RPC response.
 
 use alloy_consensus::{Signed, Transaction as _};
-use alloy_primitives::{Sealable, Sealed};
+use alloy_primitives::{PrimitiveSignature as Signature, Sealable, Sealed};
 use alloy_rpc_types_eth::{Transaction, TransactionInfo};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
-use reth_provider::{
-    BlockReader, BlockReaderIdExt, ProviderTx, ReceiptProvider, TransactionsProvider,
-};
+use reth_provider::{ReceiptProvider, TransactionsProvider};
 use reth_rpc_eth_api::{
-    helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
+    helpers::{LoadTransaction, SpawnBlocking},
     FullEthApiTypes, RpcNodeCoreExt, TransactionCompat,
 };
+use reth_rpc_eth_types::EthApiError;
 use reth_transaction_pool::TransactionPool;
 
 use scroll_alloy_consensus::ScrollTxEnvelope;
 
 use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
-
-impl<N> EthTransactions for ScrollEthApi<N>
-where
-    Self: LoadTransaction<Provider: BlockReaderIdExt>,
-    N: ScrollNodeCore<Provider: BlockReader<Transaction = ProviderTx<Self::Provider>>>,
-{
-    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
-        self.inner.eth_api.signers()
-    }
-}
 
 impl<N> LoadTransaction for ScrollEthApi<N>
 where
@@ -94,6 +83,19 @@ where
             from,
             effective_gas_price: Some(effective_gas_price),
         })
+    }
+
+    fn build_simulate_v1_transaction(
+        &self,
+        request: alloy_rpc_types_eth::TransactionRequest,
+    ) -> Result<TransactionSigned, Self::Error> {
+        let Ok(tx) = request.build_typed_tx() else {
+            return Err(ScrollEthApiError::Eth(EthApiError::TransactionConversionError))
+        };
+
+        // Create an empty signature for the transaction.
+        let signature = Signature::new(Default::default(), Default::default(), false);
+        Ok(TransactionSigned::new_unhashed(tx.into(), signature))
     }
 
     fn otterscan_api_truncate_input(tx: &mut Self::Transaction) {
