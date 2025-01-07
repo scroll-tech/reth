@@ -8876,6 +8876,7 @@ dependencies = [
  "reth-trie-common",
  "reth-zstd-compressors",
  "rstest",
+ "scroll-alloy-consensus",
  "secp256k1",
  "serde",
  "serde_json",
@@ -9461,6 +9462,7 @@ dependencies = [
  "reth-scroll-forks",
  "reth-scroll-primitives",
  "reth-scroll-revm",
+ "scroll-alloy-consensus",
  "thiserror 2.0.9",
  "tracing",
 ]

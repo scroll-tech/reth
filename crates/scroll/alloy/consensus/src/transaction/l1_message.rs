@@ -2,12 +2,14 @@
 
 use crate::ScrollTxType;
 use alloy_consensus::{Sealable, Transaction, Typed2718};
+use alloy_eips::eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718};
 use alloy_primitives::{
     keccak256,
     private::alloy_rlp::{Encodable, Header},
     Address, Bytes, ChainId, PrimitiveSignature as Signature, TxHash, TxKind, B256, U256,
 };
 use alloy_rlp::Decodable;
+use serde::{Deserialize, Serialize};
 
 /// L1 message transaction type id, 0x7e in hex.
 const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
@@ -114,6 +116,10 @@ impl TxL1Message {
         self.sender.encode(out);
     }
 
+    pub(crate) const fn tx_type(&self) -> u8 {
+        L1_MESSAGE_TRANSACTION_TYPE
+    }
+
     /// Create a RLP header for the transaction.
     fn rlp_header(&self) -> Header {
         Header { list: true, payload_length: self.rlp_encoded_fields_length() }
@@ -164,6 +170,52 @@ impl TxL1Message {
 impl Typed2718 for TxL1Message {
     fn ty(&self) -> u8 {
         ScrollTxType::L1Message as u8
+    }
+}
+
+impl Encodable2718 for TxL1Message {
+    fn type_flag(&self) -> Option<u8> {
+        Some(self.tx_type())
+    }
+
+    fn encode_2718_len(&self) -> usize {
+        self.eip2718_encoded_length()
+    }
+
+    fn encode_2718(&self, out: &mut dyn alloy_rlp::BufMut) {
+        out.put_u8(self.tx_type());
+        self.rlp_encode(out);
+    }
+}
+
+impl Decodable2718 for TxL1Message {
+    fn typed_decode(ty: u8, buf: &mut &[u8]) -> Eip2718Result<Self> {
+        if ty != L1_MESSAGE_TRANSACTION_TYPE {
+            return Err(Eip2718Error::UnexpectedType(ty));
+        }
+        let tx = Self::rlp_decode(buf)?;
+        Ok(tx)
+    }
+
+    fn fallback_decode(buf: &mut &[u8]) -> Eip2718Result<Self> {
+        let tx = Self::decode(buf)?;
+        Ok(tx)
+    }
+}
+
+impl Encodable for TxL1Message {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        self.rlp_encode(out)
+    }
+
+    fn length(&self) -> usize {
+        self.rlp_encoded_length()
+    }
+}
+
+impl Decodable for TxL1Message {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Self::rlp_decode(buf)
     }
 }
 
@@ -237,26 +289,21 @@ impl Transaction for TxL1Message {
     }
 }
 
-impl Encodable for TxL1Message {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        self.rlp_encode(out)
-    }
-
-    fn length(&self) -> usize {
-        self.rlp_encoded_length()
-    }
-}
-
-impl Decodable for TxL1Message {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Self::rlp_decode(buf)
-    }
-}
-
 impl Sealable for TxL1Message {
     fn hash_slow(&self) -> B256 {
         self.tx_hash()
     }
+}
+
+/// Scroll specific transaction fields
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScrollL1MessageTransactionFields {
+    /// The index of the transaction in the message queue.
+    #[serde(with = "alloy_serde::quantity")]
+    pub queue_index: u64,
+    /// The sender of the transaction on the L1.
+    pub sender: Address,
 }
 
 /// Deposit transactions don't have a signature, however, we include an empty signature in the

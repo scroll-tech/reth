@@ -9,7 +9,8 @@
 
 mod transaction;
 pub use transaction::{
-    ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction, TxL1Message, L1_MESSAGE_TX_TYPE_ID,
+    ScrollL1MessageTransactionFields, ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction,
+    TxL1Message, L1_MESSAGE_TX_TYPE_ID,
 };
 
 mod receipt;

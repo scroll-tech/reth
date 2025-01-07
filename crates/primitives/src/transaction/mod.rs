@@ -37,9 +37,9 @@ pub use reth_primitives_traits::{
     WithEncoded,
 };
 use reth_primitives_traits::{InMemorySize, SignedTransaction};
-#[cfg(all(feature = "scroll", not(feature = "optimism")))]
-use reth_scroll_primitives::l1_transaction::TxL1Message;
 use revm_primitives::{AuthorizationList, TxEnv};
+#[cfg(all(feature = "scroll", not(feature = "optimism")))]
+use scroll_alloy_consensus::TxL1Message;
 use serde::{Deserialize, Serialize};
 pub use signature::{recover_signer, recover_signer_unchecked};
 #[cfg(feature = "std")]
@@ -1773,7 +1773,7 @@ pub mod serde_bincode_compat {
         #[cfg(all(feature = "optimism", not(feature = "scroll")))]
         Deposit(op_alloy_consensus::serde_bincode_compat::TxDeposit<'a>),
         #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-        L1Message(Cow<'a, reth_scroll_primitives::l1_transaction::TxL1Message>),
+        L1Message(Cow<'a, scroll_alloy_consensus::TxL1Message>),
     }
 
     impl<'a> From<&'a super::Transaction> for Transaction<'a> {

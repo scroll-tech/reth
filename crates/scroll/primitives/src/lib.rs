@@ -9,10 +9,5 @@ mod execution_context;
 pub use account_extension::AccountExtension;
 mod account_extension;
 
-pub use l1_transaction::{
-    ScrollL1MessageTransactionFields, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE,
-};
-pub mod l1_transaction;
-
 /// Poseidon hashing primitives.
 pub mod poseidon;
