@@ -69,13 +69,16 @@ impl ScrollReceiptBuilder {
                         ScrollReceiptEnvelope::<Log>::Eip1559(receipt_with_bloom)
                     }
                     TxType::Eip7702 => unimplemented!("eip7702 unsupported"),
-                    TxType::Deposit => ScrollReceiptEnvelope::<Log>::L1Message(receipt_with_bloom),
+                    TxType::L1Message => {
+                        ScrollReceiptEnvelope::<Log>::L1Message(receipt_with_bloom)
+                    }
                 }
             })?;
 
-        let op_receipt_fields = ScrollTransactionReceiptFields { l1_fee: receipt.l1_fee };
+        let scroll_receipt_fields =
+            ScrollTransactionReceiptFields { l1_fee: Some(receipt.l1_fee.saturating_to()) };
 
-        Ok(Self { core_receipt, op_receipt_fields })
+        Ok(Self { core_receipt, scroll_receipt_fields })
     }
 
     /// Builds [`ScrollTransactionReceipt`] by combing core (l1) receipt fields and additional

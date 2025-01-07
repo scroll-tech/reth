@@ -4,7 +4,7 @@ use alloy_consensus::{Signed, Transaction as _};
 use alloy_primitives::{PrimitiveSignature as Signature, Sealable, Sealed};
 use alloy_rpc_types_eth::{Transaction, TransactionInfo};
 use reth_node_api::FullNodeComponents;
-use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
+use reth_primitives::{RecoveredTx, TransactionSigned};
 use reth_provider::{ReceiptProvider, TransactionsProvider};
 use reth_rpc_eth_api::{
     helpers::{LoadTransaction, SpawnBlocking},
@@ -34,7 +34,7 @@ where
 
     fn fill(
         &self,
-        tx: TransactionSignedEcRecovered,
+        tx: RecoveredTx,
         tx_info: TransactionInfo,
     ) -> Result<Self::Transaction, Self::Error> {
         let from = tx.signer();
