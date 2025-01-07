@@ -60,6 +60,7 @@ std = [
 	"serde/std",
 	"derive_more/std",
 	"reth-network-peers/std",
-	"serde_json/std"
+	"serde_json/std",
+	"reth-trie-common/std"
 ]
 mpt = ["reth-trie-common"]
