@@ -586,7 +586,7 @@ impl reth_codecs::Compact for Transaction {
                         (Self::Deposit(tx), buf)
                     }
                     #[cfg(all(feature = "scroll", not(feature = "optimism")))]
-                    reth_scroll_primitives::L1_MESSAGE_TRANSACTION_TYPE => {
+                    scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE => {
                         let (tx, buf) = TxL1Message::from_compact(buf, buf.len());
                         (Self::L1Message(tx), buf)
                     }

@@ -26,7 +26,7 @@ pub struct Transaction {
     pub sender: Option<Address>,
 
     /// queue index for deposit transactions
-    pub queue_index: Option<U256>,
+    pub queue_index: Option<u64>,
 }
 
 impl Typed2718 for Transaction {
@@ -178,7 +178,7 @@ mod tx_serde {
         )]
         effective_gas_price: Option<u128>,
         #[serde(default, rename = "queueIndex", skip_serializing_if = "Option::is_none")]
-        queue_index: Option<U256>,
+        queue_index: Option<u64>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sender: Option<Address>,
     }
@@ -275,7 +275,6 @@ mod tx_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::U256;
 
     #[test]
     fn can_deserialize_deposit() {
@@ -289,7 +288,7 @@ mod tests {
             panic!("Expected deposit transaction");
         };
         assert_eq!(tx.from, inner.sender);
-        assert_eq!(tx.queue_index, Some(U256::from(0xe7ba0)));
+        assert_eq!(tx.queue_index, Some(0xe7ba0));
         assert_eq!(tx.inner.effective_gas_price, Some(0));
 
         let deserialized = serde_json::to_value(&tx).unwrap();

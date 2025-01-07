@@ -9520,21 +9520,11 @@ dependencies = [
 name = "reth-scroll-primitives"
 version = "1.1.4"
 dependencies = [
- "alloy-consensus",
- "alloy-eips",
  "alloy-primitives",
- "alloy-rlp",
- "alloy-serde",
  "arbitrary",
- "bincode",
- "bytes",
  "modular-bitfield",
  "poseidon-bn254 0.1.0 (git+https://github.com/scroll-tech/poseidon-bn254?rev=526a64a)",
- "proptest",
- "proptest-arbitrary-interop",
- "rand 0.8.5",
  "reth-codecs",
- "reth-codecs-derive",
  "serde",
  "test-fuzz",
 ]
@@ -10585,10 +10575,16 @@ dependencies = [
  "arbitrary",
  "bincode",
  "derive_more",
+ "modular-bitfield",
+ "proptest",
+ "proptest-arbitrary-interop",
  "rand 0.8.5",
+ "reth-codecs",
+ "reth-codecs-derive",
  "serde",
  "serde_json",
  "serde_with",
+ "test-fuzz",
 ]
 
 [[package]]

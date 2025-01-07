@@ -1,8 +1,8 @@
 //! Loads and formats Scroll transaction RPC response.
 
 use alloy_consensus::{Signed, Transaction as _};
-use alloy_primitives::{PrimitiveSignature as Signature, Sealable, Sealed};
-use alloy_rpc_types_eth::{Transaction, TransactionInfo};
+use alloy_primitives::{Address, PrimitiveSignature as Signature, Sealable, Sealed};
+use alloy_rpc_types_eth::TransactionInfo;
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{RecoveredTx, TransactionSigned};
 use reth_provider::{ReceiptProvider, TransactionsProvider};
@@ -14,6 +14,7 @@ use reth_rpc_eth_types::EthApiError;
 use reth_transaction_pool::TransactionPool;
 
 use scroll_alloy_consensus::ScrollTxEnvelope;
+use scroll_alloy_rpc_types::Transaction;
 
 use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
 
@@ -40,6 +41,8 @@ where
         let from = tx.signer();
         let hash = tx.hash();
         let TransactionSigned { transaction, signature, .. } = tx.into_signed();
+        let mut tx_sender: Address;
+        let mut tx_queue_index: u64;
 
         let inner = match transaction {
             reth_primitives::Transaction::Legacy(tx) => {
@@ -54,6 +57,8 @@ where
             reth_primitives::Transaction::Eip4844(_) => unreachable!(),
             reth_primitives::Transaction::Eip7702(tx) => unreachable!(),
             reth_primitives::Transaction::L1Message(tx) => {
+                tx_queue_index = tx.queue_index;
+                tx_sender = tx.sender;
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };
@@ -76,12 +81,16 @@ where
         };
 
         Ok(Transaction {
-            inner,
-            block_hash,
-            block_number,
-            transaction_index,
-            from,
-            effective_gas_price: Some(effective_gas_price),
+            inner: alloy_rpc_types_eth::Transaction {
+                inner,
+                block_hash,
+                block_number,
+                transaction_index,
+                from,
+                effective_gas_price: Some(effective_gas_price),
+            },
+            sender: Some(tx_sender),
+            queue_index: Some(tx_queue_index),
         })
     }
 
