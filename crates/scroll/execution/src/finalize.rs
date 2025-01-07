@@ -2,10 +2,12 @@
 
 use reth_revm::{cached::CachedReadsDbMut, database::EvmStateProvider, revm::State};
 
+#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
+use reth_revm::database::StateProviderDatabase;
 #[cfg(feature = "test-utils")]
 use reth_revm::EmptyDBTyped;
-#[cfg(any(not(feature = "scroll"), feature = "test-utils"))]
-use reth_revm::{database::StateProviderDatabase, revm::CacheDB, DatabaseRef};
+#[cfg(any(not(feature = "scroll"), feature = "mpt", feature = "test-utils"))]
+use reth_revm::{revm::CacheDB, DatabaseRef};
 #[cfg(feature = "scroll")]
 use reth_scroll_storage::ScrollStateProviderDatabase;
 
