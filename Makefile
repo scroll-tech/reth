@@ -401,6 +401,17 @@ lint-scroll-reth:
 	--features "scroll $(BIN_OTHER_FEATURES)" \
 	-- -D warnings
 
+lint-all:
+	cargo +nightly clippy \
+	--workspace \
+	--lib \
+	--examples \
+	--tests \
+	--benches \
+	--all-features \
+	--locked
+
+
 lint-codespell: ensure-codespell
 	codespell --skip "*.json"
 
@@ -416,7 +427,8 @@ lint:
 	make lint-op-reth && \
 	make lint-scroll-reth &&  \
 	make lint-other-targets && \
-	make lint-codespell
+	make lint-codespell && \
+	make lint-all
 
 fix-lint-reth:
 	cargo +nightly clippy \

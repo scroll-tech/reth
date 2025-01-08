@@ -11,8 +11,8 @@ use reth_primitives::{
     proofs::calculate_receipt_root_no_memo, BlockBody, Receipt, TransactionSigned,
 };
 use reth_provider::{
-    BlockReaderIdExt, ChainSpecProvider, EvmEnvProvider, ProviderBlock, ProviderHeader,
-    ProviderReceipt, ProviderTx, StateProviderFactory,
+    BlockReaderIdExt, ChainSpecProvider, ProviderBlock, ProviderHeader, ProviderReceipt,
+    ProviderTx, StateProviderFactory,
 };
 use reth_rpc_eth_api::{
     helpers::{LoadPendingBlock, SpawnBlocking},
@@ -39,8 +39,7 @@ where
             Block = reth_primitives::Block,
             Receipt = reth_primitives::Receipt,
             Header = reth_primitives::Header,
-        > + EvmEnvProvider
-                      + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
+        > + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
                       + StateProviderFactory,
         Pool: TransactionPool<Transaction: PoolTransaction<Consensus = ProviderTx<N::Provider>>>,
         Evm: ConfigureEvm<Header = Header, Transaction = TransactionSigned>,
@@ -98,7 +97,6 @@ where
             extra_data: Default::default(),
             parent_beacon_block_root: is_cancun.then_some(B256::ZERO),
             requests_hash: is_prague.then_some(EMPTY_REQUESTS_HASH),
-            target_blobs_per_block: None,
         };
 
         // seal the block

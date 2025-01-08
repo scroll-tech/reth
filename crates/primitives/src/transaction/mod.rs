@@ -1225,7 +1225,7 @@ impl reth_primitives_traits::FillTxEnv for TransactionSigned {
                 tx_env.gas_limit = tx.gas_limit;
                 tx_env.gas_price = U256::ZERO;
                 tx_env.gas_priority_fee = None;
-                tx_env.transact_to = tx.to();
+                tx_env.transact_to = TxKind::Call(tx.to);
                 tx_env.value = tx.value;
                 tx_env.data = tx.input.clone();
                 tx_env.chain_id = None;

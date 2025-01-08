@@ -43,7 +43,7 @@ impl ScrollReceiptEnvelope<Log> {
     /// Creates a new [`ScrollReceiptEnvelope`] from the given parts.
     pub fn from_parts<'a>(
         status: bool,
-        cumulative_gas_used: u128,
+        cumulative_gas_used: u64,
         logs: impl IntoIterator<Item = &'a Log>,
         tx_type: ScrollTxType,
     ) -> Self {
@@ -90,7 +90,7 @@ impl<T> ScrollReceiptEnvelope<T> {
     }
 
     /// Returns the cumulative gas used at this receipt.
-    pub fn cumulative_gas_used(&self) -> u128 {
+    pub fn cumulative_gas_used(&self) -> u64 {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
@@ -179,7 +179,7 @@ where
     }
 
     /// Returns the cumulative gas used at this receipt.
-    fn cumulative_gas_used(&self) -> u128 {
+    fn cumulative_gas_used(&self) -> u64 {
         self.as_receipt().unwrap().cumulative_gas_used
     }
 
@@ -290,7 +290,7 @@ mod tests {
         let receipt = ScrollReceiptEnvelope::Legacy(ReceiptWithBloom {
             receipt: Receipt {
                 status: false.into(),
-                cumulative_gas_used: 0x1u128,
+                cumulative_gas_used: 0x1,
                 logs: vec![Log {
                     address: address!("0000000000000000000000000000000000000011"),
                     data: LogData::new_unchecked(
