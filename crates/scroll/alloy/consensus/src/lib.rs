@@ -7,6 +7,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use serde_with as _;
+
 mod transaction;
 pub use transaction::{
     ScrollL1MessageTransactionFields, ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction,
