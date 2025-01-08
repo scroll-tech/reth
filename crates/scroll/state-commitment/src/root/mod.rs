@@ -20,7 +20,9 @@ use tracing::{debug, trace};
 #[cfg(feature = "metrics")]
 use reth_trie::metrics::{StateRootMetrics, TrieRootMetrics, TrieType};
 
+#[cfg(feature = "parallel")]
 mod parallel;
+#[cfg(feature = "parallel")]
 pub use parallel::ParallelStateRoot;
 
 mod utils;

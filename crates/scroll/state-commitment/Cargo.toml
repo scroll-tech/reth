@@ -17,11 +17,9 @@ reth-db.workspace = true
 reth-execution-errors.workspace = true
 reth-primitives.workspace = true
 reth-primitives-traits.workspace = true
-reth-provider.workspace = true
 reth-storage-api.workspace = true
 reth-trie.workspace = true
 reth-trie-db.workspace = true
-reth-trie-parallel.workspace = true
 
 # scroll
 reth-scroll-execution.workspace = true
@@ -37,6 +35,10 @@ alloy-rlp.workspace = true
 # `metrics` feature
 reth-metrics = { workspace = true, optional = true }
 metrics = { workspace = true, optional = true }
+
+# `parallel` feature
+reth-provider = { workspace = true, optional = true }
+reth-trie-parallel = { workspace = true, optional = true }
 
 # zktrie
 poseidon-bn254.workspace = true
@@ -70,6 +72,10 @@ scroll = [
     "reth-provider/scroll",
     "reth-trie/scroll"
 ]
+parallel = [
+    "dep:reth-provider",
+    "dep:reth-trie-parallel"
+]
 test-utils = [
     "dep:zktrie_rust", 
     "dep:zktrie",
@@ -88,7 +94,9 @@ test-utils = [
 metrics = [
     "reth-metrics",
     "dep:metrics",
-    "reth-trie-parallel/metrics"
+    "reth-trie/metrics",
+    "reth-trie-db/metrics",
+    "reth-trie-parallel?/metrics"
 ]
 
 
