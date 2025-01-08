@@ -57,7 +57,6 @@ impl ScrollReceiptBuilder {
         receipt: &Receipt,
         all_receipts: &[Receipt],
     ) -> Result<Self, ScrollEthApiError> {
-        let timestamp = meta.timestamp;
         let core_receipt =
             build_receipt(transaction, meta, receipt, all_receipts, |receipt_with_bloom| {
                 match receipt.tx_type {

@@ -6,12 +6,12 @@ use alloy_primitives::U256;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_evm::ConfigureEvm;
 use reth_network_api::NetworkInfo;
+use reth_node_api::NodePrimitives;
 use reth_node_builder::EthApiBuilderCtx;
-use reth_primitives::EthPrimitives;
 use reth_provider::{
     BlockNumReader, BlockReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider,
-    EvmEnvProvider, ProviderBlock, ProviderHeader, ProviderReceipt, ProviderTx,
-    StageCheckpointReader, StateProviderFactory,
+    EvmEnvProvider, NodePrimitivesProvider, ProviderBlock, ProviderHeader, ProviderReceipt,
+    ProviderTx, StageCheckpointReader, StateProviderFactory,
 };
 use reth_rpc::eth::{core::EthApiInner, DevSigner};
 use reth_rpc_eth_api::{
@@ -35,8 +35,8 @@ use crate::ScrollEthApiError;
 mod block;
 mod call;
 mod pending_block;
-mod receipt;
-mod transaction;
+pub mod receipt;
+pub mod transaction;
 
 /// Adapter for [`EthApiInner`], which holds all the data required to serve core `eth_` API.
 pub type EthApiNodeBackend<N> = EthApiInner<
@@ -69,9 +69,11 @@ pub struct ScrollEthApi<N: ScrollNodeCore> {
 impl<N> ScrollEthApi<N>
 where
     N: ScrollNodeCore<
-        Provider: BlockReaderIdExt
-                      + ChainSpecProvider
-                      + CanonStateSubscriptions<Primitives = EthPrimitives>
+        Provider: BlockReaderIdExt<
+            Block = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Block,
+            Receipt = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Receipt,
+        > + ChainSpecProvider
+                      + CanonStateSubscriptions
                       + Clone
                       + 'static,
     >,
@@ -97,7 +99,7 @@ where
             ctx.config.proof_permits,
         );
 
-        Self { inner: Arc::new(inner) }
+        Self { inner: Arc::new(ScrollEthApiInner { eth_api: inner }) }
     }
 }
 

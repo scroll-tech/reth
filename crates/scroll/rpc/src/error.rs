@@ -68,9 +68,7 @@ impl TryFrom<InvalidTransaction> for ScrollInvalidTransactionError {
     type Error = InvalidTransaction;
 
     fn try_from(err: InvalidTransaction) -> Result<Self, Self::Error> {
-        match err {
-            _ => Err(err),
-        }
+        Err(err)
     }
 }
 

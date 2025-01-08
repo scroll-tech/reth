@@ -1,7 +1,7 @@
 //! Loads and formats Scroll transaction RPC response.
 
 use alloy_consensus::{Signed, Transaction as _};
-use alloy_primitives::{Address, PrimitiveSignature as Signature, Sealable, Sealed};
+use alloy_primitives::{PrimitiveSignature as Signature, Sealable, Sealed};
 use alloy_rpc_types_eth::TransactionInfo;
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{RecoveredTx, TransactionSigned};
@@ -41,8 +41,8 @@ where
         let from = tx.signer();
         let hash = tx.hash();
         let TransactionSigned { transaction, signature, .. } = tx.into_signed();
-        let mut tx_sender: Address;
-        let mut tx_queue_index: u64;
+        let mut tx_sender = None;
+        let mut tx_queue_index = None;
 
         let inner = match transaction {
             reth_primitives::Transaction::Legacy(tx) => {
@@ -54,11 +54,12 @@ where
             reth_primitives::Transaction::Eip1559(tx) => {
                 Signed::new_unchecked(tx, signature, hash).into()
             }
-            reth_primitives::Transaction::Eip4844(_) => unreachable!(),
-            reth_primitives::Transaction::Eip7702(tx) => unreachable!(),
+            reth_primitives::Transaction::Eip4844(_) | reth_primitives::Transaction::Eip7702(_) => {
+                unreachable!()
+            }
             reth_primitives::Transaction::L1Message(tx) => {
-                tx_queue_index = tx.queue_index;
-                tx_sender = tx.sender;
+                tx_queue_index = Some(tx.queue_index);
+                tx_sender = Some(tx.sender);
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };
@@ -89,8 +90,8 @@ where
                 from,
                 effective_gas_price: Some(effective_gas_price),
             },
-            sender: Some(tx_sender),
-            queue_index: Some(tx_queue_index),
+            sender: tx_sender,
+            queue_index: tx_queue_index,
         })
     }
 

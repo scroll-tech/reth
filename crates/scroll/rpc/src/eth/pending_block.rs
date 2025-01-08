@@ -1,8 +1,7 @@
 //! Loads Scroll pending block for an RPC response.
 
 use alloy_consensus::{
-    constants::EMPTY_WITHDRAWALS, proofs::calculate_transaction_root, BlockHeader, Header,
-    EMPTY_OMMER_ROOT_HASH,
+    constants::EMPTY_WITHDRAWALS, proofs::calculate_transaction_root, Header, EMPTY_OMMER_ROOT_HASH,
 };
 use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, merge::BEACON_NONCE};
 use alloy_primitives::{logs_bloom, B256, U256};
@@ -12,8 +11,8 @@ use reth_primitives::{
     proofs::calculate_receipt_root_no_memo, BlockBody, Receipt, TransactionSigned,
 };
 use reth_provider::{
-    BlockReader, BlockReaderIdExt, ChainSpecProvider, EvmEnvProvider, ProviderBlock,
-    ProviderHeader, ProviderReceipt, ProviderTx, StateProviderFactory,
+    BlockReaderIdExt, ChainSpecProvider, EvmEnvProvider, ProviderBlock, ProviderHeader,
+    ProviderReceipt, ProviderTx, StateProviderFactory,
 };
 use reth_rpc_eth_api::{
     helpers::{LoadPendingBlock, SpawnBlocking},

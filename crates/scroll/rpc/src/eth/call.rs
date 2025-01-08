@@ -7,7 +7,7 @@ use reth_rpc_eth_api::{
     FromEthApiError, FullEthApiTypes, IntoEthApiError,
 };
 use reth_rpc_eth_types::{revm_utils::CallFees, RpcInvalidTransactionError};
-use revm::primitives::{BlockEnv, ScrollFields, TxEnv};
+use revm::primitives::{BlockEnv, TxEnv};
 
 use super::ScrollNodeCore;
 use crate::{ScrollEthApi, ScrollEthApiError};
@@ -103,7 +103,7 @@ where
             blob_hashes: blob_versioned_hashes.unwrap_or_default(),
             max_fee_per_blob_gas,
             authorization_list: authorization_list.map(Into::into),
-            scroll: ScrollFields { ..Default::default() },
+            scroll: Default::default(),
         };
 
         Ok(env)
