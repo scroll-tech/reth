@@ -505,7 +505,7 @@ mod tests {
         let address = Address::random();
 
         // Create mock account info.
-        let account_info = revm::shared::AccountInfo {
+        let account_info = revm::AccountInfo {
             balance: U256::from(500),
             nonce: 5,
             code_hash: B256::random(),

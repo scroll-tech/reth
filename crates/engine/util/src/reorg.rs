@@ -24,6 +24,7 @@ use reth_primitives::{
 };
 use reth_provider::{BlockReader, ExecutionOutcome, ProviderError, StateProviderFactory};
 use reth_revm::{
+    database::StateProviderDatabase,
     db::{states::bundle_state::BundleRetention, State},
     DatabaseCommit,
 };
@@ -291,8 +292,10 @@ where
 
     // Configure state
     let state_provider = provider.state_by_block_hash(reorg_target.parent_hash)?;
-    let mut db = reth_revm::database::StateProviderDatabase::new(&state_provider);
-    let mut state = State::builder().with_database(&mut db).with_bundle_update().build();
+    let mut state = State::builder()
+        .with_database_ref(StateProviderDatabase::new(&state_provider))
+        .with_bundle_update()
+        .build();
 
     // Configure environments
     let EvmEnv { cfg_env_with_handler_cfg, block_env } =
@@ -377,9 +380,9 @@ where
     // and 4788 contract call
     state.merge_transitions(BundleRetention::PlainState);
 
-    let outcome = ExecutionOutcome::new(
+    let outcome: ExecutionOutcome = ExecutionOutcome::new(
         state.take_bundle(),
-        Receipts::<Receipt>::from(vec![receipts]),
+        Receipts::from(vec![receipts]),
         reorg_target.number,
         Default::default(),
     );

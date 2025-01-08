@@ -20,11 +20,6 @@ pub use revm::{
     JournaledState,
 };
 
-/// Shared module, available for all feature flags.
-pub mod shared {
-    pub use revm::{db::states::BundleState, primitives::AccountInfo};
-}
-
 /// Match the `revm` module structure
 pub mod handler {
     pub use revm::handler::*;

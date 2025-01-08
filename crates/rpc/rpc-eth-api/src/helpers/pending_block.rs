@@ -21,9 +21,12 @@ use reth_provider::{
     BlockReader, BlockReaderIdExt, ChainSpecProvider, ProviderBlock, ProviderError, ProviderHeader,
     ProviderReceipt, ProviderTx, ReceiptProvider, StateProviderFactory,
 };
-use reth_revm::primitives::{
-    BlockEnv, CfgEnvWithHandlerCfg, EVMError, Env, ExecutionResult, InvalidTransaction,
-    ResultAndState,
+use reth_revm::{
+    database::StateProviderDatabase,
+    primitives::{
+        BlockEnv, CfgEnvWithHandlerCfg, EVMError, Env, ExecutionResult, InvalidTransaction,
+        ResultAndState,
+    },
 };
 use reth_rpc_eth_types::{EthApiError, PendingBlock, PendingBlockEnv, PendingBlockEnvOrigin};
 use reth_transaction_pool::{
@@ -257,7 +260,7 @@ pub trait LoadPendingBlock:
             .provider()
             .history_by_block_hash(parent_hash)
             .map_err(Self::Error::from_eth_err)?;
-        let state = reth_revm::database::StateProviderDatabase::new(state_provider);
+        let state = StateProviderDatabase::new(state_provider);
         let mut db = State::builder().with_database(state).with_bundle_update().build();
 
         let mut cumulative_gas_used = 0;

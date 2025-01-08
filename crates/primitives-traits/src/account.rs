@@ -26,7 +26,7 @@ pub mod compact_ids {
 
 /// An Ethereum account.
 #[cfg_attr(any(test, feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
 #[cfg_attr(any(test, feature = "reth-codec"), derive(reth_codecs::Compact))]
 #[cfg_attr(any(test, feature = "reth-codec"), reth_codecs::add_arbitrary_tests(compact))]
@@ -37,12 +37,6 @@ pub struct Account {
     pub balance: U256,
     /// Hash of the account's bytecode.
     pub bytecode_hash: Option<B256>,
-}
-
-impl Default for Account {
-    fn default() -> Self {
-        Self { nonce: 0, balance: U256::ZERO, bytecode_hash: None }
-    }
 }
 
 impl Account {

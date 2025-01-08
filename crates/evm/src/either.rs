@@ -10,11 +10,11 @@ use alloc::boxed::Box;
 use alloy_primitives::BlockNumber;
 use reth_prune_types::PruneModes;
 use reth_storage_errors::provider::ProviderError;
-use revm::State;
 use revm_primitives::db::Database;
 
 // re-export Either
 pub use futures_util::future::Either;
+use revm::State;
 
 impl<A, B> BlockExecutorProvider for Either<A, B>
 where

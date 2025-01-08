@@ -20,8 +20,7 @@
 use revm::{
     db::states::StorageSlot,
     primitives::{address, bytes, Address, Bytecode, Bytes, U256},
-    shared::AccountInfo,
-    Database, State,
+    AccountInfo, Database, State,
 };
 
 /// L1 gas price oracle address.
@@ -126,8 +125,7 @@ mod tests {
         db::states::{bundle_state::BundleRetention, plain_account::PlainStorage, StorageSlot},
         keccak256,
         primitives::{bytes, poseidon, U256},
-        shared::AccountInfo,
-        Bytecode, Database, EmptyDB, State,
+        AccountInfo, Bytecode, Database, EmptyDB, State,
     };
     use std::str::FromStr;
 

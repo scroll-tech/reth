@@ -1,4 +1,3 @@
-use super::missing_static_data_error;
 use crate::stages::MERKLE_STAGE_DEFAULT_CLEAN_THRESHOLD;
 use alloy_consensus::{BlockHeader, Header, Sealable};
 use alloy_eips::{eip1898::BlockWithParent, NumHash};
@@ -36,6 +35,8 @@ use std::{
     time::{Duration, Instant},
 };
 use tracing::*;
+
+use super::missing_static_data_error;
 
 /// The execution stage executes all transactions and
 /// update history indexes.
@@ -302,8 +303,8 @@ where
 
         self.ensure_consistency(provider, input.checkpoint().block_number, None)?;
 
-        let state = LatestStateProviderRef::new(provider);
-        let mut executor = self.executor_provider.batch_executor(StateProviderDatabase(state));
+        let db = StateProviderDatabase(LatestStateProviderRef::new(provider));
+        let mut executor = self.executor_provider.batch_executor(db);
         executor.set_tip(max_block);
         executor.set_prune_modes(prune_modes);
 
@@ -1192,7 +1193,7 @@ mod tests {
                     Account {
                         nonce: 0,
                         balance: U256::from(0x1bc16d674eca30a0u64),
-                        bytecode_hash: None,
+                        bytecode_hash: None
                     }
                 ),
                 (
@@ -1200,7 +1201,7 @@ mod tests {
                     Account {
                         nonce: 1,
                         balance: U256::from(0xde0b6b3a761cf60u64),
-                        bytecode_hash: None,
+                        bytecode_hash: None
                     }
                 )
             ]

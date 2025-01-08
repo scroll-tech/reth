@@ -1123,7 +1123,7 @@ mod tests {
         let initial_balance = 100;
         db.insert_account(
             withdrawal_recipient,
-            Account { balance: U256::from(initial_balance), nonce: 1, ..Default::default() },
+            Account { balance: U256::from(initial_balance), nonce: 1, bytecode_hash: None },
             None,
             HashMap::default(),
         );

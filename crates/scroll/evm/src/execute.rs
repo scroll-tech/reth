@@ -317,8 +317,7 @@ mod tests {
     use revm::{
         db::states::{bundle_state::BundleRetention, StorageSlot},
         primitives::{Address, B256, U256},
-        shared::AccountInfo,
-        Bytecode, EmptyDBTyped, TxKind,
+        AccountInfo, Bytecode, EmptyDBTyped, TxKind,
     };
 
     const BLOCK_GAS_LIMIT: u64 = 10_000_000;

@@ -75,10 +75,9 @@ where
             "Executing block range"
         );
 
-        let db = StateProviderDatabase::new(
+        let mut executor = self.executor.batch_executor(StateProviderDatabase::new(
             self.provider.history_by_block_number(self.range.start().saturating_sub(1))?,
-        );
-        let mut executor = self.executor.batch_executor(db);
+        ));
         executor.set_prune_modes(self.prune_modes.clone());
 
         let mut fetch_block_duration = Duration::default();
@@ -202,8 +201,9 @@ where
             .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
 
         // Configure the executor to use the previous block's state.
-        let provider = self.provider.history_by_block_number(block_number.saturating_sub(1))?;
-        let executor = self.executor.executor(StateProviderDatabase::new(provider));
+        let executor = self.executor.executor(StateProviderDatabase::new(
+            self.provider.history_by_block_number(block_number.saturating_sub(1))?,
+        ));
 
         trace!(target: "exex::backfill", number = block_number, txs = block_with_senders.block.body().transactions().len(), "Executing block");
 

@@ -39,9 +39,6 @@ reth-trie-db = { workspace = true, features = ["metrics"] }
 
 reth-testing-utils = { workspace = true, optional = true }
 
-# scroll
-reth-scroll-primitives = { workspace = true, optional = true }
-
 alloy-eips.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
@@ -132,7 +129,6 @@ scroll = [
     "reth-db/scroll",
     "reth-evm-ethereum/scroll",
     "reth-exex/scroll",
-    "reth-scroll-primitives"
 ]
 skip-state-root-validation = []
 

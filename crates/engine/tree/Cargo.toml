@@ -124,6 +124,6 @@ test-utils = [
     "reth-trie-sparse/test-utils",
     "reth-prune-types?/test-utils",
     "reth-trie-db/test-utils",
-	"reth-trie-parallel/test-utils",
+    "reth-trie-parallel/test-utils",
 ]
 skip-state-root-validation = ["reth-stages/skip-state-root-validation"]
