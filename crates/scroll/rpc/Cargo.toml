@@ -66,7 +66,18 @@ derive_more = { workspace = true, features = ["constructor", "deref"] }
 reth-optimism-chainspec.workspace = true
 
 [features]
-optimism = []
-scroll = []
+scroll = [
+    "reth-primitives/scroll",
+    "reth-provider/scroll",
+    "reth-scroll-evm/scroll",
+    "reth-evm/scroll",
+]
+optimism = [
+    "reth-primitives/optimism",
+    "reth-provider/optimism",
+    "reth-scroll-evm/optimism",
+    "revm/optimism",
+]
+
 
 

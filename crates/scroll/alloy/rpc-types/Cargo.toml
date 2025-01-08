@@ -100,7 +100,10 @@ arbitrary = [
     "dep:arbitrary",
     "alloy-primitives/arbitrary",
     "alloy-rpc-types-eth/arbitrary",
-    "scroll-alloy-consensus/arbitrary"
+    "scroll-alloy-consensus/arbitrary",
+    "alloy-consensus/arbitrary",
+    "alloy-eips/arbitrary",
+    "alloy-serde/arbitrary",
 ]
 default = ["std"]
 k256 = [
@@ -112,6 +115,11 @@ std = [
     "alloy-eips/std",
     "alloy-primitives/std",
     "alloy-rpc-types-eth/std",
+    "alloy-consensus/std",
+    "alloy-serde/std",
+    "derive_more/std",
+    "serde/std",
+    "serde_json/std",
 ]
 
 [lints.clippy]

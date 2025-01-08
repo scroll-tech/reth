@@ -61,7 +61,9 @@ std = [
     "alloy-serde/std",
     "proptest/std",
     "rand/std",
-    "derive_more/std"
+    "derive_more/std",
+    "serde_json/std",
+    "serde_with/std",
 ]
 
 k256 = [
@@ -99,4 +101,8 @@ serde = [
     "rand/serde",
     "reth-codecs/serde"
 ]
-serde-bincode-compat = ["serde_with"]
+serde-bincode-compat = [
+    "serde_with",
+    "alloy-consensus/serde-bincode-compat",
+    "alloy-eips/serde-bincode-compat"
+]
