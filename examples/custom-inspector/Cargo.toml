@@ -14,6 +14,3 @@ futures-util.workspace = true
 alloy-primitives.workspace = true
 
 alloy-eips.workspace = true
-
-[features]
-scroll = []

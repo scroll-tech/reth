@@ -19,7 +19,6 @@ use reth::{
     revm::{
         interpreter::Host,
         primitives::{address, Address, Bytes, Env, EnvWithHandlerCfg, TransactTo, TxEnv, U256},
-        shared::BundleState,
         Database, DatabaseCommit, Evm, State,
     },
 };
@@ -34,8 +33,6 @@ use reth_evm::{
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_ethereum::{node::EthereumAddOns, BasicBlockExecutorProvider, EthereumNode};
 use reth_primitives::{BlockWithSenders, EthPrimitives, Receipt};
-use reth_scroll_execution::FinalizeExecution;
-use revm::db::states::bundle_state::BundleRetention;
 use std::{fmt::Display, sync::Arc};
 
 pub const SYSTEM_ADDRESS: Address = address!("fffffffffffffffffffffffffffffffffffffffe");
@@ -98,15 +95,11 @@ pub struct CustomExecutorStrategyFactory {
 
 impl BlockExecutionStrategyFactory for CustomExecutorStrategyFactory {
     type Primitives = EthPrimitives;
-    type Strategy<DB: Database<Error: Into<ProviderError> + Display>>
-        = CustomExecutorStrategy<DB>
-    where
-        State<DB>: FinalizeExecution<Output = BundleState>;
+    type Strategy<DB: Database<Error: Into<ProviderError> + Display>> = CustomExecutorStrategy<DB>;
 
     fn create_strategy<DB>(&self, db: DB) -> Self::Strategy<DB>
     where
         DB: Database<Error: Into<ProviderError> + Display>,
-        State<DB>: FinalizeExecution<Output = BundleState>,
     {
         let state =
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
@@ -149,7 +142,6 @@ where
 impl<DB> BlockExecutionStrategy for CustomExecutorStrategy<DB>
 where
     DB: Database<Error: Into<ProviderError> + Display>,
-    State<DB>: FinalizeExecution<Output = BundleState>,
 {
     type DB = DB;
     type Primitives = EthPrimitives;
@@ -192,11 +184,6 @@ where
 
     fn state_mut(&mut self) -> &mut State<DB> {
         &mut self.state
-    }
-
-    fn finish(&mut self) -> BundleState {
-        self.state_mut().merge_transitions(BundleRetention::Reverts);
-        self.state_mut().finalize()
     }
 }
 
