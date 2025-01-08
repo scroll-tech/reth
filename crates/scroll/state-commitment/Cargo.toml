@@ -70,6 +70,7 @@ scroll = [
     "reth-provider/scroll",
     "reth-trie/scroll"
 ]
+mpt = ["reth-trie/mpt", "reth-scroll-execution/mpt"]
 test-utils = [
     "dep:zktrie_rust", 
     "dep:zktrie",
@@ -83,7 +84,8 @@ test-utils = [
     "reth-scroll-state-commitment/test-utils",
     "reth-trie/test-utils",
     "reth-trie-common/test-utils",
-    "reth-trie-db/test-utils"
+    "reth-trie-db/test-utils",
+    "reth-trie-parallel/test-utils"
 ]
 metrics = [
     "reth-metrics",

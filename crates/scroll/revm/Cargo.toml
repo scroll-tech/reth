@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 # revm
-revm = { version = "18.0.0", default-features = false }
+revm = { version = "19.0.0", default-features = false }
 
 # scroll
 reth-scroll-primitives = { workspace = true, optional = true }
@@ -42,6 +42,7 @@ std = [
 	"revm/std",
 	"serde?/std"
 ]
+mpt = []
 
 blst = ["revm/blst"]
 optional_block_gas_limit =  ["revm/optional_block_gas_limit"]
