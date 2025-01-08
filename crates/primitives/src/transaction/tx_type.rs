@@ -278,7 +278,6 @@ mod tests {
     use alloy_primitives::hex;
     use reth_codecs::Compact;
     use rstest::rstest;
-    use scroll_alloy_consensus;
 
     #[rstest]
     #[case(U64::from(LEGACY_TX_TYPE_ID), Ok(TxType::Legacy))]

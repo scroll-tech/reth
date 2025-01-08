@@ -100,10 +100,12 @@ arbitrary = [
     "dep:arbitrary",
     "alloy-primitives/arbitrary",
     "alloy-rpc-types-eth/arbitrary",
+    "scroll-alloy-consensus/arbitrary"
 ]
 default = ["std"]
 k256 = [
     "alloy-rpc-types-eth/k256",
+    "scroll-alloy-consensus/k256"
 ]
 std = [
     "alloy-network-primitives/std",
