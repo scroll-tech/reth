@@ -1099,13 +1099,7 @@ mod tests {
         type PreState = BTreeMap<Address, (Account, BTreeMap<B256, U256>)>;
         let mut prestate: PreState = (0..10)
             .map(|key| {
-                let account = Account {
-                    nonce: 1,
-                    balance: U256::from(key),
-                    bytecode_hash: None,
-                    #[cfg(feature = "scroll")]
-                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-                };
+                let account = Account { nonce: 1, balance: U256::from(key), bytecode_hash: None };
                 let storage =
                     (1..11).map(|key| (B256::with_last_byte(key), U256::from(key))).collect();
                 (Address::with_last_byte(key), (account, storage))
@@ -1135,13 +1129,12 @@ mod tests {
         let mut state = State::builder().with_bundle_update().build();
 
         let assert_state_root = |state: &State<EmptyDB>, expected: &PreState, msg| {
-            #[cfg(feature = "scroll")]
-            let bundle_state = &(state.bundle_state.clone(), &()).into();
-            #[cfg(not(feature = "scroll"))]
-            let bundle_state = &state.bundle_state;
             assert_eq!(
-                StateRoot::overlay_root(tx, provider_factory.hashed_post_state(bundle_state))
-                    .unwrap(),
+                StateRoot::overlay_root(
+                    tx,
+                    provider_factory.hashed_post_state(&state.bundle_state)
+                )
+                .unwrap(),
                 state_root(expected.clone().into_iter().map(|(address, (account, storage))| (
                     address,
                     (account, storage.into_iter())
@@ -1231,13 +1224,8 @@ mod tests {
         assert_state_root(&state, &prestate, "changed nonce");
 
         // recreate account 1
-        let account1_new = Account {
-            nonce: 56,
-            balance: U256::from(123),
-            bytecode_hash: Some(B256::random()),
-            #[cfg(feature = "scroll")]
-            account_extension: Some((10, B256::random()).into()),
-        };
+        let account1_new =
+            Account { nonce: 56, balance: U256::from(123), bytecode_hash: Some(B256::random()) };
         prestate.insert(address1, (account1_new, BTreeMap::default()));
         state.commit(HashMap::from_iter([(
             address1,

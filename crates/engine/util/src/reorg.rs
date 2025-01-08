@@ -28,7 +28,6 @@ use reth_revm::{
     DatabaseCommit,
 };
 use reth_rpc_types_compat::engine::payload::block_to_payload;
-use reth_scroll_execution::FinalizeExecution;
 use revm_primitives::{EVMError, EnvWithHandlerCfg};
 use std::{
     collections::VecDeque,
@@ -292,10 +291,7 @@ where
 
     // Configure state
     let state_provider = provider.state_by_block_hash(reorg_target.parent_hash)?;
-    #[cfg(not(feature = "scroll"))]
     let mut db = reth_revm::database::StateProviderDatabase::new(&state_provider);
-    #[cfg(feature = "scroll")]
-    let mut db = reth_scroll_storage::ScrollStateProviderDatabase::new(&state_provider);
     let mut state = State::builder().with_database(&mut db).with_bundle_update().build();
 
     // Configure environments
@@ -382,7 +378,7 @@ where
     state.merge_transitions(BundleRetention::PlainState);
 
     let outcome = ExecutionOutcome::new(
-        state.finalize(),
+        state.take_bundle(),
         Receipts::<Receipt>::from(vec![receipts]),
         reorg_target.number,
         Default::default(),

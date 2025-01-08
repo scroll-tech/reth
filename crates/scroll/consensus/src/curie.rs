@@ -1,6 +1,6 @@
 //! Curie fork transition for Scroll.
 //!
-//! On block 7096836, Scroll performed a transition to the Curie fork state, which brought  various
+//! On block 7096836, Scroll performed a transition to the Curie fork state, which brought various
 //! changes to the protocol:
 //!    1. Fee reduction cost thanks to the use of compressed blobs on the L1.
 //!    2. Modified [EIP-1559](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md) pricing

@@ -64,10 +64,6 @@ mod tests {
                 nonce: 10,
                 balance: U256::from(1000),
                 bytecode_hash: Some(keccak256([0x60, 0x61])),
-                #[cfg(feature = "scroll")]
-                account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
-                    &[0x60, 0x61]
-                ))
             }
             .into_trie_account(expected_storage_root),
             trie_account
