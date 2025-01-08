@@ -455,7 +455,7 @@ where
 
     fn finalize(mut self) -> Self::Output {
         ExecutionOutcome::new(
-            self.strategy.finish(),
+            self.strategy.state_mut().take_bundle(),
             self.batch_record.take_receipts(),
             self.batch_record.first_block().unwrap_or_default(),
             self.batch_record.take_requests(),
