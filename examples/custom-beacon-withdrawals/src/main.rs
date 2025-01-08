@@ -2,9 +2,6 @@
 //! custom mechanism instead of minting native tokens
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-// Don't use the crate if `scroll` feature is used.
-#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
-#![cfg(not(feature = "scroll"))]
 
 use alloy_eips::{eip4895::Withdrawal, eip7685::Requests};
 use alloy_sol_macro::sol;
@@ -268,6 +265,8 @@ fn fill_tx_env_with_system_contract_call(
         authorization_list: None,
         #[cfg(feature = "optimism")]
         optimism: OptimismFields::default(),
+        #[cfg(feature = "scroll")]
+        scroll: revm::primitives::ScrollFields::default(),
     };
 
     // ensure the block gas limit is >= the tx

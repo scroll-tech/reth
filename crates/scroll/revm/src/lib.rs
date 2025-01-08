@@ -4,9 +4,6 @@
 #![warn(unused_crate_dependencies)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(all(not(feature = "std"), feature = "scroll"))]
-extern crate alloc as std;
-
 pub use revm::primitives::AccountInfo;
 
 #[cfg(all(feature = "optimism", not(feature = "scroll")))]
