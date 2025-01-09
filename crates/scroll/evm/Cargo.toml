@@ -27,13 +27,13 @@ revm = { workspace = true, features = ["optional_no_base_fee"] }
 # scroll
 reth-scroll-chainspec.workspace = true
 reth-scroll-forks.workspace = true
-scroll-alloy-consensus.workspace = true
-reth-scroll-consensus.workspace = true
-reth-scroll-execution.workspace = true
 
 # alloy
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
+
+# scroll
+reth-scroll-consensus.workspace = true
 
 # misc
 auto_impl.workspace = true
@@ -53,7 +53,6 @@ optimism = [
 scroll = [
     "reth-evm/scroll",
     "reth-primitives/scroll",
-    "reth-primitives-traits/scroll",
     "reth-revm/scroll",
     "reth-scroll-consensus/scroll",
     "revm/scroll"
