@@ -27,6 +27,9 @@ pub struct Transaction {
 
     /// queue index for deposit transactions
     pub queue_index: Option<u64>,
+
+    /// nonce for transactions
+    pub nonce: Option<u64>,
 }
 
 impl Typed2718 for Transaction {
@@ -177,8 +180,19 @@ mod tx_serde {
             with = "alloy_serde::quantity::opt"
         )]
         effective_gas_price: Option<u128>,
-        #[serde(default, rename = "queueIndex", skip_serializing_if = "Option::is_none")]
+        #[serde(
+            default,
+            rename = "queueIndex",
+            skip_serializing_if = "Option::is_none",
+            with = "alloy_serde::quantity::opt"
+        )]
         queue_index: Option<u64>,
+        #[serde(
+            default,
+            skip_serializing_if = "Option::is_none",
+            with = "alloy_serde::quantity::opt"
+        )]
+        nonce: Option<u64>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sender: Option<Address>,
     }
@@ -211,13 +225,9 @@ mod tx_serde {
                         from,
                     },
                 queue_index,
+                nonce,
                 ..
             } = value;
-
-            // if inner transaction is a deposit, then don't serialize `from` directly
-            let from =
-                if matches!(inner, ScrollTxEnvelope::L1Message(_)) { None } else { Some(from) };
-            let sender = from;
 
             // if inner transaction has its own `gasPrice` don't serialize it in this struct.
             let effective_gas_price = effective_gas_price.filter(|_| inner.gas_price().is_none());
@@ -227,7 +237,13 @@ mod tx_serde {
                 block_hash,
                 block_number,
                 transaction_index,
-                other: OptionalFields { from, effective_gas_price, queue_index, sender },
+                other: OptionalFields {
+                    nonce,
+                    from: Some(from),
+                    effective_gas_price,
+                    queue_index,
+                    sender: Some(from),
+                },
             }
         }
     }
@@ -264,6 +280,7 @@ mod tx_serde {
                     from,
                     effective_gas_price,
                 },
+                nonce: other.nonce,
                 sender: other.sender,
                 queue_index: other.queue_index,
             };
@@ -280,7 +297,7 @@ mod tests {
     fn can_deserialize_deposit() {
         // cast rpc eth_getTransactionByHash
         // 0x5c1c3785c8bf5d7f1cb714abd1d22e32642887215602c3a14a5e9ee105bad6aa --rpc-url https://rpc.scroll.io
-        let rpc_tx = r#"{"blockHash":"0x018ed80ea8340984a1f4841490284d6e51d71f9e9411feeca41e007a89fbfdff","blockNumber":"0xb81121","from":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","gas":"0x1e8480","gasPrice":"0x0","hash":"0x5c1c3785c8bf5d7f1cb714abd1d22e32642887215602c3a14a5e9ee105bad6aa","input":"0x8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e7ba000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f846ffc1507cbfe98a2b0ba1f06ea7e4eb749c001f78f6cb5540daa556a0566322a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0","to":"0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc","transactionIndex":"0x0","value":"0x0","type":"0x7e","v":"0x0","r":"0x0","s":"0x0","sender":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","queueIndex":0xe7ba0, "yParity":"0x0"}"#;
+        let rpc_tx = r#"{"blockHash":"0x018ed80ea8340984a1f4841490284d6e51d71f9e9411feeca41e007a89fbfdff","blockNumber":"0xb81121","from":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","gas":"0x1e8480","gasPrice":"0x0","hash":"0x5c1c3785c8bf5d7f1cb714abd1d22e32642887215602c3a14a5e9ee105bad6aa","input":"0x8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e7ba000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f846ffc1507cbfe98a2b0ba1f06ea7e4eb749c001f78f6cb5540daa556a0566322a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","nonce":"0x1","to":"0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc","transactionIndex":"0x0","value":"0x0","type":"0x7e","v":"0x0","r":"0x0","s":"0x0","sender":"0x7885bcbd5cecef1336b5300fb5186a12ddd8c478","queueIndex":"0xe7ba0", "yParity":"0x0"}"#;
 
         let tx = serde_json::from_str::<Transaction>(rpc_tx).unwrap();
 

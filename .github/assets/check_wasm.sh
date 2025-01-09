@@ -75,6 +75,7 @@ exclude_crates=(
   reth-scroll-chainspec # tokio
   reth-scroll-evm # tokio
   reth-scroll-engine # tokio
+  reth-scroll-rpc #tokio
 )
 
 # Array to hold the results
