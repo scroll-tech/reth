@@ -18,9 +18,6 @@ alloy-primitives.workspace = true
 # reth
 reth-codecs = { workspace = true, optional = true }
 
-# scroll
-poseidon-bn254 = { workspace = true, features = ["bn254"], optional = true }
-
 # required by reth-codecs
 modular-bitfield = { workspace = true, optional = true }
 serde.workspace = true
@@ -59,4 +56,3 @@ serde = [
     "alloy-primitives/serde",
     "reth-codecs/serde"
 ]
-poseidon = ["dep:poseidon-bn254"]

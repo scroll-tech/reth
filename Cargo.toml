@@ -105,20 +105,16 @@ members = [
     "crates/scroll/alloy/network",
     "crates/scroll/alloy/rpc-types",
     "crates/scroll/bin/scroll-reth",
-    "crates/scroll/bin/scroll-reth-mpt",
     "crates/scroll/chainspec",
     "crates/scroll/cli",
     "crates/scroll/consensus",
     "crates/scroll/engine",
     "crates/scroll/evm",
-    "crates/scroll/execution",
     "crates/scroll/hardforks",
     "crates/scroll/node",
     "crates/scroll/primitives",
     "crates/scroll/revm",
     "crates/scroll/rpc",
-    "crates/scroll/storage",
-    "crates/scroll/state-commitment",
     "crates/scroll/trie",
     "crates/stages/api/",
     "crates/stages/stages/",
@@ -508,19 +504,17 @@ reth-scroll-execution = { path = "crates/scroll/execution" }
 reth-scroll-forks = { path = "crates/scroll/hardforks" }
 reth-scroll-node = { path = "crates/scroll/node" }
 reth-scroll-primitives = { path = "crates/scroll/primitives" }
-reth-scroll-state-commitment = { path = "crates/scroll/state-commitment" }
 reth-scroll-trie = { path = "crates/scroll/trie" }
 reth-scroll-revm = { path = "crates/scroll/revm" }
-reth-scroll-storage = { path = "crates/scroll/storage" }
 # TODO (scroll): point to crates.io/tag once the crate is published/a tag is created.
 poseidon-bn254 = { git = "https://github.com/scroll-tech/poseidon-bn254", rev = "526a64a", features = ["bn254"] }
 
 # op
 op-alloy-rpc-types = { version = "0.9.0", default-features = false }
-op-alloy-rpc-types-engine = { version =  "0.9.0", default-features = false }
-op-alloy-rpc-jsonrpsee = { version =  "0.9.0", default-features = false }
-op-alloy-network = { version =  "0.9.0", default-features = false }
-op-alloy-consensus = { version =  "0.9.0", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.9.0", default-features = false }
+op-alloy-rpc-jsonrpsee = { version = "0.9.0", default-features = false }
+op-alloy-network = { version = "0.9.0", default-features = false }
+op-alloy-consensus = { version = "0.9.0", default-features = false }
 
 # misc
 aquamarine = "0.6"

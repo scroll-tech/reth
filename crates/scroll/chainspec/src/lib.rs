@@ -29,8 +29,6 @@ use std::sync::LazyLock;
 
 extern crate alloc;
 
-use reth_scroll_state_commitment as _;
-
 mod constants;
 pub use constants::{
     SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
@@ -235,9 +233,6 @@ impl ScrollChainSpec {
             difficulty: self.genesis.difficulty,
             nonce: self.genesis.nonce.into(),
             extra_data: self.genesis.extra_data.clone(),
-            #[cfg(not(feature = "mpt"))]
-            state_root: reth_scroll_state_commitment::state_root_ref_unhashed(&self.genesis.alloc),
-            #[cfg(feature = "mpt")]
             state_root: reth_trie_common::root::state_root_ref_unhashed(&self.genesis.alloc),
             timestamp: self.genesis.timestamp,
             mix_hash: self.genesis.mix_hash,
@@ -386,7 +381,7 @@ mod tests {
         let scroll_mainnet =
             ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet());
         assert_eq!(
-            b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"),
+            b256!("908789cb20d00fc6070093f142aa8d02c21cfb0a9b9cfd4621d8cf0255234c0f"),
             scroll_mainnet.genesis_hash()
         );
     }
@@ -396,7 +391,7 @@ mod tests {
         let scroll_sepolia =
             ScrollChainSpecBuilder::scroll_sepolia().build(ScrollChainConfig::sepolia());
         assert_eq!(
-            b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c"),
+            b256!("5e756a466b785b67e247b18c410d962866a53af97f09948016e9239b2054c94f"),
             scroll_sepolia.genesis_hash()
         );
     }
@@ -561,8 +556,8 @@ mod tests {
                         }),
                     ),
                 ]
-                .into_iter()
-                .collect(),
+                    .into_iter()
+                    .collect(),
                 ..Default::default()
             },
             ..Default::default()
