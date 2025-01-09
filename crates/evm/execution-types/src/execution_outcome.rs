@@ -809,8 +809,6 @@ mod tests {
             code: None,
             #[cfg(feature = "scroll")]
             code_size: 0,
-            #[cfg(feature = "scroll")]
-            poseidon_code_hash: B256::ZERO,
         };
         let account_info2 = AccountInfo {
             nonce: 2,
@@ -819,8 +817,6 @@ mod tests {
             code: None,
             #[cfg(feature = "scroll")]
             code_size: 0,
-            #[cfg(feature = "scroll")]
-            poseidon_code_hash: B256::ZERO,
         };
 
         // Set up the bundle state with these accounts

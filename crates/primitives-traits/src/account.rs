@@ -217,8 +217,6 @@ impl From<Account> for AccountInfo {
             code: None,
             #[cfg(feature = "scroll")]
             code_size: 0,
-            #[cfg(feature = "scroll")]
-            poseidon_code_hash: Default::default(),
         }
     }
 }

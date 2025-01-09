@@ -1401,19 +1401,6 @@ dependencies = [
 [[package]]
 name = "bn254"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/bn254.git?branch=master#81e1dcc92ee9a2798b13b84b24de182e9c42256e"
-dependencies = [
- "ff",
- "getrandom 0.2.15",
- "rand 0.8.5",
- "rand_core 0.6.4",
- "sp1-intrinsics",
- "subtle",
-]
-
-[[package]]
-name = "bn254"
-version = "0.1.0"
 source = "git+https://github.com/scroll-tech/bn254#81e1dcc92ee9a2798b13b84b24de182e9c42256e"
 dependencies = [
  "ff",
@@ -2691,8 +2678,8 @@ dependencies = [
  "reth-provider",
  "reth-revm",
  "reth-scroll-primitives",
- "reth-scroll-revm",
  "reth-stages",
+ "revm",
  "serde",
  "serde_json",
  "thiserror 2.0.9",
@@ -2921,7 +2908,7 @@ dependencies = [
  "reth-evm-ethereum",
  "reth-node-ethereum",
  "reth-primitives",
- "reth-scroll-revm",
+ "revm",
 ]
 
 [[package]]
@@ -5859,19 +5846,9 @@ checksum = "280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6"
 [[package]]
 name = "poseidon-bn254"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/poseidon-bn254?branch=master#254baa0e3e85c0975c16fe6f33042b1fa9ae0a44"
-dependencies = [
- "bn254 0.1.0 (git+https://github.com/scroll-tech/bn254.git?branch=master)",
- "itertools 0.13.0",
- "sp1-intrinsics",
-]
-
-[[package]]
-name = "poseidon-bn254"
-version = "0.1.0"
 source = "git+https://github.com/scroll-tech/poseidon-bn254?rev=526a64a#526a64a81419bcab6bd8280a8a3f9808189e0373"
 dependencies = [
- "bn254 0.1.0 (git+https://github.com/scroll-tech/bn254)",
+ "bn254",
  "itertools 0.13.0",
 ]
 
@@ -6577,9 +6554,9 @@ dependencies = [
  "reth-primitives",
  "reth-provider",
  "reth-revm",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-transaction-pool",
+ "revm",
  "tokio",
  "tracing",
 ]
@@ -6704,13 +6681,13 @@ dependencies = [
  "reth-primitives",
  "reth-provider",
  "reth-revm",
- "reth-scroll-revm",
  "reth-stages-api",
  "reth-storage-errors",
  "reth-testing-utils",
  "reth-trie",
  "reth-trie-db",
  "reth-trie-parallel",
+ "revm",
  "tokio",
  "tracing",
 ]
@@ -6750,10 +6727,10 @@ dependencies = [
  "reth-metrics",
  "reth-primitives",
  "reth-primitives-traits",
- "reth-scroll-revm",
  "reth-storage-api",
  "reth-testing-utils",
  "reth-trie",
+ "revm",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -7631,9 +7608,9 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-revm",
- "reth-scroll-revm",
  "reth-storage-api",
  "reth-transaction-pool",
+ "revm",
  "tracing",
 ]
 
@@ -7693,8 +7670,8 @@ dependencies = [
  "reth-primitives-traits",
  "reth-prune-types",
  "reth-revm",
- "reth-scroll-revm",
  "reth-storage-errors",
+ "revm",
  "revm-primitives",
 ]
 
@@ -7751,9 +7728,9 @@ dependencies = [
  "reth-execution-errors",
  "reth-primitives",
  "reth-primitives-traits",
- "reth-scroll-revm",
  "reth-trie",
  "reth-trie-common",
+ "revm",
  "serde",
  "serde_with",
 ]
@@ -7880,7 +7857,6 @@ dependencies = [
  "reth-provider",
  "reth-revm",
  "reth-rpc-api",
- "reth-scroll-revm",
  "reth-tracing",
  "reth-trie",
  "serde",
@@ -8300,11 +8276,11 @@ dependencies = [
  "reth-revm",
  "reth-rpc",
  "reth-rpc-eth-api",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-tracing",
  "reth-transaction-pool",
  "reth-trie-db",
+ "revm",
  "serde_json",
  "tokio",
 ]
@@ -8481,7 +8457,7 @@ dependencies = [
  "reth-primitives-traits",
  "reth-prune-types",
  "reth-revm",
- "reth-scroll-revm",
+ "revm",
  "revm-primitives",
  "thiserror 2.0.9",
  "tracing",
@@ -8545,11 +8521,11 @@ dependencies = [
  "reth-revm",
  "reth-rpc-server-types",
  "reth-rpc-types-compat",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-tracing",
  "reth-transaction-pool",
  "reth-trie-db",
+ "revm",
  "serde",
  "serde_json",
  "tokio",
@@ -8586,8 +8562,8 @@ dependencies = [
  "reth-provider",
  "reth-revm",
  "reth-rpc-types-compat",
- "reth-scroll-revm",
  "reth-transaction-pool",
+ "revm",
  "sha2 0.10.8",
  "thiserror 2.0.9",
  "tracing",
@@ -8657,9 +8633,9 @@ dependencies = [
  "reth-rpc-eth-api",
  "reth-rpc-eth-types",
  "reth-rpc-server-types",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-transaction-pool",
+ "revm",
  "serde_json",
  "thiserror 2.0.9",
  "tokio",
@@ -8694,7 +8670,7 @@ dependencies = [
  "reth-payload-primitives",
  "reth-primitives",
  "reth-primitives-traits",
- "reth-scroll-revm",
+ "revm",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -8784,11 +8760,11 @@ dependencies = [
  "reth-ethereum-forks",
  "reth-primitives-traits",
  "reth-scroll-primitives",
- "reth-scroll-revm",
  "reth-static-file-types",
  "reth-testing-utils",
  "reth-trie-common",
  "reth-zstd-compressors",
+ "revm-primitives",
  "rstest",
  "secp256k1",
  "serde",
@@ -8820,7 +8796,7 @@ dependencies = [
  "proptest-arbitrary-interop",
  "rand 0.8.5",
  "reth-codecs",
- "reth-scroll-revm",
+ "revm-primitives",
  "secp256k1",
  "serde",
  "serde_json",
@@ -8867,13 +8843,13 @@ dependencies = [
  "reth-primitives-traits",
  "reth-prune-types",
  "reth-scroll-primitives",
- "reth-scroll-revm",
  "reth-stages-types",
  "reth-storage-api",
  "reth-storage-errors",
  "reth-testing-utils",
  "reth-trie",
  "reth-trie-db",
+ "revm",
  "strum",
  "tempfile",
  "tokio",
@@ -8943,10 +8919,10 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-prune-types",
- "reth-scroll-revm",
  "reth-storage-api",
  "reth-storage-errors",
  "reth-trie",
+ "revm",
 ]
 
 [[package]]
@@ -9004,10 +8980,10 @@ dependencies = [
  "reth-rpc-eth-types",
  "reth-rpc-server-types",
  "reth-rpc-types-compat",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-testing-utils",
  "reth-transaction-pool",
+ "revm",
  "revm-inspectors",
  "revm-primitives",
  "serde",
@@ -9183,10 +9159,10 @@ dependencies = [
  "reth-rpc-eth-types",
  "reth-rpc-server-types",
  "reth-rpc-types-compat",
- "reth-scroll-revm",
  "reth-tasks",
  "reth-transaction-pool",
  "reth-trie-common",
+ "revm",
  "revm-inspectors",
  "revm-primitives",
  "tokio",
@@ -9219,11 +9195,11 @@ dependencies = [
  "reth-revm",
  "reth-rpc-server-types",
  "reth-rpc-types-compat",
- "reth-scroll-revm",
  "reth-storage-api",
  "reth-tasks",
  "reth-transaction-pool",
  "reth-trie",
+ "revm",
  "revm-inspectors",
  "revm-primitives",
  "schnellru",
@@ -9333,7 +9309,7 @@ name = "reth-scroll-consensus"
 version = "1.1.4"
 dependencies = [
  "eyre",
- "reth-scroll-revm",
+ "revm",
 ]
 
 [[package]]
@@ -9369,7 +9345,7 @@ dependencies = [
  "reth-scroll-consensus",
  "reth-scroll-forks",
  "reth-scroll-primitives",
- "reth-scroll-revm",
+ "revm",
  "thiserror 2.0.9",
  "tracing",
 ]
@@ -9437,20 +9413,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "reth-scroll-revm"
-version = "1.1.4"
-dependencies = [
- "revm",
-]
-
-[[package]]
 name = "reth-scroll-trie"
 version = "1.1.4"
 dependencies = [
  "alloy-primitives",
  "alloy-trie",
  "hex-literal",
- "poseidon-bn254 0.1.0 (git+https://github.com/scroll-tech/poseidon-bn254?rev=526a64a)",
+ "poseidon-bn254",
  "proptest-arbitrary-interop",
  "reth-trie",
  "tracing",
@@ -9607,11 +9576,11 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-prune-types",
- "reth-scroll-revm",
  "reth-stages-types",
  "reth-storage-errors",
  "reth-trie",
  "reth-trie-db",
+ "revm",
 ]
 
 [[package]]
@@ -9750,11 +9719,11 @@ dependencies = [
  "reth-metrics",
  "reth-primitives",
  "reth-primitives-traits",
- "reth-scroll-revm",
  "reth-stages-types",
  "reth-storage-errors",
  "reth-trie-common",
  "reth-trie-sparse",
+ "revm",
  "serde_json",
  "tracing",
  "triehash",
@@ -9808,10 +9777,10 @@ dependencies = [
  "reth-primitives",
  "reth-provider",
  "reth-scroll-primitives",
- "reth-scroll-revm",
  "reth-storage-errors",
  "reth-trie",
  "reth-trie-common",
+ "revm",
  "serde",
  "serde_json",
  "similar-asserts",
@@ -9955,7 +9924,6 @@ dependencies = [
  "dyn-clone",
  "enumn",
  "hex",
- "poseidon-bn254 0.1.0 (git+https://github.com/scroll-tech/poseidon-bn254?branch=master)",
  "serde",
 ]
 
