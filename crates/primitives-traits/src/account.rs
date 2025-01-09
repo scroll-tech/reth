@@ -90,7 +90,7 @@ impl Bytecode {
         Self(RevmBytecode::new_raw(bytes))
     }
 
-    /// Creates a new raw [`revm_primitives::primitives::Bytecode`].
+    /// Creates a new raw [`revm_primitives::Bytecode`].
     ///
     /// Returns an error on incorrect Bytecode format.
     #[inline]
