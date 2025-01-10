@@ -60,7 +60,6 @@ where
             reth_primitives::Transaction::L1Message(tx) => {
                 tx_queue_index = Some(tx.queue_index);
                 tx_sender = Some(tx.sender);
-
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };
@@ -81,6 +80,7 @@ where
                 })
                 .unwrap_or_else(|| inner.max_fee_per_gas())
         };
+        let nonce = inner.nonce();
 
         Ok(Transaction {
             inner: alloy_rpc_types_eth::Transaction {
@@ -93,6 +93,7 @@ where
             },
             sender: tx_sender,
             queue_index: tx_queue_index,
+            nonce: Some(nonce),
         })
     }
 

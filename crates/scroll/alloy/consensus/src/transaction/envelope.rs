@@ -491,7 +491,6 @@ mod tests {
     fn test_encode_decode_l1_message() {
         let tx = TxL1Message {
             queue_index: 1,
-            nonce: 1,
             gas_limit: 2,
             to: Address::left_padding_from(&[3]),
             sender: Address::left_padding_from(&[4]),
@@ -510,7 +509,6 @@ mod tests {
     fn test_serde_roundtrip_deposit() {
         let tx = TxL1Message {
             queue_index: 11,
-            nonce: 1,
             gas_limit: u64::MAX,
             sender: Address::random(),
             to: Address::random(),

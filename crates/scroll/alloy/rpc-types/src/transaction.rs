@@ -27,6 +27,10 @@ pub struct Transaction {
 
     /// queue index for deposit transactions
     pub queue_index: Option<u64>,
+
+    /// nonce for deposit transactions.
+    /// why don't put in TxL1Message? if put in TxL1Message, the payload of l1_message is wrong.
+    pub nonce: Option<u64>,
 }
 
 impl Typed2718 for Transaction {
@@ -184,6 +188,12 @@ mod tx_serde {
             with = "alloy_serde::quantity::opt"
         )]
         queue_index: Option<u64>,
+        #[serde(
+            default,
+            skip_serializing_if = "Option::is_none",
+            with = "alloy_serde::quantity::opt"
+        )]
+        nonce: Option<u64>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sender: Option<Address>,
     }
@@ -216,6 +226,7 @@ mod tx_serde {
                         from,
                     },
                 queue_index,
+                nonce,
                 ..
             } = value;
 
@@ -232,6 +243,7 @@ mod tx_serde {
                     effective_gas_price,
                     queue_index,
                     sender: Some(from),
+                    nonce,
                 },
             }
         }
@@ -260,7 +272,7 @@ mod tx_serde {
             };
 
             let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
-            let a = Self {
+            Ok(Self {
                 inner: alloy_rpc_types_eth::Transaction {
                     inner,
                     block_hash,
@@ -271,8 +283,8 @@ mod tx_serde {
                 },
                 sender: other.sender,
                 queue_index: other.queue_index,
-            };
-            Ok(a)
+                nonce: other.nonce,
+            })
         }
     }
 }

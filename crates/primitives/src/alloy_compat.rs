@@ -108,7 +108,6 @@ impl TryFrom<AnyRpcTransaction> for TransactionSigned {
                                 value: inner.value(),
                                 sender: fields.sender,
                                 input: inner.input().clone(),
-                                nonce: inner.nonce(),
                             }),
                             scroll_alloy_consensus::TxL1Message::signature(),
                             _hash,
