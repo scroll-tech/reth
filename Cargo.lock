@@ -2690,7 +2690,6 @@ dependencies = [
  "reth-primitives",
  "reth-provider",
  "reth-revm",
- "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-stages",
  "serde",
@@ -7049,7 +7048,6 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-prune-types",
- "reth-scroll-primitives",
  "reth-stages-types",
  "reth-storage-errors",
  "reth-tracing",
@@ -7750,7 +7748,6 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-revm",
- "reth-scroll-primitives",
  "reth-testing-utils",
  "revm-primitives",
  "secp256k1",
@@ -8817,7 +8814,6 @@ dependencies = [
  "reth-codecs",
  "reth-ethereum-forks",
  "reth-primitives-traits",
- "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-static-file-types",
  "reth-testing-utils",
@@ -8901,7 +8897,6 @@ dependencies = [
  "reth-primitives",
  "reth-primitives-traits",
  "reth-prune-types",
- "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-stages-types",
  "reth-storage-api",
@@ -9403,8 +9398,8 @@ dependencies = [
  "reth-scroll-chainspec",
  "reth-scroll-consensus",
  "reth-scroll-forks",
- "reth-scroll-primitives",
  "reth-scroll-revm",
+ "scroll-alloy-consensus",
  "thiserror 2.0.10",
  "tracing",
 ]
@@ -9447,18 +9442,6 @@ dependencies = [
  "reth-tracing",
  "reth-transaction-pool",
  "reth-trie-db",
-]
-
-[[package]]
-name = "reth-scroll-primitives"
-version = "1.1.4"
-dependencies = [
- "alloy-primitives",
- "arbitrary",
- "modular-bitfield",
- "reth-codecs",
- "serde",
- "test-fuzz",
 ]
 
 [[package]]
@@ -9565,7 +9548,6 @@ dependencies = [
  "reth-prune",
  "reth-prune-types",
  "reth-revm",
- "reth-scroll-primitives",
  "reth-stages-api",
  "reth-static-file",
  "reth-storage-errors",
@@ -9877,7 +9859,6 @@ dependencies = [
  "reth-metrics",
  "reth-primitives",
  "reth-provider",
- "reth-scroll-primitives",
  "reth-scroll-revm",
  "reth-storage-errors",
  "reth-trie",

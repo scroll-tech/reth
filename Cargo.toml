@@ -112,7 +112,6 @@ members = [
     "crates/scroll/evm",
     "crates/scroll/hardforks",
     "crates/scroll/node",
-    "crates/scroll/primitives",
     "crates/scroll/revm",
     "crates/scroll/rpc",
     "crates/scroll/trie",
@@ -502,7 +501,6 @@ reth-scroll-evm = { path = "crates/scroll/evm" }
 reth-scroll-engine = { path = "crates/scroll/engine" }
 reth-scroll-forks = { path = "crates/scroll/hardforks" }
 reth-scroll-node = { path = "crates/scroll/node" }
-reth-scroll-primitives = { path = "crates/scroll/primitives" }
 reth-scroll-trie = { path = "crates/scroll/trie" }
 reth-scroll-revm = { path = "crates/scroll/revm" }
 # TODO (scroll): point to crates.io/tag once the crate is published/a tag is created.

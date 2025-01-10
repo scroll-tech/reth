@@ -31,7 +31,6 @@ alloy-trie = { workspace = true, features = ["serde"] }
 
 # scroll
 revm-primitives = { package = "reth-scroll-revm", path = "../scroll/revm", features = ["serde"] }
-reth-scroll-primitives = { workspace = true, optional = true, features = ["serde"] }
 scroll-alloy-consensus = { workspace = true, optional = true, features = ["serde", "arbitrary"] }
 
 # optimism
@@ -151,7 +150,6 @@ arbitrary = [
     "alloy-trie/arbitrary",
     "reth-trie-common/arbitrary",
     "dep:secp256k1",
-    "reth-scroll-primitives?/arbitrary",
     "scroll-alloy-consensus?/arbitrary"
 ]
 secp256k1 = [
@@ -195,7 +193,6 @@ scroll = [
     "dep:scroll-alloy-consensus",
     "reth-primitives-traits/scroll",
     "reth-testing-utils/scroll",
-    "reth-scroll-primitives",
 ]
 
 [[bench]]

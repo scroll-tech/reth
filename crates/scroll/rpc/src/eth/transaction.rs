@@ -60,6 +60,7 @@ where
             reth_primitives::Transaction::L1Message(tx) => {
                 tx_queue_index = Some(tx.queue_index);
                 tx_sender = Some(tx.sender);
+
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };

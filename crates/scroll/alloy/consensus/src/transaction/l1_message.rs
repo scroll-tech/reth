@@ -37,6 +37,9 @@ pub struct TxL1Message {
     /// The queue index of the message in the L1 contract queue.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
     pub queue_index: u64,
+    /// The nonce for the transaction.
+    #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
+    pub nonce: u64,
     /// The gas limit for the transaction. Gas is paid for when message is sent from the L1.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "gas"))]
     pub gas_limit: u64,
@@ -71,6 +74,7 @@ impl TxL1Message {
     pub fn rlp_decode_fields(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Ok(Self {
             queue_index: Decodable::decode(buf)?,
+            nonce: Decodable::decode(buf)?,
             gas_limit: Decodable::decode(buf)?,
             to: Decodable::decode(buf)?,
             value: Decodable::decode(buf)?,
@@ -102,6 +106,7 @@ impl TxL1Message {
     /// Outputs the length of the transaction's fields, without a RLP header.
     fn rlp_encoded_fields_length(&self) -> usize {
         self.queue_index.length() +
+            self.nonce.length() +
             self.gas_limit.length() +
             self.to.length() +
             self.value.length() +
@@ -113,6 +118,7 @@ impl TxL1Message {
     /// <https://github.com/scroll-tech/go-ethereum/blob/9fff27e4f34fb5097100ed76ee725ce056267f4b/core/types/l1_message_tx.go#L12-L19>
     fn rlp_encode_fields(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.queue_index.encode(out);
+        self.nonce.encode(out);
         self.gas_limit.encode(out);
         self.to.encode(out);
         self.value.encode(out);
@@ -156,6 +162,7 @@ impl TxL1Message {
     #[inline]
     pub fn size(&self) -> usize {
         size_of::<u64>() + // queue_index
+            size_of::<u64>() + // nonce
             size_of::<u64>() + // gas_limit
             size_of::<Address>() + // to
             size_of::<U256>() + // value
@@ -359,6 +366,7 @@ mod tests {
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: 0,
         };
         let mut buffer = BytesMut::new();
         original.rlp_encode_fields(&mut buffer);
@@ -376,6 +384,7 @@ mod tests {
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: 0,
         };
 
         let mut buffer_with_header = BytesMut::new();
@@ -396,6 +405,7 @@ mod tests {
             value: U256::default(),
             sender: Address::default(),
             input: Bytes::default(),
+            nonce: 0,
         };
 
         assert!(tx_deposit.size() > tx_deposit.rlp_encoded_fields_length());
@@ -426,6 +436,8 @@ pub(super) mod serde_bincode_compat {
         #[serde(default)]
         queue_index: u64,
         #[serde(default)]
+        nonce: u64,
+        #[serde(default)]
         gas_limit: u64,
         to: Address,
         value: U256,
@@ -443,6 +455,7 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 sender: value.sender,
                 input: Cow::Borrowed(&value.input),
+                nonce: value.nonce,
             }
         }
     }
@@ -456,6 +469,7 @@ pub(super) mod serde_bincode_compat {
                 value: value.value,
                 sender: value.sender,
                 input: value.input.into_owned(),
+                nonce: value.nonce,
             }
         }
     }

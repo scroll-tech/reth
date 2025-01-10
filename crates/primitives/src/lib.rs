@@ -22,8 +22,6 @@
 #[cfg(feature = "optimism")]
 use op_alloy_consensus as _;
 #[cfg(feature = "scroll")]
-use reth_scroll_primitives as _;
-#[cfg(feature = "scroll")]
 use scroll_alloy_consensus as _;
 
 extern crate alloc;

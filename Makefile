@@ -398,7 +398,7 @@ lint-scroll-reth:
 	--examples \
 	--tests \
 	--benches \
-	--features "scroll $(BIN_OTHER_FEATURES)" \
+	--features "scroll $(BIN_OTHER_FEATURES) skip-state-root-validation" \
 	-- -D warnings
 
 lint-all:
