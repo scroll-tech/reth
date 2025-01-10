@@ -103,6 +103,8 @@ fn convert_revm_to_reth_account(revm_account: &RevmAccount) -> Option<RethAccoun
             } else {
                 Some(revm_account.info.code_hash)
             },
+            #[cfg(feature = "scroll")]
+            code_size: revm_account.info.code_size as u64,
         }),
     }
 }

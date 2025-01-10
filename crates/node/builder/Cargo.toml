@@ -128,6 +128,7 @@ scroll = [
     "reth-blockchain-tree/scroll",
     "reth-rpc-eth-types/scroll",
     "reth-stages/scroll",
+    "reth-db-common/scroll",
     "reth-invalid-block-hooks/scroll"
 ]
 skip-state-root-validation = [

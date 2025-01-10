@@ -126,4 +126,5 @@ test-utils = [
     "reth-trie-db/test-utils",
     "reth-trie-parallel/test-utils",
 ]
+scroll = []
 skip-state-root-validation = ["reth-stages/skip-state-root-validation"]

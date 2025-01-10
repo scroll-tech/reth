@@ -234,6 +234,8 @@ where
                     nonce: account.nonce.unwrap_or_default(),
                     balance: account.balance,
                     bytecode_hash,
+                    #[cfg(feature = "scroll")]
+                    code_size: account.code.as_ref().map(|c| c.len() as u64).unwrap_or_default(),
                 }),
                 storage,
             ),

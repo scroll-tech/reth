@@ -119,6 +119,7 @@ arbitrary = [
 	"reth-codecs/arbitrary",
 	"alloy-rpc-types-eth?/arbitrary",
 ]
+scroll = ["reth-primitives-traits/scroll"]
 
 [[bench]]
 name = "prefix_set"

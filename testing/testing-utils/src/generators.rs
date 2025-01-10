@@ -403,7 +403,16 @@ pub fn random_eoa_account<R: Rng>(rng: &mut R) -> (Address, Account) {
     let balance = U256::from(rng.gen::<u32>());
     let addr = rng.gen();
 
-    (addr, Account { nonce, balance, bytecode_hash: None })
+    (
+        addr,
+        Account {
+            nonce,
+            balance,
+            bytecode_hash: None,
+            #[cfg(feature = "scroll")]
+            code_size: 0,
+        },
+    )
 }
 
 /// Generate random Externally Owned Accounts

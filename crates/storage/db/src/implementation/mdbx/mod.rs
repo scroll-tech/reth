@@ -1180,6 +1180,8 @@ mod tests {
             nonce: 18446744073709551615,
             bytecode_hash: Some(B256::random()),
             balance: U256::MAX,
+            #[cfg(feature = "scroll")]
+            code_size: 0,
         };
         let key = Address::from_str("0xa2c122be93b0074270ebee7f6b7292c7deb45047")
             .expect(ERROR_ETH_ADDRESS);

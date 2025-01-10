@@ -87,6 +87,9 @@ impl MultiProof {
                             nonce: account.nonce,
                             bytecode_hash: (account.code_hash != KECCAK_EMPTY)
                                 .then_some(account.code_hash),
+                            // TODO (scroll): set the code size to the correct value.
+                            #[cfg(feature = "scroll")]
+                            code_size: 0,
                         })
                     }
                 }

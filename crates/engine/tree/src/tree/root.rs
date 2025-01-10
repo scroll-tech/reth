@@ -855,6 +855,8 @@ mod tests {
             } else {
                 Some(revm_account.info.code_hash)
             },
+            #[cfg(feature = "scroll")]
+            code_size: revm_account.info.code_size as u64,
         }
     }
 
