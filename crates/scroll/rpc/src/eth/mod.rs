@@ -70,12 +70,12 @@ impl<N> ScrollEthApi<N>
 where
     N: ScrollNodeCore<
         Provider: BlockReaderIdExt<
-            Block = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Block,
-            Receipt = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Receipt,
+            Block=<<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Block,
+            Receipt=<<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Receipt,
         > + ChainSpecProvider
-                      + CanonStateSubscriptions
-                      + Clone
-                      + 'static,
+        + CanonStateSubscriptions
+        + Clone
+        + 'static,
     >,
 {
     /// Creates a new instance for given context.

@@ -32,6 +32,7 @@ where
     where
         Self: LoadReceipt,
     {
+        println!("hhf: eth_block_receipts");
         if let Some((block, receipts)) = self.load_block_and_receipts(block_id).await? {
             let block_number = block.number();
             let base_fee = block.base_fee_per_gas();
