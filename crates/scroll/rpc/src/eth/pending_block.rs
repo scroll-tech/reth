@@ -42,7 +42,10 @@ where
         > + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
                       + StateProviderFactory,
         Pool: TransactionPool<Transaction: PoolTransaction<Consensus = ProviderTx<N::Provider>>>,
-        Evm: ConfigureEvm<Header = Header, Transaction = TransactionSigned>,
+        Evm: ConfigureEvm<
+            Header = ProviderHeader<Self::Provider>,
+            Transaction = ProviderTx<Self::Provider>,
+        >,
     >,
 {
     #[inline]

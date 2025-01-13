@@ -8,6 +8,7 @@ use reth_evm::ConfigureEvm;
 use reth_network_api::NetworkInfo;
 use reth_node_api::NodePrimitives;
 use reth_node_builder::EthApiBuilderCtx;
+use reth_primitives::EthPrimitives;
 use reth_provider::{
     BlockNumReader, BlockReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider,
     NodePrimitivesProvider, ProviderBlock, ProviderHeader, ProviderReceipt, ProviderTx,
@@ -69,37 +70,21 @@ pub struct ScrollEthApi<N: ScrollNodeCore> {
 impl<N> ScrollEthApi<N>
 where
     N: ScrollNodeCore<
-        Provider: BlockReaderIdExt<
-            Block=<<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Block,
-            Receipt=<<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Receipt,
-        > + ChainSpecProvider
-        + CanonStateSubscriptions
-        + Clone
-        + 'static,
+        Provider: BlockReaderIdExt
+                      + ChainSpecProvider
+                      + CanonStateSubscriptions<Primitives = EthPrimitives>
+                      + Clone
+                      + 'static,
     >,
 {
-    /// Creates a new instance for given context.
-    pub fn new(ctx: &EthApiBuilderCtx<N>) -> Self {
-        let blocking_task_pool =
-            BlockingTaskPool::build().expect("failed to build blocking task pool");
+    /// Returns a reference to the [`EthApiNodeBackend`].
+    pub fn eth_api(&self) -> &EthApiNodeBackend<N> {
+        self.inner.eth_api()
+    }
 
-        let inner = EthApiInner::new(
-            ctx.provider.clone(),
-            ctx.pool.clone(),
-            ctx.network.clone(),
-            ctx.cache.clone(),
-            ctx.new_gas_price_oracle(),
-            ctx.config.rpc_gas_cap,
-            ctx.config.rpc_max_simulate_blocks,
-            ctx.config.eth_proof_window,
-            blocking_task_pool,
-            ctx.new_fee_history_cache(),
-            ctx.evm_config.clone(),
-            ctx.executor.clone(),
-            ctx.config.proof_permits,
-        );
-
-        Self { inner: Arc::new(ScrollEthApiInner { eth_api: inner }) }
+    /// Build a [`ScrollEthApi`] using [`ScrollEthApiBuildlmn9 ,ner`].
+    pub const fn builder() -> ScrollEthApiBuilder {
+        ScrollEthApiBuilder::new()
     }
 }
 
@@ -285,4 +270,59 @@ impl<N: ScrollNodeCore> fmt::Debug for ScrollEthApi<N> {
 struct ScrollEthApiInner<N: ScrollNodeCore> {
     /// Gateway to node's core components.
     eth_api: EthApiNodeBackend<N>,
+}
+
+impl<N: ScrollNodeCore> ScrollEthApiInner<N> {
+    /// Returns a reference to the [`EthApiNodeBackend`].
+    const fn eth_api(&self) -> &EthApiNodeBackend<N> {
+        &self.eth_api
+    }
+}
+
+/// A type that knows how to build a [`ScrollEthApi`].
+#[derive(Debug, Default)]
+pub struct ScrollEthApiBuilder {}
+
+impl ScrollEthApiBuilder {
+    /// Creates a [`ScrollEthApiBuilder`] instance from [`EthApiBuilderCtx`].
+    pub const fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ScrollEthApiBuilder {
+    /// Builds an instance of [`ScrollEthApi`]
+    pub fn build<N>(self, ctx: &EthApiBuilderCtx<N>) -> ScrollEthApi<N>
+    where
+        N: ScrollNodeCore<
+            Provider: BlockReaderIdExt<
+                Block = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Block,
+                Receipt = <<N::Provider as NodePrimitivesProvider>::Primitives as NodePrimitives>::Receipt,
+            > + ChainSpecProvider
+            + CanonStateSubscriptions
+            + Clone
+            + 'static,
+        >,
+    {
+        let blocking_task_pool =
+            BlockingTaskPool::build().expect("failed to build blocking task pool");
+
+        let inner = EthApiInner::new(
+            ctx.provider.clone(),
+            ctx.pool.clone(),
+            ctx.network.clone(),
+            ctx.cache.clone(),
+            ctx.new_gas_price_oracle(),
+            ctx.config.rpc_gas_cap,
+            ctx.config.rpc_max_simulate_blocks,
+            ctx.config.eth_proof_window,
+            blocking_task_pool,
+            ctx.new_fee_history_cache(),
+            ctx.evm_config.clone(),
+            ctx.executor.clone(),
+            ctx.config.proof_permits,
+        );
+
+        ScrollEthApi { inner: Arc::new(ScrollEthApiInner { eth_api: inner }) }
+    }
 }

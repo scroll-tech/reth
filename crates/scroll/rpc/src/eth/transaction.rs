@@ -1,22 +1,51 @@
 //! Loads and formats Scroll transaction RPC response.
 
 use alloy_consensus::{Signed, Transaction as _};
-use alloy_primitives::{PrimitiveSignature as Signature, Sealable, Sealed};
+use alloy_primitives::{Bytes, PrimitiveSignature as Signature, Sealable, Sealed, B256};
 use alloy_rpc_types_eth::TransactionInfo;
 use reth_node_api::FullNodeComponents;
 use reth_primitives::{RecoveredTx, TransactionSigned};
-use reth_provider::{ReceiptProvider, TransactionsProvider};
-use reth_rpc_eth_api::{
-    helpers::{LoadTransaction, SpawnBlocking},
-    FullEthApiTypes, RpcNodeCoreExt, TransactionCompat,
+use reth_provider::{
+    BlockReader, BlockReaderIdExt, ProviderTx, ReceiptProvider, TransactionsProvider,
 };
-use reth_rpc_eth_types::EthApiError;
-use reth_transaction_pool::TransactionPool;
+use reth_rpc_eth_api::{
+    helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
+    FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt, TransactionCompat,
+};
+use reth_rpc_eth_types::{utils::recover_raw_transaction, EthApiError};
+use reth_transaction_pool::{PoolTransaction, TransactionOrigin, TransactionPool};
 
 use scroll_alloy_consensus::ScrollTxEnvelope;
 use scroll_alloy_rpc_types::Transaction;
 
 use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
+
+impl<N> EthTransactions for ScrollEthApi<N>
+where
+    Self: LoadTransaction<Provider: BlockReaderIdExt>,
+    N: ScrollNodeCore<Provider: BlockReader<Transaction = ProviderTx<Self::Provider>>>,
+{
+    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
+        self.inner.eth_api.signers()
+    }
+
+    /// Decodes and recovers the transaction and submits it to the pool.
+    ///
+    /// Returns the hash of the transaction.
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<B256, Self::Error> {
+        let recovered = recover_raw_transaction(&tx)?;
+        let pool_transaction = <Self::Pool as TransactionPool>::Transaction::from_pooled(recovered);
+
+        // submit the transaction to the pool with a `Local` origin
+        let hash = self
+            .pool()
+            .add_transaction(TransactionOrigin::Local, pool_transaction)
+            .await
+            .map_err(Self::Error::from_eth_err)?;
+
+        Ok(hash)
+    }
+}
 
 impl<N> LoadTransaction for ScrollEthApi<N>
 where
