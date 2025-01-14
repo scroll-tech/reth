@@ -29,6 +29,7 @@ use reth_tasks::{
 };
 use reth_transaction_pool::TransactionPool;
 
+pub use receipt::ScrollReceiptBuilder;
 use scroll_alloy_network::Scroll;
 
 use crate::ScrollEthApiError;

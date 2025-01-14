@@ -9,7 +9,7 @@ use alloy_rpc_types_eth::AccessList;
 use scroll_alloy_consensus::{self, ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction};
 use scroll_alloy_rpc_types::ScrollTransactionRequest;
 
-/// Types for an Op-stack network.
+/// Types for an Scroll-stack network.
 #[derive(Clone, Copy, Debug)]
 pub struct Scroll {
     _private: (),

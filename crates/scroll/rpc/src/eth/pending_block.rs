@@ -7,9 +7,7 @@ use alloy_eips::{eip7685::EMPTY_REQUESTS_HASH, merge::BEACON_NONCE};
 use alloy_primitives::{logs_bloom, B256, U256};
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_evm::ConfigureEvm;
-use reth_primitives::{
-    proofs::calculate_receipt_root_no_memo, BlockBody, Receipt, TransactionSigned,
-};
+use reth_primitives::{proofs::calculate_receipt_root_no_memo, BlockBody, Receipt};
 use reth_provider::{
     BlockReaderIdExt, ChainSpecProvider, ProviderBlock, ProviderHeader, ProviderReceipt,
     ProviderTx, StateProviderFactory,

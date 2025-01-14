@@ -1,7 +1,7 @@
 //! Loads and formats Scroll block RPC response.
 
 use alloy_consensus::BlockHeader;
-use alloy_rpc_types_eth::{BlockId, TransactionReceipt};
+use alloy_rpc_types_eth::BlockId;
 use reth_chainspec::ChainSpecProvider;
 use reth_node_api::BlockBody;
 use reth_primitives::{Receipt, TransactionMeta, TransactionSigned};
@@ -10,20 +10,18 @@ use reth_rpc_eth_api::{
     helpers::{EthBlocks, LoadBlock, LoadPendingBlock, LoadReceipt, SpawnBlocking},
     RpcReceipt,
 };
-use reth_rpc_eth_types::{EthApiError, EthReceiptBuilder};
 use scroll_alloy_network::Network;
 
 use reth_scroll_chainspec::ScrollChainSpec;
-// use scroll_alloy_rpc_types::ScrollTransactionReceipt;
+use scroll_alloy_rpc_types::ScrollTransactionReceipt;
 
-// use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError};
-use crate::{eth::ScrollNodeCore, ScrollEthApi};
+use crate::{eth::ScrollNodeCore, ScrollEthApi, ScrollEthApiError, ScrollReceiptBuilder};
 
 impl<N> EthBlocks for ScrollEthApi<N>
 where
     Self: LoadBlock<
-        Error = EthApiError,
-        NetworkTypes: Network<ReceiptResponse = TransactionReceipt>,
+        Error = ScrollEthApiError,
+        NetworkTypes: Network<ReceiptResponse = ScrollTransactionReceipt>,
         Provider: BlockReader<Receipt = Receipt, Transaction = TransactionSigned>,
     >,
     N: ScrollNodeCore<Provider: ChainSpecProvider<ChainSpec = ScrollChainSpec> + HeaderProvider>,
@@ -35,7 +33,6 @@ where
     where
         Self: LoadReceipt,
     {
-        println!("hhhffffffffff");
         if let Some((block, receipts)) = self.load_block_and_receipts(block_id).await? {
             let block_number = block.number();
             let base_fee = block.base_fee_per_gas();
@@ -59,7 +56,7 @@ where
                         excess_blob_gas,
                         timestamp,
                     };
-                    EthReceiptBuilder::new(tx, meta, receipt, &receipts)
+                    ScrollReceiptBuilder::new(tx, meta, receipt, &receipts)
                         .map(|builder| builder.build())
                 })
                 .collect::<Result<Vec<_>, Self::Error>>()

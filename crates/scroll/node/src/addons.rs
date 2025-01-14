@@ -1,18 +1,16 @@
-use crate::{ScrollEngineValidator, ScrollEngineValidatorBuilder, ScrollStorage};
 use reth_ethereum_engine_primitives::EthEngineTypes;
-use reth_network::NetworkHandle;
 use reth_node_api::{AddOnsContext, NodeAddOns};
 use reth_node_builder::{
-    rpc::{EngineValidatorAddOn, RethRpcAddOns, RpcAddOns, RpcHandle},
-    FullNodeComponents, FullNodeTypes,
+    rpc::{EngineValidatorAddOn, EngineValidatorBuilder, RethRpcAddOns, RpcAddOns, RpcHandle},
+    FullNodeComponents,
 };
 use reth_node_types::{NodeTypes, NodeTypesWithEngine};
 use reth_primitives::EthPrimitives;
-use reth_rpc::EthApi;
-use reth_rpc_server_types::RethRpcModule;
+
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_rpc::ScrollEthApi;
-use reth_tracing::tracing::debug;
+
+use crate::{ScrollEngineValidator, ScrollEngineValidatorBuilder, ScrollStorage};
 
 /// Add-ons for the Scroll follower node.
 #[derive(Debug)]
@@ -55,7 +53,7 @@ where
         ctx: reth_node_api::AddOnsContext<'_, N>,
     ) -> eyre::Result<Self::Handle> {
         let Self { rpc_add_ons } = self;
-        rpc_add_ons.launch_add_ons_with(ctx, |modules, _auth_modules| Ok(())).await
+        rpc_add_ons.launch_add_ons_with(ctx, |_, _| Ok(())).await
     }
 }
 
