@@ -64,12 +64,12 @@ where
 
     fn fill(
         &self,
-        tx: RecoveredTx,
+        tx: RecoveredTx<TransactionSigned>,
         tx_info: TransactionInfo,
     ) -> Result<Self::Transaction, Self::Error> {
         let from = tx.signer();
         let hash = tx.hash();
-        let TransactionSigned { transaction, signature, .. } = tx.into_signed();
+        let TransactionSigned { transaction, signature, .. } = tx.into_tx();
         let mut tx_sender = None;
         let mut tx_queue_index = None;
 
