@@ -53,7 +53,8 @@ optimism = [
     "reth-primitives/optimism",
     "reth-provider/optimism",
     "reth-scroll-evm/optimism",
-    "reth-scroll-engine/optimism"
+    "reth-scroll-engine/optimism",
+    "reth-scroll-rpc/optimism",
 ]
 scroll = [
     "reth-db/scroll",
