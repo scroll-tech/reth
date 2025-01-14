@@ -88,7 +88,7 @@ where
     type Validator = ScrollEngineValidator;
 
     async fn engine_validator(&self, ctx: &AddOnsContext<'_, N>) -> eyre::Result<Self::Validator> {
-        ScrollEngineValidatorBuilder::default().build(ctx).await
+        ScrollEngineValidatorBuilder.build(ctx).await
     }
 }
 
