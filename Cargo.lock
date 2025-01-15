@@ -8607,6 +8607,7 @@ dependencies = [
  "reth-zstd-compressors",
  "revm-primitives",
  "rstest",
+ "scroll-alloy-consensus",
  "secp256k1",
  "serde",
  "serde_json",
