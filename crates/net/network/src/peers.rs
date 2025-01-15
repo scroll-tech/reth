@@ -154,7 +154,7 @@ impl PeersManager {
     }
 
     /// Returns a new [`PeersHandle`] that can send commands to this type.
-    pub(crate) fn handle(&self) -> PeersHandle {
+    pub fn handle(&self) -> PeersHandle {
         PeersHandle::new(self.manager_tx.clone())
     }
 

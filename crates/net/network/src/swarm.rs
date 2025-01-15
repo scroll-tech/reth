@@ -48,7 +48,7 @@ use tracing::trace;
 /// `include_mmd!("docs/mermaid/swarm.mmd`")
 #[derive(Debug)]
 #[must_use = "Swarm does nothing unless polled"]
-pub(crate) struct Swarm<N: NetworkPrimitives = EthNetworkPrimitives> {
+pub struct Swarm<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// Listens for new incoming connections.
     incoming: ConnectionListener,
     /// All sessions.
@@ -61,7 +61,7 @@ pub(crate) struct Swarm<N: NetworkPrimitives = EthNetworkPrimitives> {
 
 impl<N: NetworkPrimitives> Swarm<N> {
     /// Configures a new swarm instance.
-    pub(crate) const fn new(
+    pub const fn new(
         incoming: ConnectionListener,
         sessions: SessionManager<N>,
         state: NetworkState<N>,
@@ -75,12 +75,12 @@ impl<N: NetworkPrimitives> Swarm<N> {
     }
 
     /// Access to the state.
-    pub(crate) const fn state(&self) -> &NetworkState<N> {
+    pub const fn state(&self) -> &NetworkState<N> {
         &self.state
     }
 
     /// Mutable access to the state.
-    pub(crate) fn state_mut(&mut self) -> &mut NetworkState<N> {
+    pub fn state_mut(&mut self) -> &mut NetworkState<N> {
         &mut self.state
     }
 
@@ -95,7 +95,7 @@ impl<N: NetworkPrimitives> Swarm<N> {
     }
 
     /// Mutable access to the [`SessionManager`].
-    pub(crate) fn sessions_mut(&mut self) -> &mut SessionManager<N> {
+    pub fn sessions_mut(&mut self) -> &mut SessionManager<N> {
         &mut self.sessions
     }
 }
@@ -268,7 +268,7 @@ impl<N: NetworkPrimitives> Swarm<N> {
     }
 
     /// Set network connection state to `ShuttingDown`
-    pub(crate) fn on_shutdown_requested(&mut self) {
+    pub fn on_shutdown_requested(&mut self) {
         self.state_mut().peers_mut().on_shutdown();
     }
 
@@ -336,7 +336,8 @@ impl<N: NetworkPrimitives> Stream for Swarm<N> {
 
 /// All events created or delegated by the [`Swarm`] that represents changes to the state of the
 /// network.
-pub(crate) enum SwarmEvent<N: NetworkPrimitives = EthNetworkPrimitives> {
+#[derive(Debug)]
+pub enum SwarmEvent<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// Events related to the actual network protocol.
     ValidMessage {
         /// The peer that sent the message
@@ -346,6 +347,7 @@ pub(crate) enum SwarmEvent<N: NetworkPrimitives = EthNetworkPrimitives> {
     },
     /// Received a message that does not match the announced capabilities of the peer.
     InvalidCapabilityMessage {
+        /// The peer that sent the message
         peer_id: PeerId,
         /// Announced capabilities of the remote peer.
         capabilities: Arc<Capabilities>,

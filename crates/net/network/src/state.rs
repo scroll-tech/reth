@@ -38,7 +38,7 @@ use tracing::{debug, trace};
 const PEER_BLOCK_CACHE_LIMIT: u32 = 512;
 
 /// Wrapper type for the [`BlockNumReader`] trait.
-pub(crate) struct BlockNumReader(Box<dyn reth_storage_api::BlockNumReader>);
+pub struct BlockNumReader(Box<dyn reth_storage_api::BlockNumReader>);
 
 impl BlockNumReader {
     /// Create a new instance with the given reader.
@@ -74,7 +74,7 @@ impl Deref for BlockNumReader {
 #[derive(Debug)]
 pub struct NetworkState<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// All active peers and their state.
-    active_peers: HashMap<PeerId, ActivePeer<N>>,
+    pub active_peers: HashMap<PeerId, ActivePeer<N>>,
     /// Manages connections to peers.
     peers_manager: PeersManager,
     /// Buffered messages until polled.
@@ -96,7 +96,7 @@ pub struct NetworkState<N: NetworkPrimitives = EthNetworkPrimitives> {
 
 impl<N: NetworkPrimitives> NetworkState<N> {
     /// Create a new state instance with the given params
-    pub(crate) fn new(
+    pub fn new(
         client: BlockNumReader,
         discovery: Discovery,
         peers_manager: PeersManager,
@@ -248,7 +248,7 @@ impl<N: NetworkPrimitives> NetworkState<N> {
     }
 
     /// Updates the block information for the peer.
-    pub(crate) fn update_peer_block(&mut self, peer_id: &PeerId, hash: B256, number: u64) {
+    pub fn update_peer_block(&mut self, peer_id: &PeerId, hash: B256, number: u64) {
         if let Some(peer) = self.active_peers.get_mut(peer_id) {
             peer.best_hash = hash;
         }
@@ -502,7 +502,7 @@ impl<N: NetworkPrimitives> NetworkState<N> {
 ///
 /// For example known blocks,so we can decide what to announce.
 #[derive(Debug)]
-pub(crate) struct ActivePeer<N: NetworkPrimitives> {
+pub struct ActivePeer<N: NetworkPrimitives> {
     /// Best block of the peer.
     pub(crate) best_hash: B256,
     /// The capabilities of the remote peer.
@@ -513,7 +513,7 @@ pub(crate) struct ActivePeer<N: NetworkPrimitives> {
     /// The response receiver for a currently active request to that peer.
     pub(crate) pending_response: Option<PeerResponse<N>>,
     /// Blocks we know the peer has.
-    pub(crate) blocks: LruCache<B256>,
+    pub blocks: LruCache<B256>,
 }
 
 /// Message variants triggered by the [`NetworkState`]

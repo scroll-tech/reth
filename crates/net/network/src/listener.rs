@@ -60,6 +60,7 @@ impl ConnectionListener {
 }
 
 /// Event type produced by the [`TcpListenerStream`].
+#[derive(Debug)]
 pub enum ListenerEvent {
     /// Received a new incoming.
     Incoming {
