@@ -121,8 +121,13 @@ mod tests {
 
     #[test]
     fn test_all_tx_types() {
-        assert_eq!(ScrollTxType::ALL.len(), 2);
-        let all = vec![ScrollTxType::Legacy, ScrollTxType::L1Message];
+        assert_eq!(ScrollTxType::ALL.len(), 4);
+        let all = vec![
+            ScrollTxType::Legacy,
+            ScrollTxType::Eip1559,
+            ScrollTxType::Eip2930,
+            ScrollTxType::L1Message,
+        ];
         assert_eq!(ScrollTxType::ALL.to_vec(), all);
     }
 
