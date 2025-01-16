@@ -163,7 +163,7 @@ mod tx_serde {
     //!
     //! This is needed because we might need to deserialize the `from` field into both
     //! [`alloy_rpc_types_eth::Transaction::from`] and
-    //! [`scroll_alloy_consensus::TxL1Message::from`].
+    //! [`scroll_alloy_consensus::TxL1Message`].
     //!
     //! Additionally, we need similar logic for the `gasPrice` field
     use super::*;
