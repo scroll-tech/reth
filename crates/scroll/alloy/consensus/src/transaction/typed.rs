@@ -102,7 +102,7 @@ impl ScrollTypedTransaction {
         }
     }
 
-    /// Return the inner deposit transaction if it exists.
+    /// Return the inner l1 message if it exists.
     pub const fn l1_message(&self) -> Option<&TxL1Message> {
         match self {
             Self::L1Message(tx) => Some(tx),
