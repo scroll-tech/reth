@@ -14,9 +14,3 @@ pub use typed::ScrollTypedTransaction;
 
 #[cfg(feature = "serde")]
 pub use l1_message::serde_l1_message_tx_rpc;
-
-/// Bincode-compatible serde implementations for transaction types.
-#[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
-pub(super) mod serde_bincode_compat {
-    pub use super::l1_message::serde_bincode_compat::TxL1Message;
-}
