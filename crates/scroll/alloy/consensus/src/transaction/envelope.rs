@@ -506,7 +506,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "serde")]
-    fn test_serde_roundtrip_deposit() {
+    fn test_serde_roundtrip_l1_message() {
         let tx = TxL1Message {
             queue_index: 11,
             gas_limit: u64::MAX,

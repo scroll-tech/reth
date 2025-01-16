@@ -8,137 +8,53 @@ homepage.workspace = true
 repository.workspace = true
 exclude.workspace = true
 
+[lints]
+workspace = true
+
+[dependencies]
+scroll-alloy-consensus = { workspace = true, features = ["serde"] }
+alloy-consensus = { version = "0.9.2", default-features = false }
+alloy-eips = { version = "0.9.2", features = ["serde"], default-features = false }
+alloy-network-primitives = { version = "0.9.2", default-features = false }
+alloy-primitives = { version = "0.8.12", features = ["map", "rlp", "serde"], default-features = false }
+alloy-rpc-types-eth = { version = "0.9.2", features = ["serde"], default-features = false }
+alloy-serde = { version = "0.9.2", default-features = false }
+arbitrary = { version = "1.4", features = ["derive", "derive"], optional = true }
+derive_more = { version = "1.0", default-features = false }
+serde = { version = "1.0", features = ["derive", "alloc", "derive"], default-features = false }
+serde_json = { version = "1.0", features = ["alloc"], default-features = false }
+
 [dev-dependencies]
 similar-asserts = "1.6"
-
-[dependencies.scroll-alloy-consensus]
-workspace = true
-features = ["serde"]
-
-[dependencies.alloy-consensus]
-version = "0.9.2"
-default-features = false
-
-[dependencies.alloy-eips]
-version = "0.9.2"
-features = ["serde"]
-default-features = false
-
-[dependencies.alloy-network-primitives]
-version = "0.9.2"
-default-features = false
-
-[dependencies.alloy-primitives]
-version = "0.8.12"
-features = [
-    "map",
-    "rlp",
-    "serde",
-]
-default-features = false
-
-[dependencies.alloy-rpc-types-eth]
-version = "0.9.2"
-features = ["serde"]
-default-features = false
-
-[dependencies.alloy-serde]
-version = "0.9.2"
-default-features = false
-
-[dependencies.arbitrary]
-version = "1.4"
-features = [
-    "derive",
-    "derive",
-]
-optional = true
-
-[dependencies.derive_more]
-version = "1.0"
-default-features = false
-
-[dependencies.serde]
-version = "1.0"
-features = [
-    "derive",
-    "alloc",
-    "derive",
-]
-default-features = false
-
-[dependencies.serde_json]
-version = "1.0"
-features = ["alloc"]
-default-features = false
-
-[dev-dependencies.alloy-consensus]
-version = "0.9.2"
-features = ["arbitrary"]
-default-features = false
-
-[dev-dependencies.alloy-primitives]
-version = "0.8.12"
-features = ["arbitrary"]
-default-features = false
-
-[dev-dependencies.alloy-rpc-types-eth]
-version = "0.9.2"
-features = ["arbitrary"]
-default-features = false
-
-[dev-dependencies.arbitrary]
-version = "1.4"
-features = [
-    "derive",
-    "derive",
-]
+alloy-consensus = { version = "0.9.2", features = ["arbitrary"], default-features = false }
+alloy-primitives = { version = "0.8.12", features = ["arbitrary"], default-features = false }
+alloy-rpc-types-eth = { version = "0.9.2", features = ["arbitrary"], default-features = false }
+arbitrary = { version = "1.4", features = ["derive", "derive"] }
 
 [features]
 arbitrary = [
-    "std",
-    "dep:arbitrary",
-    "alloy-primitives/arbitrary",
-    "alloy-rpc-types-eth/arbitrary",
-    "scroll-alloy-consensus/arbitrary",
-    "alloy-consensus/arbitrary",
-    "alloy-eips/arbitrary",
-    "alloy-serde/arbitrary",
+	"std",
+	"dep:arbitrary",
+	"alloy-primitives/arbitrary",
+	"alloy-rpc-types-eth/arbitrary",
+	"scroll-alloy-consensus/arbitrary",
+	"alloy-consensus/arbitrary",
+	"alloy-eips/arbitrary",
+	"alloy-serde/arbitrary",
 ]
 default = ["std"]
 k256 = [
-    "alloy-rpc-types-eth/k256",
-    "scroll-alloy-consensus/k256"
+	"alloy-rpc-types-eth/k256",
+	"scroll-alloy-consensus/k256"
 ]
 std = [
-    "alloy-network-primitives/std",
-    "alloy-eips/std",
-    "alloy-primitives/std",
-    "alloy-rpc-types-eth/std",
-    "alloy-consensus/std",
-    "alloy-serde/std",
-    "derive_more/std",
-    "serde/std",
-    "serde_json/std",
+	"alloy-network-primitives/std",
+	"alloy-eips/std",
+	"alloy-primitives/std",
+	"alloy-rpc-types-eth/std",
+	"alloy-consensus/std",
+	"alloy-serde/std",
+	"derive_more/std",
+	"serde/std",
+	"serde_json/std",
 ]
-
-[lints.clippy]
-missing-const-for-fn = "warn"
-option-if-let-else = "warn"
-redundant-clone = "warn"
-use-self = "warn"
-
-[lints.clippy.all]
-level = "warn"
-priority = -1
-
-[lints.rust]
-missing-debug-implementations = "warn"
-missing-docs = "warn"
-rust-2018-idioms = "deny"
-unnameable-types = "warn"
-unreachable-pub = "warn"
-unused-must-use = "deny"
-
-[lints.rustdoc]
-all = "warn"

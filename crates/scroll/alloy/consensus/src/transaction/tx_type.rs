@@ -21,14 +21,14 @@ pub enum ScrollTxType {
     /// EIP-1559 transaction type.
     #[display("eip1559")]
     Eip1559 = 2,
-    /// Optimism Deposit transaction type.
-    #[display("deposit")]
+    /// L1 message transaction type.
+    #[display("l1_message")]
     L1Message = L1_MESSAGE_TX_TYPE_ID,
 }
 
 impl ScrollTxType {
     /// List of all variants.
-    pub const ALL: [Self; 2] = [Self::Legacy, Self::L1Message];
+    pub const ALL: [Self; 4] = [Self::Legacy, Self::Eip1559, Self::Eip2930, Self::L1Message];
 }
 
 #[cfg(any(test, feature = "arbitrary"))]

@@ -98,9 +98,9 @@ where
         } = tx_info;
 
         let effective_gas_price = if inner.is_l1_message() {
-            // For deposits, we must always set the `gasPrice` field to 0 in rpc
-            // deposit tx don't have a gas price field, but serde of `Transaction` will take care of
-            // it
+            // For l1 message, we must always set the `gasPrice` field to 0 in rpc
+            // l1 message tx don't have a gas price field, but serde of `Transaction` will take care
+            // of it
             0
         } else {
             base_fee

@@ -310,7 +310,7 @@ pub struct ScrollL1MessageTransactionFields {
     pub sender: Address,
 }
 
-/// Deposit transactions don't have a signature, however, we include an empty signature in the
+/// L1 message transactions don't have a signature, however, we include an empty signature in the
 /// response for better compatibility.
 ///
 /// This function can be used as `serialize_with` serde attribute for the [`TxL1Message`] and will
@@ -338,8 +338,12 @@ pub fn serde_l1_message_tx_rpc<T: serde::Serialize, S: serde::Serializer>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::hex;
+    use alloy_eips::eip2718::Encodable2718;
+    use alloy_primitives::{address, bytes, hex, Bytes, U256};
     use alloy_rlp::BytesMut;
+    use arbitrary::Arbitrary;
+    use rand::Rng;
+    use reth_codecs::{test_utils::UnusedBits, validate_bitflag_backwards_compat};
 
     #[test]
     fn test_rlp_roundtrip() {
@@ -350,6 +354,7 @@ mod tests {
         tx_a.encode(&mut buf_a);
         assert_eq!(&buf_a[..], &bytes[1..]);
     }
+
     #[test]
     fn test_encode_decode_fields() {
         let original = TxL1Message {
@@ -407,6 +412,43 @@ mod tests {
         // let obj: TxL1Message = serde_json::from_str(rpc_tx).unwrap();
         let obj = serde_json::from_str::<TxL1Message>(rpc_tx).unwrap();
         assert_eq!(obj.queue_index, 0xe7ba0);
+    }
+
+    #[test]
+    fn test_bincode_roundtrip() {
+        let mut bytes = [0u8; 1024];
+        rand::thread_rng().fill(bytes.as_mut_slice());
+        let tx = TxL1Message::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
+
+        let encoded = bincode::serialize(&tx).unwrap();
+        let decoded: TxL1Message = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded, tx);
+    }
+
+    #[test]
+    fn test_eip2718_encode() {
+        let tx =
+            TxL1Message {
+                queue_index: 947883,
+                gas_limit: 2000000,
+                to: address!("781e90f1c8fc4611c9b7497c3b47f99ef6969cbc"),
+                value: U256::ZERO,
+                sender: address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"),
+                input: bytes!("8ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+            }
+            ;
+        let bytes = Bytes::from_static(&hex!("7ef9015a830e76ab831e848094781e90f1c8fc4611c9b7497c3b47f99ef6969cbc80b901248ef1332e000000000000000000000000c186fa914353c44b2e33ebe05f21846f1048beda0000000000000000000000003bad7ad0728f9917d1bf08af5782dcbd516cdd96000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e76ab00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000044493a4f84f464e58d4bfa93bcc57abfb14dbe1b8ff46cd132b5709aab227f269727943d2f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000947885bcbd5cecef1336b5300fb5186a12ddd8c478"));
+
+        let mut encoded = BytesMut::default();
+        tx.encode_2718(&mut encoded);
+
+        assert_eq!(encoded, bytes.as_ref())
+    }
+
+    #[test]
+    fn test_compaction_backwards_compatibility() {
+        assert_eq!(TxL1Message::bitflag_encoded_bytes(), 2);
+        validate_bitflag_backwards_compat!(TxL1Message, UnusedBits::NotZero);
     }
 }
 

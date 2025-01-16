@@ -83,7 +83,7 @@ impl alloy_network_primitives::ReceiptResponse for ScrollTransactionReceipt {
 }
 
 /// Additional fields for Scroll transaction receipts: <https://github.com/scroll-tech/go-ethereum/blob/develop/core/types/receipt.go#L78>
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[doc(alias = "ScrollTxReceiptFields")]
 pub struct ScrollTransactionReceiptFields {
@@ -102,7 +102,7 @@ impl From<ScrollTransactionReceipt> for ScrollReceiptEnvelope<alloy_primitives::
     fn from(value: ScrollTransactionReceipt) -> Self {
         let inner_envelope = value.inner.inner;
 
-        /// Helper function to convert the inner logs within a [ReceiptWithBloom] from RPC to
+        /// Helper function to convert the inner logs within a [`ReceiptWithBloom`] from RPC to
         /// consensus types.
         #[inline(always)]
         fn convert_standard_receipt(
@@ -134,7 +134,7 @@ impl From<ScrollTransactionReceipt> for ScrollReceiptEnvelope<alloy_primitives::
             ScrollReceiptEnvelope::L1Message(receipt) => {
                 Self::L1Message(convert_standard_receipt(receipt))
             }
-            _ => unreachable!("Unsupported OpReceiptEnvelope variant"),
+            _ => unreachable!("Unsupported ScrollReceiptEnvelope variant"),
         }
     }
 }

@@ -412,7 +412,7 @@ lint-all:
 	--locked
 
 lint-udeps:
-	cargo udeps --workspace --lib --examples --tests --benches --all-features --locked \
+	cargo +nightly udeps --workspace --lib --examples --tests --benches --all-features --locked \
         --exclude reth-optimism-cli --exclude reth-optimism-consensus --exclude reth-optimism-payload-builder \
         --exclude reth-optimism-node --exclude reth-optimism-evm --exclude reth-optimism-node --exclude reth-optimism-rpc \
         --exclude op-reth --exclude "example-*" --exclude reth --exclude reth-payload-primitives \

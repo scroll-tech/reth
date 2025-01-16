@@ -22,14 +22,15 @@ pub struct Transaction {
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<ScrollTxEnvelope>,
 
-    /// sender for deposit transactions. Only present in RPC responses.
+    /// sender for l1 message transactions. Only present in RPC responses.
     pub sender: Option<Address>,
 
-    /// queue index for deposit transactions
+    /// queue index for l1 message transactions
     pub queue_index: Option<u64>,
 
-    /// nonce for deposit transactions.
-    /// why don't put in TxL1Message? if put in TxL1Message, the payload of l1_message is wrong.
+    /// nonce for l1 message transactions.
+    /// why don't put in `TxL1Message`? if put in `TxL1Message`, the payload of `l1_message` is
+    /// wrong.
     pub nonce: Option<u64>,
 }
 
@@ -271,7 +272,7 @@ mod tx_serde {
                 return Err(serde_json::Error::custom("missing `from` field"));
             };
 
-            let effective_gas_price = other.effective_gas_price.or(inner.gas_price());
+            let effective_gas_price = other.effective_gas_price.or_else(|| inner.gas_price());
             Ok(Self {
                 inner: alloy_rpc_types_eth::Transaction {
                     inner,

@@ -43,21 +43,21 @@ alloy-genesis.workspace = true
 [features]
 default = ["std"]
 std = [
-    "reth-consensus/std",
-    "reth-primitives/std",
-    "reth-revm/std",
-    "alloy-consensus/std",
-    "alloy-eips/std",
-    "alloy-genesis/std",
-    "alloy-primitives/std",
-    "revm-primitives/std",
-    "secp256k1/std",
-    "reth-ethereum-forks/std",
-    "serde_json/std",
-    "reth-primitives-traits/std",
-    "reth-chainspec/std"
+	"reth-consensus/std",
+	"reth-primitives/std",
+	"reth-revm/std",
+	"alloy-consensus/std",
+	"alloy-eips/std",
+	"alloy-genesis/std",
+	"alloy-primitives/std",
+	"revm-primitives/std",
+	"secp256k1/std",
+	"reth-ethereum-forks/std",
+	"serde_json/std",
+	"reth-primitives-traits/std",
+	"reth-chainspec/std"
 ]
 scroll = [
-    "reth-primitives/scroll",
-    "reth-testing-utils/scroll",
+	"reth-primitives/scroll",
+	"reth-testing-utils/scroll",
 ]

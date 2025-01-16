@@ -108,16 +108,16 @@ impl<T> ScrollReceiptEnvelope<T> {
         }
     }
 
-    /// Returns the deposit receipt if it is a deposit receipt.
-    pub const fn as_deposit_receipt_with_bloom(&self) -> Option<&ReceiptWithBloom<Receipt<T>>> {
+    /// Returns the L1 message receipt if it is a deposit receipt.
+    pub const fn as_l1_message_receipt_with_bloom(&self) -> Option<&ReceiptWithBloom<Receipt<T>>> {
         match self {
             Self::L1Message(t) => Some(t),
             _ => None,
         }
     }
 
-    /// Returns the deposit receipt if it is a deposit receipt.
-    pub const fn as_deposit_receipt(&self) -> Option<&Receipt<T>> {
+    /// Returns the L1 message receipt if it is a deposit receipt.
+    pub const fn as_l1_message_receipt(&self) -> Option<&Receipt<T>> {
         match self {
             Self::L1Message(t) => Some(&t.receipt),
             _ => None,
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn deposit_receipt_from_parts() {
+    fn l1_message_receipt_from_parts() {
         let receipt = ScrollReceiptEnvelope::from_parts(true, 100, vec![], ScrollTxType::L1Message);
         assert!(receipt.status());
         assert_eq!(receipt.cumulative_gas_used(), 100);

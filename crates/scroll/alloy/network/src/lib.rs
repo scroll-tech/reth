@@ -133,7 +133,7 @@ impl TransactionBuilder<Scroll> for ScrollTransactionRequest {
 
     fn complete_type(&self, ty: ScrollTxType) -> Result<(), Vec<&'static str>> {
         match ty {
-            ScrollTxType::L1Message => Err(vec!["not implemented for deposit tx"]),
+            ScrollTxType::L1Message => Err(vec!["not implemented for L1 message tx"]),
             _ => {
                 let ty = TxType::try_from(ty as u8).unwrap();
                 self.as_ref().complete_type(ty)
