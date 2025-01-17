@@ -76,7 +76,7 @@ test-utils = [
     "revm/test-utils",
     "reth-primitives/test-utils",
     "reth-trie-common/test-utils",
-    "reth-trie-common/test-utils",
+	"reth-trie-common/test-utils",
     "reth-trie-sparse/test-utils",
     "reth-stages-types/test-utils",
     "reth-primitives-traits/test-utils"
