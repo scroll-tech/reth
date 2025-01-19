@@ -116,7 +116,6 @@ where
                 from,
                 effective_gas_price: Some(effective_gas_price),
             },
-            nonce: Some(nonce),
         })
     }
 
