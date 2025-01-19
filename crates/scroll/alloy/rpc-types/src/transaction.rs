@@ -22,12 +22,6 @@ pub struct Transaction {
     #[deref_mut]
     pub inner: alloy_rpc_types_eth::Transaction<ScrollTxEnvelope>,
 
-    /// sender for l1 message transactions. Only present in RPC responses.
-    pub sender: Option<Address>,
-
-    /// queue index for l1 message transactions
-    pub queue_index: Option<u64>,
-
     /// nonce for l1 message transactions.
     /// why don't put in `TxL1Message`? if put in `TxL1Message`, the payload of `l1_message` is
     /// wrong.
@@ -184,19 +178,10 @@ mod tx_serde {
         effective_gas_price: Option<u128>,
         #[serde(
             default,
-            rename = "queueIndex",
-            skip_serializing_if = "Option::is_none",
-            with = "alloy_serde::quantity::opt"
-        )]
-        queue_index: Option<u64>,
-        #[serde(
-            default,
             skip_serializing_if = "Option::is_none",
             with = "alloy_serde::quantity::opt"
         )]
         nonce: Option<u64>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        sender: Option<Address>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -226,7 +211,6 @@ mod tx_serde {
                         effective_gas_price,
                         from,
                     },
-                queue_index,
                 nonce,
                 ..
             } = value;
@@ -239,13 +223,7 @@ mod tx_serde {
                 block_hash,
                 block_number,
                 transaction_index,
-                other: OptionalFields {
-                    from: Some(from),
-                    effective_gas_price,
-                    queue_index,
-                    sender: Some(from),
-                    nonce,
-                },
+                other: OptionalFields { from: Some(from), effective_gas_price, nonce },
             }
         }
     }
@@ -282,8 +260,6 @@ mod tx_serde {
                     from,
                     effective_gas_price,
                 },
-                sender: other.sender,
-                queue_index: other.queue_index,
                 nonce: other.nonce,
             })
         }
@@ -293,6 +269,7 @@ mod tx_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::address;
 
     #[test]
     fn can_deserialize_deposit() {
@@ -305,8 +282,8 @@ mod tests {
         let ScrollTxEnvelope::L1Message(inner) = tx.as_ref() else {
             panic!("Expected deposit transaction");
         };
-        assert_eq!(tx.from, inner.sender);
-        assert_eq!(tx.queue_index, Some(0xe7ba0));
+        assert_eq!(inner.sender, address!("7885bcbd5cecef1336b5300fb5186a12ddd8c478"));
+        assert_eq!(inner.queue_index, 0xe7ba0);
         assert_eq!(tx.inner.effective_gas_price, Some(0));
 
         let deserialized = serde_json::to_value(&tx).unwrap();

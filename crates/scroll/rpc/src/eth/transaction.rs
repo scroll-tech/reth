@@ -70,8 +70,6 @@ where
         let from = tx.signer();
         let hash = tx.hash();
         let TransactionSigned { transaction, signature, .. } = tx.into_tx();
-        let mut tx_sender = None;
-        let mut tx_queue_index = None;
 
         let inner = match transaction {
             reth_primitives::Transaction::Legacy(tx) => {
@@ -87,8 +85,6 @@ where
                 unreachable!()
             }
             reth_primitives::Transaction::L1Message(tx) => {
-                tx_queue_index = Some(tx.queue_index);
-                tx_sender = Some(tx.sender);
                 ScrollTxEnvelope::L1Message(tx.seal_unchecked(hash))
             }
         };
@@ -120,8 +116,6 @@ where
                 from,
                 effective_gas_price: Some(effective_gas_price),
             },
-            sender: tx_sender,
-            queue_index: tx_queue_index,
             nonce: Some(nonce),
         })
     }
