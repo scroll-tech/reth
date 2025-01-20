@@ -79,6 +79,7 @@ where
     >,
 {
     /// Returns a reference to the [`EthApiNodeBackend`].
+    #[allow(clippy::missing_const_for_fn)]
     pub fn eth_api(&self) -> &EthApiNodeBackend<N> {
         self.inner.eth_api()
     }

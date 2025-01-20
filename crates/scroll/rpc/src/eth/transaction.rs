@@ -105,7 +105,6 @@ where
                 })
                 .unwrap_or_else(|| inner.max_fee_per_gas())
         };
-        let nonce = inner.nonce();
 
         Ok(Transaction {
             inner: alloy_rpc_types_eth::Transaction {
