@@ -333,5 +333,4 @@ mod tests {
         assert_eq!(receipt.logs().len(), 0);
         assert_eq!(receipt.tx_type(), ScrollTxType::L1Message);
     }
-    
 }
