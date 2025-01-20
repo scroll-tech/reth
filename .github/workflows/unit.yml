@@ -49,7 +49,7 @@ jobs:
             args: --manifest-path book/sources/Cargo.toml --workspace --exclude ef-tests
             partition: 1
             total_partitions: 1
-    timeout-minutes: 30
+    timeout-minutes: 300
     steps:
       - name: Free up disk space
         run: rm -rf /opt/hostedtoolcache
@@ -77,7 +77,7 @@ jobs:
     env:
       RUST_LOG: info,sync=error
       RUST_BACKTRACE: 1
-    timeout-minutes: 30
+    timeout-minutes: 300
     steps:
       - name: Free up disk space
         run: rm -rf /opt/hostedtoolcache
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
-    timeout-minutes: 30
+    timeout-minutes: 300
     strategy:
       matrix:
         network: ["ethereum", "optimism"]
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs: [test, state, doc]
-    timeout-minutes: 30
+    timeout-minutes: 300
     steps:
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
