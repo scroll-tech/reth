@@ -19,7 +19,7 @@ concurrency:
 jobs:
   test:
     name: test / ${{ matrix.type }} (${{ matrix.partition }}/${{ matrix.total_partitions }})
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest-8
     env:
       RUST_BACKTRACE: 1
     strategy:
