@@ -20,6 +20,8 @@ jobs:
   test:
     name: test / ${{ matrix.type }} (${{ matrix.partition }}/${{ matrix.total_partitions }})
     runs-on: ubuntu-latest
+    container:
+      options: --cpus=4 --memory=16g
     env:
       RUST_BACKTRACE: 1
     strategy:
@@ -90,7 +92,7 @@ jobs:
           path: testing/ef-tests/ethereum-tests
           submodules: recursive
           fetch-depth: 1
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
