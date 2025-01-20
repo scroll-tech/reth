@@ -90,7 +90,7 @@ jobs:
           path: testing/ef-tests/ethereum-tests
           submodules: recursive
           fetch-depth: 1
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
