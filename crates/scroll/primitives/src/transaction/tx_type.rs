@@ -24,9 +24,9 @@ mod tests {
 
         assert_eq!(
             identifier, expected_identifier,
-            "Unexpected identifier for OpTxType {tx_type:?}",
+            "Unexpected identifier for ScrollTxType {tx_type:?}",
         );
-        assert_eq!(buf, expected_buf, "Unexpected buffer for OpTxType {tx_type:?}",);
+        assert_eq!(buf, expected_buf, "Unexpected buffer for ScrollTxType {tx_type:?}",);
     }
 
     #[rstest]

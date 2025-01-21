@@ -9227,6 +9227,7 @@ dependencies = [
  "reth-scroll-chainspec",
  "reth-scroll-engine",
  "reth-scroll-evm",
+ "reth-scroll-primitives",
  "reth-scroll-rpc",
  "reth-tracing",
  "reth-transaction-pool",

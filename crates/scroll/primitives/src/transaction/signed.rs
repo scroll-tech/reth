@@ -63,7 +63,7 @@ impl ScrollTransactionSigned {
 
     /// Creates a new signed transaction from the given transaction and signature without the hash.
     ///
-    /// Note: this only calculates the hash on the first [`OpTransactionSigned::hash`] call.
+    /// Note: this only calculates the hash on the first [`ScrollTransactionSigned::hash`] call.
     pub fn new_unhashed(transaction: ScrollTypedTransaction, signature: Signature) -> Self {
         Self { hash: Default::default(), signature, transaction }
     }

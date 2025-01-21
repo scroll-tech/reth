@@ -24,7 +24,7 @@ pub enum ScrollReceipt {
 }
 
 impl ScrollReceipt {
-    /// Returns [`OpTxType`] of the receipt.
+    /// Returns [`ScrollTxType`] of the receipt.
     pub const fn tx_type(&self) -> ScrollTxType {
         match self {
             Self::Legacy(_) => ScrollTxType::Legacy,

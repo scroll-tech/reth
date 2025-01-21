@@ -251,8 +251,6 @@ mod tests {
         receipt.encode(&mut data);
         let decoded = ScrollReceiptWithBloom::decode(&mut &data[..]).unwrap();
 
-        // receipt.clone().to_compact(&mut data);
-        // let (decoded, _) = Receipt::from_compact(&data[..], data.len());
         assert_eq!(decoded, receipt);
     }
 }
