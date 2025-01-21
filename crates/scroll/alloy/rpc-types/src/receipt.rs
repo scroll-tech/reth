@@ -172,9 +172,9 @@ mod tests {
 
     #[test]
     fn serialize_empty_optimism_transaction_receipt_fields_struct() {
-        let op_fields = ScrollTransactionReceiptFields::default();
+        let scroll_fields = ScrollTransactionReceiptFields::default();
 
-        let json = serde_json::to_value(op_fields).unwrap();
+        let json = serde_json::to_value(scroll_fields).unwrap();
         assert_eq!(json, json!({}));
     }
 }
