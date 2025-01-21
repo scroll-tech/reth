@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
+      CARGO_HTTP_MULTIPLEXING: ${{ steps.set_env.outputs.value }}
     strategy:
       matrix:
         include:
@@ -59,6 +60,14 @@ jobs:
         with:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
+      - name: Set CARGO_HTTP_MULTIPLEXING if Rust version is 1.70.x
+        id: set_env
+        run: |
+          if rustc +stable --version --verbose | grep -q '^release: 1\.7[01]\.'; then
+            echo "::set-output name=value::false"
+          else
+            echo "::set-output name=value::true"
+          fi
       - if: "${{ matrix.type == 'book' }}"
         uses: arduino/setup-protoc@v3
         with:
