@@ -154,10 +154,7 @@ op = [
 	"dep:op-alloy-consensus",
 ]
 scr = ["scroll-alloy-consensus"]
-scroll = [
-	"revm-primitives/scroll",
-	"scroll-alloy-consensus"
-]
+scroll = ["revm-primitives/scroll"]
 rayon = [
 	"dep:rayon",
 ]
