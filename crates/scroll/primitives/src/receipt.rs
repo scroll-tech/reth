@@ -5,7 +5,7 @@ use alloy_consensus::{
 use alloy_primitives::{Bloom, Log, U256};
 use alloy_rlp::{BufMut, Decodable, Header};
 use reth_primitives_traits::InMemorySize;
-use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxReceipt, ScrollTxType};
+use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxType};
 
 /// Typed ethereum transaction receipt.
 /// Receipt containing result of transaction execution.
@@ -100,10 +100,10 @@ impl ScrollReceipt {
     }
 
     /// Returns the l1 fee for the transaction receipt.
-    pub fn l1_fee(&self) -> U256 {
+    pub const fn l1_fee(&self) -> U256 {
         match self {
             Self::Legacy(receipt) | Self::Eip2930(receipt) | Self::Eip1559(receipt) => {
-                receipt.l1_fee()
+                receipt.l1_fee
             }
             Self::L1Message(_) => U256::ZERO,
         }
