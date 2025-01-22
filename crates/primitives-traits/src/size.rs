@@ -127,7 +127,7 @@ impl InMemorySize for op_alloy_consensus::OpTypedTransaction {
     }
 }
 
-#[cfg(feature = "scr")]
+#[cfg(feature = "scroll-in-memory-size")]
 impl InMemorySize for scroll_alloy_consensus::ScrollTypedTransaction {
     fn size(&self) -> usize {
         match self {
