@@ -16,7 +16,7 @@ pub use transaction::{
 };
 
 mod receipt;
-pub use receipt::ScrollReceiptEnvelope;
+pub use receipt::{ScrollReceiptEnvelope, ScrollReceiptWithBloom, ScrollTransactionReceipt};
 
 #[cfg(feature = "serde")]
 pub use transaction::serde_l1_message_tx_rpc;
