@@ -14,5 +14,5 @@
 pub mod error;
 pub mod eth;
 
-pub use error::{ScrollEthApiError, ScrollInvalidTransactionError, SequencerClientError};
+pub use error::ScrollEthApiError;
 pub use eth::{ScrollEthApi, ScrollReceiptBuilder};

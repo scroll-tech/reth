@@ -63,10 +63,7 @@ impl ScrollReceiptBuilder {
                     TxType::Legacy => ScrollReceiptEnvelope::<Log>::Legacy(receipt_with_bloom),
                     TxType::Eip2930 => ScrollReceiptEnvelope::<Log>::Eip2930(receipt_with_bloom),
                     TxType::Eip1559 => ScrollReceiptEnvelope::<Log>::Eip1559(receipt_with_bloom),
-                    TxType::Eip4844 => {
-                        // TODO: unreachable
-                        ScrollReceiptEnvelope::<Log>::Eip1559(receipt_with_bloom)
-                    }
+                    TxType::Eip4844 => unimplemented!("eip4844 unsupported"),
                     TxType::Eip7702 => unimplemented!("eip7702 unsupported"),
                     TxType::L1Message => {
                         ScrollReceiptEnvelope::<Log>::L1Message(receipt_with_bloom)

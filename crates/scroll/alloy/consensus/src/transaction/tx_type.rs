@@ -56,10 +56,10 @@ impl TryFrom<u8> for ScrollTxType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
-            0 => Self::Legacy,
-            1 => Self::Eip2930,
-            2 => Self::Eip1559,
-            126 => Self::L1Message,
+            x if x == Self::Legacy as u8 => Self::Legacy,
+            x if x == Self::Eip2930 as u8 => Self::Eip2930,
+            x if x == Self::Eip1559 as u8 => Self::Eip1559,
+            x if x == Self::L1Message as u8 => Self::L1Message,
             _ => return Err(Eip2718Error::UnexpectedType(value)),
         })
     }
