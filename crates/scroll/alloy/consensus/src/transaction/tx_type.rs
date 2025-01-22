@@ -1,9 +1,18 @@
 //! Contains the transaction type identifier for Scroll.
 
+use alloy_consensus::Typed2718;
 use alloy_eips::eip2718::Eip2718Error;
 use alloy_primitives::{U64, U8};
 use alloy_rlp::{BufMut, Decodable, Encodable};
 use derive_more::Display;
+use reth_codecs::{
+    __private::bytes,
+    txtype::{
+        COMPACT_EXTENDED_IDENTIFIER_FLAG, COMPACT_IDENTIFIER_EIP1559, COMPACT_IDENTIFIER_EIP2930,
+        COMPACT_IDENTIFIER_LEGACY,
+    },
+    Compact,
+};
 
 /// Identifier for an Scroll L1 message transaction
 pub const L1_MESSAGE_TX_TYPE_ID: u8 = 126; // 0x7E
@@ -110,6 +119,52 @@ impl Decodable for ScrollTxType {
         let ty = u8::decode(buf)?;
 
         Self::try_from(ty).map_err(|_| alloy_rlp::Error::Custom("invalid transaction type"))
+    }
+}
+
+impl Compact for ScrollTxType {
+    fn to_compact<B>(&self, buf: &mut B) -> usize
+    where
+        B: BufMut + AsMut<[u8]>,
+    {
+        match self {
+            Self::Legacy => COMPACT_IDENTIFIER_LEGACY,
+            Self::Eip2930 => COMPACT_IDENTIFIER_EIP2930,
+            Self::Eip1559 => COMPACT_IDENTIFIER_EIP1559,
+            Self::L1Message => {
+                buf.put_u8(L1_MESSAGE_TX_TYPE_ID);
+                COMPACT_EXTENDED_IDENTIFIER_FLAG
+            }
+        }
+    }
+
+    // For backwards compatibility purposes only 2 bits of the type are encoded in the identifier
+    // parameter. In the case of a [`COMPACT_EXTENDED_IDENTIFIER_FLAG`], the full transaction type
+    // is read from the buffer as a single byte.
+    fn from_compact(mut buf: &[u8], identifier: usize) -> (Self, &[u8]) {
+        use bytes::Buf;
+        (
+            match identifier {
+                COMPACT_IDENTIFIER_LEGACY => Self::Legacy,
+                COMPACT_IDENTIFIER_EIP2930 => Self::Eip2930,
+                COMPACT_IDENTIFIER_EIP1559 => Self::Eip1559,
+                COMPACT_EXTENDED_IDENTIFIER_FLAG => {
+                    let extended_identifier = buf.get_u8();
+                    match extended_identifier {
+                        L1_MESSAGE_TX_TYPE_ID => Self::L1Message,
+                        _ => panic!("Unsupported TxType identifier: {extended_identifier}"),
+                    }
+                }
+                _ => panic!("Unknown identifier for TxType: {identifier}"),
+            },
+            buf,
+        )
+    }
+}
+
+impl Typed2718 for ScrollTxType {
+    fn ty(&self) -> u8 {
+        (*self).into()
     }
 }
 

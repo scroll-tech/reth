@@ -8641,6 +8641,7 @@ dependencies = [
  "rayon",
  "reth-codecs",
  "revm-primitives",
+ "scroll-alloy-consensus",
  "secp256k1",
  "serde",
  "serde_json",
@@ -9226,10 +9227,37 @@ dependencies = [
  "reth-scroll-chainspec",
  "reth-scroll-engine",
  "reth-scroll-evm",
+ "reth-scroll-primitives",
  "reth-scroll-rpc",
  "reth-tracing",
  "reth-transaction-pool",
  "reth-trie-db",
+]
+
+[[package]]
+name = "reth-scroll-primitives"
+version = "1.1.5"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "alloy-rlp",
+ "arbitrary",
+ "bytes",
+ "derive_more",
+ "modular-bitfield",
+ "once_cell",
+ "proptest",
+ "proptest-arbitrary-interop",
+ "rand 0.8.5",
+ "reth-codecs",
+ "reth-primitives-traits",
+ "reth-zstd-compressors",
+ "revm-primitives",
+ "rstest",
+ "scroll-alloy-consensus",
+ "secp256k1",
+ "serde",
 ]
 
 [[package]]

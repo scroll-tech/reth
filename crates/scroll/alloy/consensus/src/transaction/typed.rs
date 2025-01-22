@@ -2,6 +2,8 @@ use crate::{ScrollTxEnvelope, ScrollTxType, TxL1Message};
 use alloy_consensus::{Transaction, TxEip1559, TxEip2930, TxLegacy, Typed2718};
 use alloy_eips::eip2930::AccessList;
 use alloy_primitives::{Address, Bytes, TxKind};
+use reth_codecs::{Compact, __private::bytes};
+use reth_codecs_derive::generate_tests;
 
 /// The `TypedTransaction` enum represents all Ethereum transaction request types, modified for
 /// Scroll
@@ -285,6 +287,50 @@ impl Transaction for ScrollTypedTransaction {
         }
     }
 }
+
+impl Compact for ScrollTypedTransaction {
+    fn to_compact<B>(&self, out: &mut B) -> usize
+    where
+        B: bytes::BufMut + AsMut<[u8]>,
+    {
+        let identifier = self.tx_type().to_compact(out);
+        match self {
+            Self::Legacy(tx) => tx.to_compact(out),
+            Self::Eip2930(tx) => tx.to_compact(out),
+            Self::Eip1559(tx) => tx.to_compact(out),
+            Self::L1Message(tx) => tx.to_compact(out),
+        };
+        identifier
+    }
+
+    fn from_compact(buf: &[u8], identifier: usize) -> (Self, &[u8]) {
+        let (tx_type, buf) = ScrollTxType::from_compact(buf, identifier);
+        match tx_type {
+            ScrollTxType::Legacy => {
+                let (tx, buf) = Compact::from_compact(buf, buf.len());
+                (Self::Legacy(tx), buf)
+            }
+            ScrollTxType::Eip2930 => {
+                let (tx, buf) = Compact::from_compact(buf, buf.len());
+                (Self::Eip2930(tx), buf)
+            }
+            ScrollTxType::Eip1559 => {
+                let (tx, buf) = Compact::from_compact(buf, buf.len());
+                (Self::Eip1559(tx), buf)
+            }
+            ScrollTxType::L1Message => {
+                let (tx, buf) = Compact::from_compact(buf, buf.len());
+                (Self::L1Message(tx), buf)
+            }
+        }
+    }
+}
+
+generate_tests!(
+    #[compact]
+    ScrollTypedTransaction,
+    ScrollTypedTransactionTests
+);
 
 #[cfg(feature = "serde")]
 mod serde_from {
