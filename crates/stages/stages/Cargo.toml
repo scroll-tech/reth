@@ -24,9 +24,7 @@ reth-evm.workspace = true
 reth-exex.workspace = true
 reth-network-p2p.workspace = true
 reth-primitives = { workspace = true, features = ["secp256k1"] }
-reth-primitives-traits = { workspace = true, features = [
-    "serde-bincode-compat",
-] }
+reth-primitives-traits = { workspace = true, features = ["serde-bincode-compat"] }
 reth-provider.workspace = true
 reth-execution-types.workspace = true
 reth-prune.workspace = true
@@ -88,11 +86,7 @@ tempfile.workspace = true
 criterion = { workspace = true, features = ["async_tokio"] }
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
-pprof = { workspace = true, features = [
-    "flamegraph",
-    "frame-pointer",
-    "criterion",
-] }
+pprof = { workspace = true, features = ["flamegraph", "frame-pointer", "criterion"] }
 
 [features]
 test-utils = [

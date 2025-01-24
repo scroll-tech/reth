@@ -37,5 +37,5 @@ thiserror.workspace = true
 scroll = [
     "reth-execution-types/scroll",
     "reth-primitives/scroll",
-    "reth-trie/scroll"
+    "reth-trie/scroll",
 ]

@@ -28,13 +28,13 @@ alloy-rpc-types-engine.workspace = true
 [features]
 default = ["std"]
 std = [
-	"reth-primitives/std",
-	"reth-scroll-chainspec/std",
-	"reth-scroll-forks/std",
-	"alloy-consensus/std",
-	"alloy-eips/std",
-	"alloy-rlp/std",
-	"alloy-rpc-types-engine/std"
+    "reth-primitives/std",
+    "reth-scroll-chainspec/std",
+    "reth-scroll-forks/std",
+    "alloy-consensus/std",
+    "alloy-eips/std",
+    "alloy-rlp/std",
+    "alloy-rpc-types-engine/std",
 ]
 scroll = ["reth-primitives/scroll"]
 optimism = ["reth-primitives/optimism"]

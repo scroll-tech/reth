@@ -27,8 +27,8 @@ tracing.workspace = true
 
 [features]
 serde = [
-	"dep:serde",
-	"dep:humantime-serde",
-	"reth-ethereum-forks/serde"
+    "dep:serde",
+    "dep:humantime-serde",
+    "reth-ethereum-forks/serde",
 ]
 test-utils = []

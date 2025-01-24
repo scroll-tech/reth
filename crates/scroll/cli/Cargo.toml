@@ -39,16 +39,16 @@ tracing.workspace = true
 
 [features]
 optimism = [
-	"reth-db/optimism",
-	"reth-node-core/optimism",
-	"reth-scroll-evm/optimism",
-	"reth-scroll-node/optimism",
-	"reth-primitives/optimism"
+    "reth-db/optimism",
+    "reth-node-core/optimism",
+    "reth-scroll-evm/optimism",
+    "reth-scroll-node/optimism",
+    "reth-primitives/optimism",
 ]
 scroll = [
-	"reth-db/scroll",
-	"reth-node-builder/scroll",
-	"reth-node-core/scroll",
-	"reth-scroll-evm/scroll",
-	"reth-scroll-node/scroll"
+    "reth-db/scroll",
+    "reth-node-builder/scroll",
+    "reth-node-core/scroll",
+    "reth-scroll-evm/scroll",
+    "reth-scroll-node/scroll",
 ]

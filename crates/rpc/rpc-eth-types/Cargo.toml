@@ -63,7 +63,6 @@ itertools.workspace = true
 [dev-dependencies]
 serde_json.workspace = true
 
-
 [features]
 js-tracer = ["revm-inspectors/js-tracer"]
 scroll = [
@@ -71,5 +70,5 @@ scroll = [
     "reth-execution-types/scroll",
     "reth-revm/scroll",
     "reth-primitives/scroll",
-    "reth-trie/scroll"
+    "reth-trie/scroll",
 ]

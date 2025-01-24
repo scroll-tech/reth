@@ -25,7 +25,7 @@ eyre.workspace = true
 
 [features]
 optimism = [
-	"reth-primitives/optimism",
-	"revm/optimism"
+    "reth-primitives/optimism",
+    "revm/optimism",
 ]
 scroll = []
