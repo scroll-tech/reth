@@ -35,6 +35,11 @@ impl ScrollAuthEngineApiProvider {
         let provider = RootProvider::new(client);
         Self { auth_provider: provider }
     }
+
+    /// Returns a reference to the inner [`alloy_provider::Provider`].
+    pub fn provider(&self) -> &RootProvider<Scroll> {
+        &self.auth_provider
+    }
 }
 
 #[cfg(all(test, feature = "scroll", not(feature = "optimism")))]

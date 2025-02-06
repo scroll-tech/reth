@@ -1,4 +1,5 @@
 mod provider;
+
 pub use provider::ScrollAuthEngineApiProvider;
 
 use alloy_primitives::{BlockHash, U64};
@@ -141,5 +142,53 @@ where
         capabilities: Vec<String>,
     ) -> TransportResult<Vec<String>> {
         self.client().request("engine_exchangeCapabilities", (capabilities,)).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ScrollEngineApi<scroll_alloy_network::Scroll> for ScrollAuthEngineApiProvider {
+    async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> TransportResult<PayloadStatus> {
+        self.provider().new_payload_v1(payload).await
+    }
+
+    async fn fork_choice_updated_v1(
+        &self,
+        fork_choice_state: ForkchoiceState,
+        payload_attributes: Option<ScrollPayloadAttributes>,
+    ) -> TransportResult<ForkchoiceUpdated> {
+        self.provider().fork_choice_updated_v1(fork_choice_state, payload_attributes).await
+    }
+
+    async fn get_payload_v1(&self, payload_id: PayloadId) -> TransportResult<ExecutionPayloadV1> {
+        self.provider().get_payload_v1(payload_id).await
+    }
+
+    async fn get_payload_bodies_by_hash_v1(
+        &self,
+        block_hashes: Vec<BlockHash>,
+    ) -> TransportResult<ExecutionPayloadBodiesV1> {
+        self.provider().get_payload_bodies_by_hash_v1(block_hashes).await
+    }
+
+    async fn get_payload_bodies_by_range_v1(
+        &self,
+        start: U64,
+        count: U64,
+    ) -> TransportResult<ExecutionPayloadBodiesV1> {
+        self.provider().get_payload_bodies_by_range_v1(start, count).await
+    }
+
+    async fn get_client_version_v1(
+        &self,
+        client_version: ClientVersionV1,
+    ) -> TransportResult<Vec<ClientVersionV1>> {
+        self.provider().get_client_version_v1(client_version).await
+    }
+
+    async fn exchange_capabilities(
+        &self,
+        capabilities: Vec<String>,
+    ) -> TransportResult<Vec<String>> {
+        self.provider().exchange_capabilities(capabilities).await
     }
 }
