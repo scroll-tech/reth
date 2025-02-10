@@ -3,11 +3,10 @@
 use alloc::sync::Arc;
 
 use alloy_chains::{Chain, NamedChain};
-use alloy_primitives::b256;
 use reth_chainspec::{once_cell_set, ChainSpec};
 use reth_scroll_forks::ScrollHardfork;
 
-use crate::{LazyLock, ScrollChainConfig, ScrollChainSpec};
+use crate::{LazyLock, ScrollChainConfig, ScrollChainSpec, SCROLL_SEPOLIA_GENESIS_HASH};
 
 /// The Scroll Sepolia spec
 pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
@@ -18,9 +17,7 @@ pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             genesis: serde_json::from_str(include_str!("../res/genesis/sepolia_scroll.json"))
                 .expect("Can't deserialize Scroll Sepolia genesis json"),
             // TODO(scroll): update this value once the bootnodes run the mpt.
-            genesis_hash: once_cell_set(b256!(
-                "aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c"
-            )),
+            genesis_hash: once_cell_set(SCROLL_SEPOLIA_GENESIS_HASH),
             hardforks: ScrollHardfork::scroll_sepolia(),
             ..Default::default()
         },
