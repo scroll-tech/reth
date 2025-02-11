@@ -15,8 +15,6 @@ use alloy_primitives::{
     keccak256, Address, Bytes, PrimitiveSignature as Signature, TxHash, TxKind, Uint, B256,
 };
 use alloy_rlp::Header;
-#[cfg(feature = "reth-codec")]
-use arbitrary as _;
 use core::{
     hash::{Hash, Hasher},
     mem,
@@ -24,8 +22,6 @@ use core::{
 use derive_more::{AsRef, Deref};
 #[cfg(not(feature = "std"))]
 use once_cell::sync::OnceCell as OnceLock;
-#[cfg(any(test, feature = "reth-codec"))]
-use proptest as _;
 use reth_primitives_traits::{
     crypto::secp256k1::{recover_signer, recover_signer_unchecked},
     transaction::{error::TransactionConversionError, signed::RecoveryError},
