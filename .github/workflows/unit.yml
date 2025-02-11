@@ -19,7 +19,8 @@ concurrency:
 jobs:
   test:
     name: test / ${{ matrix.type }} (${{ matrix.partition }}/${{ matrix.total_partitions }})
-    runs-on: ubuntu-latest
+    runs-on:
+      group: scroll-reth-runner-group
     env:
       RUST_BACKTRACE: 1
     strategy:
@@ -42,7 +43,7 @@ jobs:
             partition: 2
             total_partitions: 2
           - type: scroll
-            args: -p "reth-scroll-*" --locked --features "scroll"
+            args: -p "reth-scroll-*" -p "scroll-alloy-*" --locked --features "scroll"
             partition: 1
             total_partitions: 1
           - type: book
@@ -54,6 +55,7 @@ jobs:
       - name: Free up disk space
         run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -86,10 +88,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ethereum/tests
-          ref: 1c23e3c27ac53b794de0844d2d5e19cd2495b9d8
+          ref: 59781f1c6cce3d6c161751ab3512d79fa75d5597
           path: testing/ef-tests/ethereum-tests
           submodules: recursive
           fetch-depth: 1
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
@@ -108,6 +111,7 @@ jobs:
         network: ["ethereum", "optimism"]
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:

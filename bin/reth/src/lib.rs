@@ -26,9 +26,6 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-// Don't use the crate if `scroll` feature is used.
-#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
-#![cfg(not(feature = "scroll"))]
 
 pub mod cli;
 pub mod commands;
@@ -106,13 +103,9 @@ pub mod primitives {
     pub use reth_primitives::*;
 }
 
-/// Re-exported from `reth_beacon_consensus`.
+/// Re-exported from `reth_ethereum_consensus`.
 pub mod beacon_consensus {
-    pub use reth_beacon_consensus::*;
-}
-/// Re-exported from `reth_blockchain_tree`.
-pub mod blockchain_tree {
-    pub use reth_blockchain_tree::*;
+    pub use reth_node_ethereum::consensus::*;
 }
 
 /// Re-exported from `reth_consensus`.

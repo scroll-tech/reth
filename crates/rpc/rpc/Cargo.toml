@@ -20,6 +20,7 @@ reth-rpc-api.workspace = true
 reth-rpc-eth-api.workspace = true
 reth-engine-primitives.workspace = true
 reth-errors.workspace = true
+reth-metrics.workspace = true
 reth-provider.workspace = true
 reth-transaction-pool.workspace = true
 reth-network-api.workspace = true
@@ -56,15 +57,8 @@ alloy-rpc-types-txpool.workspace = true
 alloy-rpc-types-admin.workspace = true
 alloy-rpc-types-engine.workspace = true
 alloy-serde.workspace = true
-revm = { workspace = true, features = [
-    "optional_block_gas_limit",
-    "optional_eip3607",
-    "optional_no_base_fee",
-] }
+revm = { workspace = true, features = ["optional_block_gas_limit", "optional_eip3607", "optional_no_base_fee"] }
 revm-primitives = { workspace = true, features = ["serde"] }
-
-# scroll
-reth-scroll-storage = { workspace = true, optional = true }
 
 # rpc
 jsonrpsee.workspace = true
@@ -107,14 +101,10 @@ js-tracer = ["revm-inspectors/js-tracer", "reth-rpc-eth-types/js-tracer"]
 scroll = [
     "reth-evm/scroll",
     "reth-rpc-eth-types/scroll",
-    "reth-primitives/scroll",
     "reth-revm/scroll",
     "reth-provider/scroll",
     "reth-testing-utils/scroll",
     "reth-evm-ethereum/scroll",
     "reth-rpc-eth-api/scroll",
-    "reth-scroll-storage/scroll",
-    "reth-chainspec/scroll",
-    "revm-primitives/scroll",
     "revm/scroll",
 ]

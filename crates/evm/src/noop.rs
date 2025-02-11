@@ -1,19 +1,14 @@
 //! A no operation block executor implementation.
 
-use alloy_primitives::BlockNumber;
-use core::fmt::Display;
 use reth_execution_errors::BlockExecutionError;
-use reth_execution_types::{BlockExecutionInput, BlockExecutionOutput, ExecutionOutcome};
-use reth_primitives::{BlockWithSenders, NodePrimitives};
-use reth_prune_types::PruneModes;
-use reth_scroll_execution::FinalizeExecution;
-use reth_storage_errors::provider::ProviderError;
-use revm::{db::BundleState, State};
-use revm_primitives::db::Database;
+use reth_execution_types::{BlockExecutionOutput, ExecutionOutcome};
+use reth_primitives::{NodePrimitives, RecoveredBlock};
+use revm::State;
 
 use crate::{
     execute::{BatchExecutor, BlockExecutorProvider, Executor},
     system_calls::OnStateHook,
+    Database,
 };
 
 const UNAVAILABLE_FOR_NOOP: &str = "execution unavailable for noop";
@@ -26,35 +21,27 @@ pub struct NoopBlockExecutorProvider<P>(core::marker::PhantomData<P>);
 impl<P: NodePrimitives> BlockExecutorProvider for NoopBlockExecutorProvider<P> {
     type Primitives = P;
 
-    type Executor<DB: Database<Error: Into<ProviderError> + Display>>
-        = Self
-    where
-        State<DB>: FinalizeExecution<Output = BundleState>;
+    type Executor<DB: Database> = Self;
 
-    type BatchExecutor<DB: Database<Error: Into<ProviderError> + Display>>
-        = Self
-    where
-        State<DB>: FinalizeExecution<Output = BundleState>;
+    type BatchExecutor<DB: Database> = Self;
 
     fn executor<DB>(&self, _: DB) -> Self::Executor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
-        State<DB>: FinalizeExecution<Output = BundleState>,
+        DB: Database,
     {
         Self::default()
     }
 
     fn batch_executor<DB>(&self, _: DB) -> Self::BatchExecutor<DB>
     where
-        DB: Database<Error: Into<ProviderError> + Display>,
-        State<DB>: FinalizeExecution<Output = BundleState>,
+        DB: Database,
     {
         Self::default()
     }
 }
 
 impl<DB, P: NodePrimitives> Executor<DB> for NoopBlockExecutorProvider<P> {
-    type Input<'a> = BlockExecutionInput<'a, BlockWithSenders<P::Block>>;
+    type Input<'a> = &'a RecoveredBlock<P::Block>;
     type Output = BlockExecutionOutput<P::Receipt>;
     type Error = BlockExecutionError;
 
@@ -86,7 +73,7 @@ impl<DB, P: NodePrimitives> Executor<DB> for NoopBlockExecutorProvider<P> {
 }
 
 impl<DB, P: NodePrimitives> BatchExecutor<DB> for NoopBlockExecutorProvider<P> {
-    type Input<'a> = BlockExecutionInput<'a, BlockWithSenders<P::Block>>;
+    type Input<'a> = &'a RecoveredBlock<P::Block>;
     type Output = ExecutionOutcome<P::Receipt>;
     type Error = BlockExecutionError;
 
@@ -97,10 +84,6 @@ impl<DB, P: NodePrimitives> BatchExecutor<DB> for NoopBlockExecutorProvider<P> {
     fn finalize(self) -> Self::Output {
         unreachable!()
     }
-
-    fn set_tip(&mut self, _: BlockNumber) {}
-
-    fn set_prune_modes(&mut self, _: PruneModes) {}
 
     fn size_hint(&self) -> Option<usize> {
         None

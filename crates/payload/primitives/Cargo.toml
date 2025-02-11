@@ -18,18 +18,32 @@ reth-errors.workspace = true
 reth-primitives.workspace = true
 reth-chain-state.workspace = true
 
-revm-primitives.workspace = true
-
 # alloy
 alloy-eips.workspace = true
 alloy-primitives.workspace = true
 alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 op-alloy-rpc-types-engine = { workspace = true, optional = true }
+scroll-alloy-rpc-types-engine = { workspace = true, optional = true, features = ["serde"] }
 
 # misc
 serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, default-features = false, features = ["sync"] }
 
+[dev-dependencies]
+assert_matches.workspace = true
+
 [features]
+default = ["std"]
+std = [
+    "reth-chainspec/std",
+    "reth-primitives/std",
+    "alloy-eips/std",
+    "alloy-primitives/std",
+    "alloy-rpc-types-engine/std",
+    "op-alloy-rpc-types-engine?/std",
+    "serde/std",
+    "thiserror/std",
+]
 op = ["dep:op-alloy-rpc-types-engine"]
+scroll-alloy-traits = ["dep:scroll-alloy-rpc-types-engine"]

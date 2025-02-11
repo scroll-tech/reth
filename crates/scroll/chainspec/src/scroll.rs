@@ -17,6 +17,7 @@ pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             chain: Chain::from_named(NamedChain::Scroll),
             genesis: serde_json::from_str(include_str!("../res/genesis/scroll.json"))
                 .expect("Can't deserialize Scroll Mainnet genesis json"),
+            // TODO(scroll): update this value once the bootnodes run the mpt.
             genesis_hash: once_cell_set(b256!(
                 "bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"
             )),

@@ -6,12 +6,12 @@ use alloy_primitives::{
 };
 use reth_primitives::{Account, Bytecode};
 use reth_storage_api::{
-    AccountReader, BlockHashReader, HashedPostStateProvider, HashedStorageProvider,
-    KeyHasherProvider, StateProofProvider, StateProvider, StateRootProvider, StorageRootProvider,
+    AccountReader, BlockHashReader, HashedPostStateProvider, StateProofProvider, StateProvider,
+    StateRootProvider, StorageRootProvider,
 };
 use reth_storage_errors::provider::ProviderResult;
 use reth_trie::{
-    updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, KeccakKeyHasher, KeyHasher,
+    updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, KeccakKeyHasher,
     MultiProof, MultiProofTargets, StorageMultiProof, StorageProof, TrieInput,
 };
 
@@ -47,8 +47,8 @@ impl StateProviderTest {
 }
 
 impl AccountReader for StateProviderTest {
-    fn basic_account(&self, address: Address) -> ProviderResult<Option<Account>> {
-        Ok(self.accounts.get(&address).map(|(_, acc)| *acc))
+    fn basic_account(&self, address: &Address) -> ProviderResult<Option<Account>> {
+        Ok(self.accounts.get(address).map(|(_, acc)| *acc))
     }
 }
 
@@ -72,7 +72,7 @@ impl BlockHashReader for StateProviderTest {
 }
 
 impl StateRootProvider for StateProviderTest {
-    fn state_root_from_state(&self, _hashed_state: HashedPostState) -> ProviderResult<B256> {
+    fn state_root(&self, _hashed_state: HashedPostState) -> ProviderResult<B256> {
         unimplemented!("state root computation is not supported")
     }
 
@@ -80,7 +80,7 @@ impl StateRootProvider for StateProviderTest {
         unimplemented!("state root computation is not supported")
     }
 
-    fn state_root_from_state_with_updates(
+    fn state_root_with_updates(
         &self,
         _hashed_state: HashedPostState,
     ) -> ProviderResult<(B256, TrieUpdates)> {
@@ -156,18 +156,6 @@ impl HashedPostStateProvider for StateProviderTest {
     }
 }
 
-impl HashedStorageProvider for StateProviderTest {
-    fn hashed_storage(&self, account: &revm::db::BundleAccount) -> HashedStorage {
-        HashedStorage::from_bundle_account::<KeccakKeyHasher>(account)
-    }
-}
-
-impl KeyHasherProvider for StateProviderTest {
-    fn hash_key(&self, bytes: &[u8]) -> B256 {
-        KeccakKeyHasher::hash_key(bytes)
-    }
-}
-
 impl StateProvider for StateProviderTest {
     fn storage(
         &self,
@@ -177,7 +165,7 @@ impl StateProvider for StateProviderTest {
         Ok(self.accounts.get(&account).and_then(|(storage, _)| storage.get(&storage_key).copied()))
     }
 
-    fn bytecode_by_hash(&self, code_hash: B256) -> ProviderResult<Option<Bytecode>> {
-        Ok(self.contracts.get(&code_hash).cloned())
+    fn bytecode_by_hash(&self, code_hash: &B256) -> ProviderResult<Option<Bytecode>> {
+        Ok(self.contracts.get(code_hash).cloned())
     }
 }

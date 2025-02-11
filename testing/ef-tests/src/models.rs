@@ -116,7 +116,6 @@ impl From<Header> for SealedHeader {
             excess_blob_gas: value.excess_blob_gas.map(|v| v.to::<u64>()),
             parent_beacon_block_root: value.parent_beacon_block_root,
             requests_hash: value.requests_hash,
-            target_blobs_per_block: value.target_blobs_per_block.map(|v| v.to::<u64>()),
         };
         Self::new(header, value.hash)
     }
@@ -165,10 +164,6 @@ impl State {
                 balance: account.balance,
                 nonce: account.nonce.to::<u64>(),
                 bytecode_hash: code_hash,
-                #[cfg(feature = "scroll")]
-                account_extension: Some(reth_scroll_primitives::AccountExtension::from_bytecode(
-                    &account.code,
-                )),
             };
             tx.put::<tables::PlainAccountState>(address, reth_account)?;
             tx.put::<tables::HashedAccounts>(hashed_address, reth_account)?;

@@ -23,19 +23,18 @@ jobs:
           - type: optimism
             args: --bin op-reth --workspace --lib --examples --tests --benches --locked
             features: "optimism asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
-          - type: scroll-bmpt
+          - type: scroll
             args: --bin scroll-reth --workspace --lib --examples --tests --benches --locked
-            features: "scroll asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
-          - type: scroll-mpt
-            args: --bin scroll-reth-mpt --workspace --lib --examples --tests --benches --locked
-            features: "scroll asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
+            features: "scroll skip-state-root-validation asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs"
           - type: book
             args: --manifest-path book/sources/Cargo.toml --workspace --bins
             features: ""
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@clippy
         with:
+          toolchain: nightly-2025-01-16
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
@@ -55,8 +54,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@nightly
         with:
+          toolchain: nightly-2025-01-16
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
@@ -70,6 +71,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: wasm32-wasip1
@@ -79,13 +81,16 @@ jobs:
           cache-on-failure: true
       - uses: dcarbone/install-jq-action@v3
       - name: Run Wasm checks
-        run: .github/assets/check_wasm.sh
+        run: |
+          sudo apt update && sudo apt install gcc-multilib
+          .github/assets/check_wasm.sh
 
   riscv:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: riscv32imac-unknown-none-elf
@@ -102,6 +107,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
@@ -110,7 +116,6 @@ jobs:
       - run: cargo hack check --workspace --exclude op-reth --exclude scroll-reth --exclude scroll-reth-mpt
       - run: cargo check -p op-reth --features "optimism"
       - run: cargo check -p scroll-reth --features "scroll"
-      - run: cargo check -p scroll-reth-mpt --features "scroll"
 
   msrv:
     name: MSRV / ${{ matrix.network }}
@@ -125,6 +130,7 @@ jobs:
             network: optimism
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.82" # MSRV
@@ -141,6 +147,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -157,6 +164,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
@@ -171,6 +179,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -180,10 +189,13 @@ jobs:
         # #![cfg(not(feature = "scroll))] or #![cfg(not(feature = "optimism"))].
       - run: |
           cargo udeps --workspace --lib --examples --tests --benches --all-features --locked \
-            --exclude "reth-optimism-*" --exclude op-reth --exclude "example-*" --exclude reth \
+            --exclude reth-optimism-cli --exclude reth-optimism-consensus --exclude reth-optimism-payload-builder \
+            --exclude reth-optimism-node --exclude reth-optimism-evm --exclude reth-optimism-node --exclude reth-optimism-rpc \
+            --exclude op-reth --exclude "example-*" --exclude reth --exclude reth-payload-primitives \
             --exclude reth-e2e-test-utils --exclude reth-ethereum-payload-builder --exclude reth-exex-test-utils \
             --exclude reth-node-ethereum --exclude reth-scroll-cli --exclude reth-scroll-evm \
-            --exclude reth-scroll-node --exclude "scroll-reth*" --exclude reth-scroll-engine
+            --exclude reth-scroll-node --exclude scroll-reth --exclude reth-scroll-rpc  --exclude reth-scroll-trie \
+            --exclude reth-scroll-engine-primitives --exclude scroll-alloy-provider
 
   book:
     name: book
@@ -191,10 +203,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@nightly
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: "1.82" # MSRV
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
@@ -214,6 +224,17 @@ jobs:
         with:
           skip: "*.json"
 
+  check-toml:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run dprint
+        uses: dprint/check@v2.2
+        with:
+          config-path: dprint.json
+
   grafana:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -229,6 +250,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - name: Ensure no arbitrary or proptest dependency on default build
         run: cargo tree --package reth -e=features,no-dev | grep -Eq "arbitrary|proptest" && exit 1 || exit 0
@@ -240,6 +262,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@clippy
       - uses: Swatinem/rust-cache@v2
         with:

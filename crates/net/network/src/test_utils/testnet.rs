@@ -100,6 +100,7 @@ where
     }
 
     /// Return a slice of all peers.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn peers(&self) -> &[Peer<C, Pool>] {
         &self.peers
     }
@@ -331,6 +332,7 @@ impl<C, Pool> TestnetHandle<C, Pool> {
     }
 
     /// Returns the [`PeerHandle`]s of this [`Testnet`].
+    #[allow(clippy::missing_const_for_fn)]
     pub fn peers(&self) -> &[PeerHandle<Pool>] {
         &self.peers
     }
@@ -698,11 +700,8 @@ impl NetworkEventStream {
     /// Awaits the next event for a session to be closed
     pub async fn next_session_closed(&mut self) -> Option<(PeerId, Option<DisconnectReason>)> {
         while let Some(ev) = self.inner.next().await {
-            match ev {
-                NetworkEvent::Peer(PeerEvent::SessionClosed { peer_id, reason }) => {
-                    return Some((peer_id, reason))
-                }
-                _ => continue,
+            if let NetworkEvent::Peer(PeerEvent::SessionClosed { peer_id, reason }) = ev {
+                return Some((peer_id, reason))
             }
         }
         None
@@ -716,7 +715,7 @@ impl NetworkEventStream {
                 NetworkEvent::Peer(PeerEvent::SessionEstablished(info)) => {
                     return Some(info.peer_id)
                 }
-                _ => continue,
+                _ => {}
             }
         }
         None
@@ -729,15 +728,12 @@ impl NetworkEventStream {
         }
         let mut peers = Vec::with_capacity(num);
         while let Some(ev) = self.inner.next().await {
-            match ev {
-                NetworkEvent::ActivePeerSession { info: SessionInfo { peer_id, .. }, .. } => {
-                    peers.push(peer_id);
-                    num -= 1;
-                    if num == 0 {
-                        return peers;
-                    }
+            if let NetworkEvent::ActivePeerSession { info: SessionInfo { peer_id, .. }, .. } = ev {
+                peers.push(peer_id);
+                num -= 1;
+                if num == 0 {
+                    return peers;
                 }
-                _ => continue,
             }
         }
         peers

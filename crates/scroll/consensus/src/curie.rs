@@ -1,6 +1,6 @@
 //! Curie fork transition for Scroll.
 //!
-//! On block 7096836, Scroll performed a transition to the Curie fork state, which brought  various
+//! On block 7096836, Scroll performed a transition to the Curie fork state, which brought various
 //! changes to the protocol:
 //!    1. Fee reduction cost thanks to the use of compressed blobs on the L1.
 //!    2. Modified [EIP-1559](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md) pricing
@@ -19,8 +19,7 @@
 
 use revm::{
     db::states::StorageSlot,
-    primitives::{address, bytes, Address, Bytecode, Bytes, U256},
-    shared::AccountInfo,
+    primitives::{address, bytes, AccountInfo, Address, Bytecode, Bytes, U256},
     Database, State,
 };
 
@@ -74,19 +73,13 @@ pub fn apply_curie_hard_fork<DB: Database>(state: &mut State<DB>) -> Result<(), 
     let bytecode = Bytecode::new_raw(CURIE_L1_GAS_PRICE_ORACLE_BYTECODE);
     let bytecode_len = bytecode.len();
     let code_hash = bytecode.hash_slow();
-    let poseidon_code_hash = bytecode.poseidon_hash_slow();
 
     // get the old oracle account info
     let old_oracle_info = oracle.account_info().unwrap_or_default();
 
     // init new oracle account information
-    let new_oracle_info = AccountInfo {
-        code_size: bytecode_len,
-        code_hash,
-        poseidon_code_hash,
-        code: Some(bytecode),
-        ..old_oracle_info
-    };
+    let new_oracle_info =
+        AccountInfo { code_size: bytecode_len, code_hash, code: Some(bytecode), ..old_oracle_info };
 
     // init new storage
     let new_storage = CURIE_L1_GAS_PRICE_ORACLE_STORAGE
@@ -123,11 +116,12 @@ mod tests {
         },
     };
     use revm::{
-        db::states::{bundle_state::BundleRetention, plain_account::PlainStorage, StorageSlot},
-        keccak256,
-        primitives::{bytes, poseidon, U256},
-        shared::AccountInfo,
-        Bytecode, Database, EmptyDB, State,
+        db::{
+            states::{bundle_state::BundleRetention, plain_account::PlainStorage, StorageSlot},
+            EmptyDB,
+        },
+        primitives::{bytes, keccak256, AccountInfo, Bytecode, U256},
+        Database, State,
     };
     use std::str::FromStr;
 
@@ -143,7 +137,6 @@ mod tests {
         let oracle_pre_fork = AccountInfo {
             code_size: bytecode_pre_fork.len(),
             code_hash: bytecode_pre_fork.hash_slow(),
-            poseidon_code_hash: bytecode_pre_fork.poseidon_hash_slow(),
             code: Some(bytecode_pre_fork),
             ..Default::default()
         };
@@ -174,7 +167,6 @@ mod tests {
         let expected_oracle_info = AccountInfo {
             code_size: CURIE_L1_GAS_PRICE_ORACLE_BYTECODE.len(),
             code_hash,
-            poseidon_code_hash: poseidon(&CURIE_L1_GAS_PRICE_ORACLE_BYTECODE),
             code: Some(bytecode.clone()),
             ..Default::default()
         };

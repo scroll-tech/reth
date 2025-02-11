@@ -134,6 +134,7 @@ impl<V: Value> RawValue<V> {
     }
 
     /// Returns the raw value as seen on the database.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn raw_value(&self) -> &[u8] {
         &self.value
     }
@@ -168,7 +169,7 @@ impl<V: Value> Compress for RawValue<V> {
         self.value
     }
 
-    fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(self, buf: &mut B) {
+    fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(&self, buf: &mut B) {
         buf.put_slice(self.value.as_slice())
     }
 }

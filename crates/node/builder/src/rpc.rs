@@ -18,8 +18,8 @@ use reth_node_core::{
     version::{CARGO_PKG_VERSION, CLIENT_CODE, NAME_CLIENT, VERGEN_GIT_SHA},
 };
 use reth_payload_builder::PayloadStore;
-use reth_primitives::{EthPrimitives, PooledTransaction};
-use reth_provider::providers::NodeTypesForProvider;
+use reth_primitives::EthPrimitives;
+use reth_provider::ChainSpecProvider;
 use reth_rpc::{
     eth::{EthApiTypes, FullEthApiServer},
     EthApi,
@@ -33,7 +33,6 @@ use reth_rpc_builder::{
 use reth_rpc_engine_api::{capabilities::EngineCapabilities, EngineApi};
 use reth_tasks::TaskExecutor;
 use reth_tracing::tracing::{debug, info};
-use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use std::sync::Arc;
 
 use crate::EthApiBuilderCtx;
@@ -199,7 +198,6 @@ pub struct RpcRegistry<Node: FullNodeComponents, EthApi: EthApiTypes> {
         Node::Pool,
         Node::Network,
         TaskExecutor,
-        Node::Provider,
         EthApi,
         Node::Executor,
         Node::Consensus,
@@ -216,7 +214,6 @@ where
         Node::Pool,
         Node::Network,
         TaskExecutor,
-        Node::Provider,
         EthApi,
         Node::Executor,
         Node::Consensus,
@@ -404,9 +401,7 @@ where
 
 impl<N, EthApi, EV> RpcAddOns<N, EthApi, EV>
 where
-    N: FullNodeComponents<
-        Pool: TransactionPool<Transaction: PoolTransaction<Pooled = PooledTransaction>>,
-    >,
+    N: FullNodeComponents,
     EthApi: EthApiTypes
         + FullEthApiServer<Provider = N::Provider, Pool = N::Pool, Network = N::Network>
         + AddDevSigners
@@ -457,7 +452,6 @@ where
             .with_provider(node.provider().clone())
             .with_pool(node.pool().clone())
             .with_network(node.network().clone())
-            .with_events(node.provider().clone())
             .with_executor(node.task_executor().clone())
             .with_evm_config(node.evm_config().clone())
             .with_block_executor(node.block_executor().clone())
@@ -534,10 +528,7 @@ where
 
 impl<N, EthApi, EV> NodeAddOns<N> for RpcAddOns<N, EthApi, EV>
 where
-    N: FullNodeComponents<
-        Types: NodeTypesForProvider<Primitives = EthPrimitives>,
-        Pool: TransactionPool<Transaction: PoolTransaction<Pooled = PooledTransaction>>,
-    >,
+    N: FullNodeComponents,
     EthApi: EthApiTypes
         + FullEthApiServer<Provider = N::Provider, Pool = N::Pool, Network = N::Network>
         + AddDevSigners
@@ -581,8 +572,12 @@ pub trait EthApiBuilder<N: FullNodeComponents>: 'static {
     fn build(ctx: &EthApiBuilderCtx<N>) -> Self;
 }
 
-impl<N: FullNodeComponents<Types: NodeTypes<Primitives = EthPrimitives>>> EthApiBuilder<N>
-    for EthApi<N::Provider, N::Pool, N::Network, N::Evm>
+impl<
+        N: FullNodeComponents<
+            Provider: ChainSpecProvider,
+            Types: NodeTypes<Primitives = EthPrimitives>,
+        >,
+    > EthApiBuilder<N> for EthApi<N::Provider, N::Pool, N::Network, N::Evm>
 {
     fn build(ctx: &EthApiBuilderCtx<N>) -> Self {
         Self::with_spawner(ctx)

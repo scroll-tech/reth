@@ -1,21 +1,27 @@
 use alloy_consensus::BlockHeader;
-use alloy_primitives::{BlockNumber, B256};
 use reth_codecs::Compact;
-use reth_consensus::ConsensusError;
 use reth_db::tables;
 use reth_db_api::transaction::{DbTx, DbTxMut};
-use reth_primitives::{GotExpected, SealedHeader};
 use reth_provider::{
-    DBProvider, HeaderProvider, LatestStateProviderRef, ProviderError, StageCheckpointReader,
-    StageCheckpointWriter, StateCommitmentProvider, StateRootProviderExt, StatsReader, TrieWriter,
+    DBProvider, HeaderProvider, ProviderError, StageCheckpointReader, StageCheckpointWriter,
+    StatsReader, TrieWriter,
 };
 use reth_stages_api::{
-    BlockErrorKind, EntitiesCheckpoint, ExecInput, ExecOutput, MerkleCheckpoint, Stage,
-    StageCheckpoint, StageError, StageId, UnwindInput, UnwindOutput,
+    EntitiesCheckpoint, ExecInput, ExecOutput, MerkleCheckpoint, Stage, StageCheckpoint,
+    StageError, StageId, UnwindInput, UnwindOutput,
 };
-use reth_trie::{IntermediateStateRootState, StateRootProgress, StoredSubNode};
+use reth_trie::{IntermediateStateRootState, StateRoot, StateRootProgress, StoredSubNode};
+use reth_trie_db::DatabaseStateRoot;
 use std::fmt::Debug;
 use tracing::*;
+
+#[cfg(not(feature = "skip-state-root-validation"))]
+use {
+    alloy_primitives::{BlockNumber, Sealable, B256},
+    reth_consensus::ConsensusError,
+    reth_primitives::{GotExpected, SealedHeader},
+    reth_stages_api::BlockErrorKind,
+};
 
 // TODO: automate the process outlined below so the user can just send in a debugging package
 /// The error message that we include in invalid state root errors to tell users what information
@@ -137,8 +143,7 @@ where
         + StatsReader
         + HeaderProvider
         + StageCheckpointReader
-        + StageCheckpointWriter
-        + StateCommitmentProvider,
+        + StageCheckpointWriter,
 {
     /// Return the id of the stage
     fn id(&self) -> StageId {
@@ -211,8 +216,10 @@ where
                     as u64,
             });
 
-            let progress = LatestStateProviderRef::new(provider).state_root_with_progress
-                (checkpoint.map(IntermediateStateRootState::from))
+            let tx = provider.tx_ref();
+            let progress = StateRoot::from_tx(tx)
+                .with_intermediate_state(checkpoint.map(IntermediateStateRootState::from))
+                .root_with_progress()
                 .map_err(|e| {
                     error!(target: "sync::stages::merkle", %e, ?current_block_number, ?to_block, "State root with progress failed! {INVALID_STATE_ROOT_ERROR_MESSAGE}");
                     StageError::Fatal(Box::new(e))
@@ -249,7 +256,7 @@ where
         } else {
             debug!(target: "sync::stages::merkle::exec", current = ?current_block_number, target = ?to_block, "Updating trie");
             let (root, updates) =
-                LatestStateProviderRef::new(provider).incremental_state_root_with_updates(range)
+                StateRoot::incremental_root_with_updates(provider.tx_ref(), range)
                     .map_err(|e| {
                         error!(target: "sync::stages::merkle", %e, ?current_block_number, ?to_block, "Incremental state root failed! {INVALID_STATE_ROOT_ERROR_MESSAGE}");
                         StageError::Fatal(Box::new(e))
@@ -276,9 +283,9 @@ where
         self.save_execution_checkpoint(provider, None)?;
 
         #[cfg(feature = "skip-state-root-validation")]
-        let _ = trie_root;
+        debug!(target: "sync::stages::merkle::exec", ?trie_root, block_number = target_block.number());
         #[cfg(not(feature = "skip-state-root-validation"))]
-        validate_state_root(trie_root, SealedHeader::seal(target_block), to_block)?;
+        validate_state_root(trie_root, SealedHeader::seal_slow(target_block), to_block)?;
 
         Ok(ExecOutput {
             checkpoint: StageCheckpoint::new(to_block)
@@ -323,8 +330,7 @@ where
         if range.is_empty() {
             info!(target: "sync::stages::merkle::unwind", "Nothing to unwind");
         } else {
-            let (block_root, updates) = LatestStateProviderRef::new(provider)
-                .incremental_state_root_with_updates(range)
+            let (block_root, updates) = StateRoot::incremental_root_with_updates(tx, range)
                 .map_err(|e| StageError::Fatal(Box::new(e)))?;
 
             // Validate the calculated state root
@@ -332,7 +338,10 @@ where
                 .header_by_number(input.unwind_to)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(input.unwind_to.into()))?;
 
-            validate_state_root(block_root, SealedHeader::seal(target), input.unwind_to)?;
+            #[cfg(feature = "skip-state-root-validation")]
+            debug!(target: "sync::stages::merkle::unwind", ?block_root, block_number = target.number());
+            #[cfg(not(feature = "skip-state-root-validation"))]
+            validate_state_root(block_root, SealedHeader::seal_slow(target), input.unwind_to)?;
 
             // Validation passed, apply unwind changes to the database.
             provider.write_trie_updates(&updates)?;
@@ -346,7 +355,8 @@ where
 
 /// Check that the computed state root matches the root in the expected header.
 #[inline]
-fn validate_state_root<H: BlockHeader + Debug>(
+#[cfg(not(feature = "skip-state-root-validation"))]
+fn validate_state_root<H: BlockHeader + Sealable + Debug>(
     got: B256,
     expected: SealedHeader<H>,
     target_block: BlockNumber,
@@ -371,10 +381,10 @@ mod tests {
         stage_test_suite_ext, ExecuteStageTestRunner, StageTestRunner, StorageKind,
         TestRunnerError, TestStageDB, UnwindStageTestRunner,
     };
-    use alloy_primitives::{keccak256, U256};
+    use alloy_primitives::{keccak256, B256, U256};
     use assert_matches::assert_matches;
     use reth_db_api::cursor::{DbCursorRO, DbCursorRW, DbDupCursorRO};
-    use reth_primitives::{SealedBlock, StaticFileSegment, StorageEntry};
+    use reth_primitives::{SealedBlock, SealedHeader, StaticFileSegment, StorageEntry};
     use reth_provider::{providers::StaticFileWriter, StaticFileProviderFactory};
     use reth_stages_api::StageUnitCheckpoint;
     use reth_testing_utils::generators::{
@@ -522,11 +532,12 @@ mod tests {
                 accounts.iter().map(|(addr, acc)| (*addr, (*acc, std::iter::empty()))),
             )?;
 
-            let SealedBlock { header, body } = random_block(
+            let (header, body) = random_block(
                 &mut rng,
                 stage_progress,
                 BlockParams { parent: preblocks.last().map(|b| b.hash()), ..Default::default() },
-            );
+            )
+            .split_sealed_header_body();
             let mut header = header.unseal();
 
             header.state_root = state_root(
@@ -535,7 +546,10 @@ mod tests {
                     .into_iter()
                     .map(|(address, account)| (address, (account, std::iter::empty()))),
             );
-            let sealed_head = SealedBlock { header: SealedHeader::seal(header), body };
+            let sealed_head = SealedBlock::<reth_primitives::Block>::from_sealed_parts(
+                SealedHeader::seal_slow(header),
+                body,
+            );
 
             let head_hash = sealed_head.hash();
             let mut blocks = vec![sealed_head];
@@ -585,8 +599,8 @@ mod tests {
             let static_file_provider = self.db.factory.static_file_provider();
             let mut writer =
                 static_file_provider.latest_writer(StaticFileSegment::Headers).unwrap();
-            let mut last_header = last_block.header().clone();
-            last_header.state_root = root;
+            let mut last_header = last_block.clone_sealed_header();
+            last_header.set_state_root(root);
 
             let hash = last_header.hash_slow();
             writer.prune_headers(1).unwrap();
@@ -649,7 +663,7 @@ mod tests {
 
                             if !value.is_zero() {
                                 let storage_entry = StorageEntry { key: hashed_slot, value };
-                                storage_cursor.upsert(hashed_address, storage_entry).unwrap();
+                                storage_cursor.upsert(hashed_address, &storage_entry).unwrap();
                             }
                         }
                     }

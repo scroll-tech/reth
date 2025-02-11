@@ -7,6 +7,9 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 /// The implementation of hash builder.
 pub mod hash_builder;
@@ -19,7 +22,7 @@ mod account;
 pub use account::TrieAccount;
 
 mod key;
-pub use key::{pack_nibbles, unpack_nibbles, BitsCompatibility, KeccakKeyHasher, KeyHasher};
+pub use key::{KeccakKeyHasher, KeyHasher};
 
 mod nibbles;
 pub use nibbles::{Nibbles, StoredNibbles, StoredNibblesSubKey};

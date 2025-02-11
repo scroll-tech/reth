@@ -20,8 +20,9 @@ use reth_chainspec::{
 };
 use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition, Hardfork};
 use reth_network_peers::NodeRecord;
-use reth_scroll_forks::ScrollHardforks;
+use reth_scroll_forks::{ScrollHardfork, ScrollHardforks};
 
+use alloy_eips::eip7840::BlobParams;
 #[cfg(not(feature = "std"))]
 use once_cell::sync::Lazy as LazyLock;
 #[cfg(feature = "std")]
@@ -197,6 +198,10 @@ impl EthChainSpec for ScrollChainSpec {
         self.inner.base_fee_params_at_timestamp(timestamp)
     }
 
+    fn blob_params_at_timestamp(&self, timestamp: u64) -> Option<BlobParams> {
+        self.inner.blob_params_at_timestamp(timestamp)
+    }
+
     fn deposit_contract(&self) -> Option<&DepositContract> {
         self.inner.deposit_contract()
     }
@@ -233,7 +238,7 @@ impl ScrollChainSpec {
             difficulty: self.genesis.difficulty,
             nonce: self.genesis.nonce.into(),
             extra_data: self.genesis.extra_data.clone(),
-            state_root: reth_scroll_state_commitment::state_root_ref_unhashed(&self.genesis.alloc),
+            state_root: reth_trie_common::root::state_root_ref_unhashed(&self.genesis.alloc),
             timestamp: self.genesis.timestamp,
             mix_hash: self.genesis.mix_hash,
             beneficiary: self.genesis.coinbase,
@@ -273,6 +278,10 @@ impl Hardforks for ScrollChainSpec {
 }
 
 impl EthereumHardforks for ScrollChainSpec {
+    fn ethereum_fork_activation(&self, fork: EthereumHardfork) -> ForkCondition {
+        self.fork(fork)
+    }
+
     fn get_final_paris_total_difficulty(&self) -> Option<U256> {
         self.inner.get_final_paris_total_difficulty()
     }
@@ -282,7 +291,11 @@ impl EthereumHardforks for ScrollChainSpec {
     }
 }
 
-impl ScrollHardforks for ScrollChainSpec {}
+impl ScrollHardforks for ScrollChainSpec {
+    fn scroll_fork_activation(&self, fork: ScrollHardfork) -> ForkCondition {
+        self.fork(fork)
+    }
+}
 
 impl From<Genesis> for ScrollChainSpec {
     fn from(genesis: Genesis) -> Self {
@@ -381,7 +394,7 @@ mod tests {
         let scroll_mainnet =
             ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet());
         assert_eq!(
-            b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80"),
+            b256!("908789cb20d00fc6070093f142aa8d02c21cfb0a9b9cfd4621d8cf0255234c0f"),
             scroll_mainnet.genesis_hash()
         );
     }
@@ -391,7 +404,7 @@ mod tests {
         let scroll_sepolia =
             ScrollChainSpecBuilder::scroll_sepolia().build(ScrollChainConfig::sepolia());
         assert_eq!(
-            b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c"),
+            b256!("5e756a466b785b67e247b18c410d962866a53af97f09948016e9239b2054c94f"),
             scroll_sepolia.genesis_hash()
         );
     }
@@ -556,8 +569,8 @@ mod tests {
                         }),
                     ),
                 ]
-                .into_iter()
-                .collect(),
+                    .into_iter()
+                    .collect(),
                 ..Default::default()
             },
             ..Default::default()

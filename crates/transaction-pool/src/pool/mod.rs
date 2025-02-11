@@ -88,7 +88,7 @@ use reth_eth_wire_types::HandleMempoolData;
 use reth_execution_types::ChangedAccount;
 
 use alloy_eips::eip4844::BlobTransactionSidecar;
-use reth_primitives::RecoveredTx;
+use reth_primitives::Recovered;
 use rustc_hash::FxHashMap;
 use std::{collections::HashSet, fmt, sync::Arc, time::Instant};
 use tokio::sync::mpsc;
@@ -109,7 +109,7 @@ pub use events::{FullTransactionEvent, TransactionEvent};
 pub use listener::{AllTransactionsEvents, TransactionEvents};
 pub use parked::{BasefeeOrd, ParkedOrd, ParkedPool, QueuedOrd};
 pub use pending::PendingPool;
-use reth_primitives_traits::{BlockBody, BlockHeader};
+use reth_primitives_traits::Block;
 
 mod best;
 mod blob;
@@ -316,7 +316,7 @@ where
     fn to_pooled_transaction(
         &self,
         transaction: Arc<ValidPoolTransaction<T::Transaction>>,
-    ) -> Option<RecoveredTx<<<V as TransactionValidator>::Transaction as PoolTransaction>::Pooled>>
+    ) -> Option<Recovered<<<V as TransactionValidator>::Transaction as PoolTransaction>::Pooled>>
     where
         <V as TransactionValidator>::Transaction: EthPoolTransaction,
     {
@@ -357,7 +357,7 @@ where
             };
 
             size += encoded_len;
-            elements.push(pooled.into_signed());
+            elements.push(pooled.into_tx());
 
             if limit.exceeds(size) {
                 break
@@ -371,7 +371,7 @@ where
     pub fn get_pooled_transaction_element(
         &self,
         tx_hash: TxHash,
-    ) -> Option<RecoveredTx<<<V as TransactionValidator>::Transaction as PoolTransaction>::Pooled>>
+    ) -> Option<Recovered<<<V as TransactionValidator>::Transaction as PoolTransaction>::Pooled>>
     where
         <V as TransactionValidator>::Transaction: EthPoolTransaction,
     {
@@ -379,10 +379,9 @@ where
     }
 
     /// Updates the entire pool after a new block was executed.
-    pub fn on_canonical_state_change<H, B>(&self, update: CanonicalStateUpdate<'_, H, B>)
+    pub fn on_canonical_state_change<B>(&self, update: CanonicalStateUpdate<'_, B>)
     where
-        H: BlockHeader,
-        B: BlockBody,
+        B: Block,
     {
         trace!(target: "txpool", ?update, "updating pool on canonical state change");
 
@@ -1078,6 +1077,7 @@ impl<T: PoolTransaction> AddedPendingTransaction<T> {
     }
 
     /// Returns if the transaction should be propagated.
+    #[allow(clippy::missing_const_for_fn)]
     pub(crate) fn is_propagate_allowed(&self) -> bool {
         self.transaction.propagate
     }
@@ -1168,6 +1168,7 @@ impl<T: PoolTransaction> AddedTransaction<T> {
     }
 
     /// Returns the discarded transactions if there were any
+    #[allow(clippy::missing_const_for_fn)]
     pub(crate) fn discarded_transactions(&self) -> Option<&[Arc<ValidPoolTransaction<T>>]> {
         match self {
             Self::Pending(tx) => Some(&tx.discarded),
@@ -1211,6 +1212,7 @@ impl<T: PoolTransaction> AddedTransaction<T> {
 
     /// Returns the [`TransactionId`] of the added transaction
     #[cfg(test)]
+    #[allow(clippy::missing_const_for_fn)]
     pub(crate) fn id(&self) -> &TransactionId {
         match self {
             Self::Pending(added) => added.transaction.id(),

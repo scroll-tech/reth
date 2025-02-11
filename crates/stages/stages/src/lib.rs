@@ -30,11 +30,11 @@
 //! # use reth_provider::test_utils::{create_test_provider_factory, MockNodeTypesWithDB};
 //! # use reth_static_file::StaticFileProducer;
 //! # use reth_config::config::StageConfig;
-//! # use reth_consensus::Consensus;
+//! # use reth_consensus::{Consensus, ConsensusError};
 //! # use reth_consensus::test_utils::TestConsensus;
 //! #
 //! # let chain_spec = MAINNET.clone();
-//! # let consensus: Arc<dyn Consensus> = Arc::new(TestConsensus::default());
+//! # let consensus: Arc<dyn Consensus<reth_primitives::Block, Error = ConsensusError>> = Arc::new(TestConsensus::default());
 //! # let headers_downloader = ReverseHeadersDownloaderBuilder::default().build(
 //! #    Arc::new(TestHeadersClient::default()),
 //! #    consensus.clone().as_header_validator()
@@ -79,10 +79,6 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-
-use reth_revm as _;
-#[cfg(feature = "scroll")]
-use reth_scroll_primitives as _;
 
 #[allow(missing_docs)]
 #[cfg(any(test, feature = "test-utils"))]

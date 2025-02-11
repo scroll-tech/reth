@@ -1,23 +1,19 @@
 use alloy_consensus::BlockHeader;
-use alloy_primitives::{B256, U256};
+use alloy_primitives::{keccak256, B256};
 use alloy_rpc_types_debug::ExecutionWitness;
-use eyre::OptionExt;
 use pretty_assertions::Comparison;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_engine_primitives::InvalidBlockHook;
 use reth_evm::{
-    env::EvmEnv, state_change::post_block_balance_increments, system_calls::SystemCaller,
-    ConfigureEvm,
+    state_change::post_block_balance_increments, system_calls::SystemCaller, ConfigureEvmFor, Evm,
 };
-use reth_primitives::{NodePrimitives, SealedBlockWithSenders, SealedHeader};
-use reth_primitives_traits::SignedTransaction;
+use reth_primitives::{NodePrimitives, RecoveredBlock, SealedHeader};
+use reth_primitives_traits::{BlockBody, SignedTransaction};
 use reth_provider::{BlockExecutionOutput, ChainSpecProvider, StateProviderFactory};
 use reth_revm::{
-    db::states::bundle_state::BundleRetention, primitives::EnvWithHandlerCfg, DatabaseCommit,
-    StateBuilder,
+    database::StateProviderDatabase, db::states::bundle_state::BundleRetention, StateBuilder,
 };
 use reth_rpc_api::DebugApiClient;
-use reth_scroll_execution::FinalizeExecution;
 use reth_tracing::tracing::warn;
 use reth_trie::{updates::TrieUpdates, HashedStorage};
 use serde::Serialize;
@@ -60,65 +56,47 @@ where
     fn on_invalid_block<N>(
         &self,
         parent_header: &SealedHeader<N::BlockHeader>,
-        block: &SealedBlockWithSenders<N::Block>,
+        block: &RecoveredBlock<N::Block>,
         output: &BlockExecutionOutput<N::Receipt>,
         trie_updates: Option<(&TrieUpdates, B256)>,
     ) -> eyre::Result<()>
     where
         N: NodePrimitives,
-        EvmConfig: ConfigureEvm<Header = N::BlockHeader, Transaction = N::SignedTx>,
+        EvmConfig: ConfigureEvmFor<N>,
     {
         // TODO(alexey): unify with `DebugApi::debug_execution_witness`
 
         // Setup database.
-        let provider = self.provider.state_by_block_hash(parent_header.hash())?;
-        #[cfg(not(feature = "scroll"))]
-        let state = reth_revm::database::StateProviderDatabase::new(&provider);
-        #[cfg(feature = "scroll")]
-        let state = reth_scroll_storage::ScrollStateProviderDatabase::new(&provider);
-        let mut db = StateBuilder::new().with_database(state).with_bundle_update().build();
-
-        // Setup environment for the execution.
-        let EvmEnv { cfg_env_with_handler_cfg, block_env } =
-            self.evm_config.cfg_and_block_env(block.header(), U256::MAX);
+        let mut db = StateBuilder::new()
+            .with_database(StateProviderDatabase::new(
+                self.provider.state_by_block_hash(parent_header.hash())?,
+            ))
+            .with_bundle_update()
+            .build();
 
         // Setup EVM
-        let mut evm = self.evm_config.evm_with_env(
-            &mut db,
-            EnvWithHandlerCfg::new_with_cfg_env(
-                cfg_env_with_handler_cfg,
-                block_env,
-                Default::default(),
-            ),
-        );
+        let mut evm = self.evm_config.evm_for_block(&mut db, block.header());
 
         let mut system_caller =
             SystemCaller::new(self.evm_config.clone(), self.provider.chain_spec());
 
         // Apply pre-block system contract calls.
-        system_caller.apply_pre_execution_changes(&block.clone().unseal().block, &mut evm)?;
+        system_caller.apply_pre_execution_changes(block.header(), &mut evm)?;
 
         // Re-execute all of the transactions in the block to load all touched accounts into
         // the cache DB.
-        for tx in block.transactions() {
-            self.evm_config.fill_tx_env(
-                evm.tx_mut(),
-                tx,
-                tx.recover_signer().ok_or_eyre("failed to recover sender")?,
-            );
-            let result = evm.transact()?;
-            evm.db_mut().commit(result.state);
+        for tx in block.body().transactions() {
+            let signer =
+                tx.recover_signer().map_err(|_| eyre::eyre!("failed to recover sender"))?;
+            evm.transact_commit(self.evm_config.tx_env(tx, signer))?;
         }
 
         drop(evm);
 
         // use U256::MAX here for difficulty, because fetching it is annoying
         // NOTE: This is not mut because we are not doing the DAO irregular state change here
-        let balance_increments = post_block_balance_increments(
-            self.provider.chain_spec().as_ref(),
-            &block.clone().unseal().block,
-            U256::MAX,
-        );
+        let balance_increments =
+            post_block_balance_increments(self.provider.chain_spec().as_ref(), block);
 
         // increment balances
         db.increment_balances(balance_increments)?;
@@ -127,7 +105,7 @@ where
         db.merge_transitions(BundleRetention::Reverts);
 
         // Take the bundle state
-        let mut bundle_state = db.finalize();
+        let mut bundle_state = db.take_bundle();
 
         // Initialize a map of preimages.
         let mut state_preimages = HashMap::default();
@@ -138,18 +116,10 @@ where
         // referenced accounts + storage slots.
         let mut hashed_state = db.database.hashed_post_state(&bundle_state);
         for (address, account) in db.cache.accounts {
-            let hashed_address = provider.hash_key(address.as_ref());
-            #[cfg(feature = "scroll")]
-            let hashed_account = account.account.as_ref().map(|a| {
-                Into::<reth_scroll_revm::AccountInfo>::into((
-                    a.info.clone(),
-                    &db.database.post_execution_context,
-                ))
-                .into()
-            });
-            #[cfg(not(feature = "scroll"))]
-            let hashed_account = account.account.as_ref().map(|a| a.info.clone().into());
-            hashed_state.accounts.insert(hashed_address, hashed_account);
+            let hashed_address = keccak256(address);
+            hashed_state
+                .accounts
+                .insert(hashed_address, account.account.as_ref().map(|a| a.info.clone().into()));
 
             let storage = hashed_state
                 .storages
@@ -161,7 +131,7 @@ where
 
                 for (slot, value) in account.storage {
                     let slot = B256::from(slot);
-                    let hashed_slot = provider.hash_key(slot.as_ref());
+                    let hashed_slot = keccak256(slot);
                     storage.storage.insert(hashed_slot, value);
 
                     state_preimages.insert(hashed_slot, alloy_rlp::encode(slot).into());
@@ -251,7 +221,7 @@ where
         // Calculate the state root and trie updates after re-execution. They should match
         // the original ones.
         let (re_executed_root, trie_output) =
-            state_provider.state_root_from_state_with_updates(hashed_state)?;
+            state_provider.state_root_with_updates(hashed_state)?;
         if let Some((original_updates, original_root)) = trie_updates {
             if re_executed_root != original_root {
                 let filename = format!("{}_{}.state_root.diff", block.number(), block.hash());
@@ -319,12 +289,12 @@ where
         + Send
         + Sync
         + 'static,
-    EvmConfig: ConfigureEvm<Header = N::BlockHeader, Transaction = N::SignedTx>,
+    EvmConfig: ConfigureEvmFor<N>,
 {
     fn on_invalid_block(
         &self,
         parent_header: &SealedHeader<N::BlockHeader>,
-        block: &SealedBlockWithSenders<N::Block>,
+        block: &RecoveredBlock<N::Block>,
         output: &BlockExecutionOutput<N::Receipt>,
         trie_updates: Option<(&TrieUpdates, B256)>,
     ) {

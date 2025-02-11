@@ -1,18 +1,41 @@
-//! Primitive types for the Scroll extension of `Reth`.
+//! Commonly used types in Scroll.
 
-#![warn(unused_crate_dependencies)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/paradigmxyz/reth/main/assets/reth-docs.png",
+    html_favicon_url = "https://avatars0.githubusercontent.com/u/97369466?s=256",
+    issue_tracker_base_url = "https://github.com/scroll-tech/reth/issues/"
+)]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use execution_context::ScrollPostExecutionContext;
-mod execution_context;
+use once_cell as _;
 
-pub use account_extension::AccountExtension;
-mod account_extension;
+extern crate alloc;
 
-pub use l1_transaction::{
-    ScrollL1MessageTransactionFields, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE,
-};
-pub mod l1_transaction;
+pub mod transaction;
+pub use transaction::{signed::ScrollTransactionSigned, tx_type::ScrollTxType};
 
-/// Poseidon hashing primitives.
-pub mod poseidon;
+use reth_primitives_traits::Block;
+
+mod receipt;
+pub use receipt::ScrollReceipt;
+
+/// Scroll-specific block type.
+pub type ScrollBlock = alloy_consensus::Block<ScrollTransactionSigned>;
+
+/// Scroll-specific block body type.
+pub type ScrollBlockBody = <ScrollBlock as Block>::Body;
+
+/// Primitive types for Scroll Node.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct ScrollPrimitives;
+
+#[cfg(feature = "scroll")]
+impl reth_primitives_traits::NodePrimitives for ScrollPrimitives {
+    type Block = ScrollBlock;
+    type BlockHeader = alloy_consensus::Header;
+    type BlockBody = ScrollBlockBody;
+    type SignedTx = ScrollTransactionSigned;
+    type Receipt = ScrollReceipt;
+}

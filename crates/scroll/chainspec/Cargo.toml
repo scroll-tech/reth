@@ -15,12 +15,12 @@ workspace = true
 # reth
 reth-chainspec.workspace = true
 reth-ethereum-forks.workspace = true
-reth-primitives-traits.workspace = true
 reth-network-peers.workspace = true
+reth-primitives-traits.workspace = true
+reth-trie-common.workspace = true
 
 # scroll
 reth-scroll-forks.workspace = true
-reth-scroll-state-commitment.workspace = true
 
 # ethereum
 alloy-chains.workspace = true
@@ -45,18 +45,20 @@ reth-chainspec = { workspace = true, features = ["test-utils"] }
 [features]
 default = ["std"]
 std = [
-	"alloy-chains/std",
-	"alloy-genesis/std",
-	"alloy-primitives/std",
-	"alloy-eips/std",
-	"alloy-serde/std",
-	"reth-chainspec/std",
-	"reth-ethereum-forks/std",
-	"reth-primitives-traits/std",
-	"reth-scroll-forks/std",
-	"alloy-consensus/std",
-	"once_cell/std",
-	"serde/std",
-	"derive_more/std",
-	"reth-network-peers/std"
+    "alloy-chains/std",
+    "alloy-genesis/std",
+    "alloy-primitives/std",
+    "alloy-eips/std",
+    "alloy-serde/std",
+    "reth-chainspec/std",
+    "reth-ethereum-forks/std",
+    "reth-primitives-traits/std",
+    "reth-scroll-forks/std",
+    "alloy-consensus/std",
+    "once_cell/std",
+    "serde/std",
+    "derive_more/std",
+    "reth-network-peers/std",
+    "serde_json/std",
+    "reth-trie-common/std",
 ]

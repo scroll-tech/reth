@@ -1,7 +1,7 @@
 //! Run with
 //!
 //! ```not_rust
-//! cargo run -p beacon-api-beacon-sidecar-fetcher --node -- full
+//! cargo run -p beacon-api-beacon-sidecar-fetcher --node --full
 //! ```
 //!
 //! This launches a regular reth instance and subscribes to payload attributes event stream.
@@ -12,9 +12,6 @@
 //! See beacon Node API: <https://ethereum.github.io/beacon-APIs/>
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-// Don't use the crate if `scroll` feature is used.
-#![cfg_attr(feature = "scroll", allow(unused_crate_dependencies))]
-#![cfg(not(feature = "scroll"))]
 
 use std::{
     collections::VecDeque,

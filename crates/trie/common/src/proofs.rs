@@ -1,6 +1,7 @@
 //! Merkle trie proofs.
 
 use crate::{Nibbles, TrieAccount};
+use alloc::vec::Vec;
 use alloy_consensus::constants::KECCAK_EMPTY;
 use alloy_primitives::{
     keccak256,
@@ -28,6 +29,8 @@ pub struct MultiProof {
     pub account_subtree: ProofNodes,
     /// The hash masks of the branch nodes in the account proof.
     pub branch_node_hash_masks: HashMap<Nibbles, TrieMask>,
+    /// The tree masks of the branch nodes in the account proof.
+    pub branch_node_tree_masks: HashMap<Nibbles, TrieMask>,
     /// Storage trie multiproofs.
     pub storages: B256HashMap<StorageMultiProof>,
 }
@@ -86,11 +89,6 @@ impl MultiProof {
                             nonce: account.nonce,
                             bytecode_hash: (account.code_hash != KECCAK_EMPTY)
                                 .then_some(account.code_hash),
-                            // TODO (scroll): set the extension to the correct value.
-                            #[cfg(feature = "scroll")]
-                            account_extension: Some(
-                                reth_scroll_primitives::AccountExtension::empty(),
-                            ),
                         })
                     }
                 }
@@ -119,6 +117,7 @@ impl MultiProof {
         self.account_subtree.extend_from(other.account_subtree);
 
         self.branch_node_hash_masks.extend(other.branch_node_hash_masks);
+        self.branch_node_tree_masks.extend(other.branch_node_tree_masks);
 
         for (hashed_address, storage) in other.storages {
             match self.storages.entry(hashed_address) {
@@ -127,6 +126,7 @@ impl MultiProof {
                     let entry = entry.get_mut();
                     entry.subtree.extend_from(storage.subtree);
                     entry.branch_node_hash_masks.extend(storage.branch_node_hash_masks);
+                    entry.branch_node_tree_masks.extend(storage.branch_node_tree_masks);
                 }
                 hash_map::Entry::Vacant(entry) => {
                     entry.insert(storage);
@@ -145,6 +145,8 @@ pub struct StorageMultiProof {
     pub subtree: ProofNodes,
     /// The hash masks of the branch nodes in the storage proof.
     pub branch_node_hash_masks: HashMap<Nibbles, TrieMask>,
+    /// The tree masks of the branch nodes in the storage proof.
+    pub branch_node_tree_masks: HashMap<Nibbles, TrieMask>,
 }
 
 impl StorageMultiProof {
@@ -157,6 +159,7 @@ impl StorageMultiProof {
                 Bytes::from([EMPTY_STRING_CODE]),
             )]),
             branch_node_hash_masks: HashMap::default(),
+            branch_node_tree_masks: HashMap::default(),
         }
     }
 
@@ -402,6 +405,7 @@ mod tests {
                 root,
                 subtree: subtree1,
                 branch_node_hash_masks: HashMap::default(),
+                branch_node_tree_masks: HashMap::default(),
             },
         );
 
@@ -416,6 +420,7 @@ mod tests {
                 root,
                 subtree: subtree2,
                 branch_node_hash_masks: HashMap::default(),
+                branch_node_tree_masks: HashMap::default(),
             },
         );
 

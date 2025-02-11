@@ -1,4 +1,4 @@
-use alloy_primitives::B256;
+use alloy_primitives::{keccak256, B256};
 use itertools::Itertools;
 use reth_config::config::{EtlConfig, HashingConfig};
 use reth_db::{tables, RawKey, RawTable, RawValue};
@@ -8,16 +8,12 @@ use reth_db_api::{
 };
 use reth_etl::Collector;
 use reth_primitives::Account;
-use reth_provider::{
-    AccountExtReader, DBProvider, HashingWriter, StateCommitmentProvider, StatsReader,
-};
+use reth_provider::{AccountExtReader, DBProvider, HashingWriter, StatsReader};
 use reth_stages_api::{
     AccountHashingCheckpoint, EntitiesCheckpoint, ExecInput, ExecOutput, Stage, StageCheckpoint,
     StageError, StageId, UnwindInput, UnwindOutput,
 };
 use reth_storage_errors::provider::ProviderResult;
-use reth_trie::KeyHasher;
-use reth_trie_db::StateCommitment;
 use std::{
     fmt::Debug,
     ops::{Range, RangeInclusive},
@@ -68,7 +64,7 @@ impl AccountHashingStage {
     ) -> Result<Vec<(alloy_primitives::Address, reth_primitives::Account)>, StageError>
     where
         N::Primitives: reth_primitives_traits::FullNodePrimitives<
-            BlockBody = reth_primitives::BlockBody,
+            Block = reth_primitives::Block,
             BlockHeader = reth_primitives::Header,
         >,
     {
@@ -89,7 +85,7 @@ impl AccountHashingStage {
         );
 
         for block in blocks {
-            provider.insert_historical_block(block.try_seal_with_senders().unwrap()).unwrap();
+            provider.insert_historical_block(block.try_recover().unwrap()).unwrap();
         }
         provider
             .static_file_provider()
@@ -104,7 +100,7 @@ impl AccountHashingStage {
                 provider.tx_ref().cursor_write::<tables::PlainAccountState>()?;
             accounts.sort_by(|a, b| a.0.cmp(&b.0));
             for (addr, acc) in &accounts {
-                account_cursor.append(*addr, *acc)?;
+                account_cursor.append(*addr, acc)?;
             }
 
             let mut acc_changeset_cursor =
@@ -115,11 +111,9 @@ impl AccountHashingStage {
                     nonce: nonce - 1,
                     balance: balance - U256::from(1),
                     bytecode_hash: None,
-                    #[cfg(feature = "scroll")]
-                    account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
                 };
                 let acc_before_tx = AccountBeforeTx { address: *addr, info: Some(prev_acc) };
-                acc_changeset_cursor.append(t, acc_before_tx)?;
+                acc_changeset_cursor.append(t, &acc_before_tx)?;
             }
         }
 
@@ -139,11 +133,7 @@ impl Default for AccountHashingStage {
 
 impl<Provider> Stage<Provider> for AccountHashingStage
 where
-    Provider: DBProvider<Tx: DbTxMut>
-        + HashingWriter
-        + AccountExtReader
-        + StatsReader
-        + StateCommitmentProvider,
+    Provider: DBProvider<Tx: DbTxMut> + HashingWriter + AccountExtReader + StatsReader,
 {
     /// Return the id of the stage
     fn id(&self) -> StageId {
@@ -184,14 +174,7 @@ where
                 rayon::spawn(move || {
                     for (address, account) in chunk {
                         let address = address.key().unwrap();
-                        let _ = tx.send((
-                            RawKey::new(
-                                <<Provider::StateCommitment as StateCommitment>::KeyHasher as KeyHasher>::hash_key(
-                                    address,
-                                ),
-                            ),
-                            account,
-                        ));
+                        let _ = tx.send((RawKey::new(keccak256(address)), account));
                     }
                 });
 
@@ -219,7 +202,7 @@ where
 
                 let (key, value) = item?;
                 hashed_account_cursor
-                    .append(RawKey::<B256>::from_vec(key), RawValue::<Account>::from_vec(value))?;
+                    .append(RawKey::<B256>::from_vec(key), &RawValue::<Account>::from_vec(value))?;
             }
         } else {
             // Aggregate all transition changesets and make a list of accounts that have been
@@ -318,7 +301,7 @@ mod tests {
         stage_test_suite_ext, ExecuteStageTestRunner, StageTestRunner, TestRunnerError,
         UnwindStageTestRunner,
     };
-    use alloy_primitives::{keccak256, U256};
+    use alloy_primitives::U256;
     use assert_matches::assert_matches;
     use reth_primitives::Account;
     use reth_provider::providers::StaticFileWriter;
@@ -422,10 +405,6 @@ mod tests {
                             nonce: nonce - 1,
                             balance: balance - U256::from(1),
                             bytecode_hash: None,
-                            #[cfg(feature = "scroll")]
-                            account_extension: Some(
-                                reth_scroll_primitives::AccountExtension::empty(),
-                            ),
                         };
                         let hashed_addr = keccak256(address);
                         if let Some((_, acc)) = hashed_acc_cursor.seek_exact(hashed_addr)? {

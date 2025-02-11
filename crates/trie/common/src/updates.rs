@@ -1,4 +1,5 @@
 use crate::{BranchNodeCompact, HashBuilder, Nibbles};
+use alloc::vec::Vec;
 use alloy_primitives::{
     map::{B256HashMap, B256HashSet, HashMap, HashSet},
     B256,
@@ -75,6 +76,9 @@ impl TrieUpdates {
         hashed_address: B256,
         storage_updates: StorageTrieUpdates,
     ) {
+        if storage_updates.is_empty() {
+            return;
+        }
         let existing = self.storage_tries.insert(hashed_address, storage_updates);
         debug_assert!(existing.is_none());
     }
@@ -229,7 +233,11 @@ impl StorageTrieUpdates {
 /// This also sorts the set before serializing.
 #[cfg(any(test, feature = "serde"))]
 mod serde_nibbles_set {
-    use crate::{pack_nibbles, unpack_nibbles, Nibbles};
+    use crate::Nibbles;
+    use alloc::{
+        string::{String, ToString},
+        vec::Vec,
+    };
     use alloy_primitives::map::HashSet;
     use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -237,10 +245,8 @@ mod serde_nibbles_set {
     where
         S: Serializer,
     {
-        let mut storage_nodes = map
-            .iter()
-            .map(|elem| alloy_primitives::hex::encode(pack_nibbles(elem)))
-            .collect::<Vec<_>>();
+        let mut storage_nodes =
+            map.iter().map(|elem| alloy_primitives::hex::encode(elem.pack())).collect::<Vec<_>>();
         storage_nodes.sort_unstable();
         storage_nodes.serialize(serializer)
     }
@@ -252,7 +258,7 @@ mod serde_nibbles_set {
         Vec::<String>::deserialize(deserializer)?
             .into_iter()
             .map(|node| {
-                Ok(unpack_nibbles(
+                Ok(Nibbles::unpack(
                     alloy_primitives::hex::decode(node)
                         .map_err(|err| D::Error::custom(err.to_string()))?,
                 ))
@@ -267,14 +273,18 @@ mod serde_nibbles_set {
 /// This also sorts the map's keys before encoding and serializing.
 #[cfg(any(test, feature = "serde"))]
 mod serde_nibbles_map {
-    use crate::{pack_nibbles, unpack_nibbles, Nibbles};
+    use crate::Nibbles;
+    use alloc::{
+        string::{String, ToString},
+        vec::Vec,
+    };
     use alloy_primitives::{hex, map::HashMap};
+    use core::marker::PhantomData;
     use serde::{
         de::{Error, MapAccess, Visitor},
         ser::SerializeMap,
         Deserialize, Deserializer, Serialize, Serializer,
     };
-    use std::marker::PhantomData;
 
     pub(super) fn serialize<S, T>(
         map: &HashMap<Nibbles, T>,
@@ -289,7 +299,7 @@ mod serde_nibbles_map {
         storage_nodes.sort_unstable_by_key(|node| node.0);
         for (k, v) in storage_nodes {
             // pack, then hex encode the Nibbles
-            let packed = alloy_primitives::hex::encode(pack_nibbles(k));
+            let packed = alloy_primitives::hex::encode(k.pack());
             map_serializer.serialize_entry(&packed, &v)?;
         }
         map_serializer.end()
@@ -310,7 +320,7 @@ mod serde_nibbles_map {
         {
             type Value = HashMap<Nibbles, T>;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 formatter.write_str("a map with hex-encoded Nibbles keys")
             }
 
@@ -327,7 +337,7 @@ mod serde_nibbles_map {
                     let decoded_key =
                         hex::decode(&key).map_err(|err| Error::custom(err.to_string()))?;
 
-                    let nibbles = unpack_nibbles(&decoded_key);
+                    let nibbles = Nibbles::unpack(&decoded_key);
 
                     result.insert(nibbles, value);
                 }
@@ -354,6 +364,7 @@ pub struct TrieUpdatesSorted {
 
 impl TrieUpdatesSorted {
     /// Returns reference to updated account nodes.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn account_nodes_ref(&self) -> &[(Nibbles, BranchNodeCompact)] {
         &self.account_nodes
     }
@@ -387,6 +398,7 @@ impl StorageTrieUpdatesSorted {
     }
 
     /// Returns reference to updated storage nodes.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn storage_nodes_ref(&self) -> &[(Nibbles, BranchNodeCompact)] {
         &self.storage_nodes
     }
@@ -413,10 +425,10 @@ fn exclude_empty_from_pair<V>(
 #[cfg(feature = "serde-bincode-compat")]
 pub mod serde_bincode_compat {
     use crate::{BranchNodeCompact, Nibbles};
+    use alloc::borrow::Cow;
     use alloy_primitives::map::{B256HashMap, HashMap, HashSet};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use serde_with::{DeserializeAs, SerializeAs};
-    use std::borrow::Cow;
 
     /// Bincode-compatible [`super::TrieUpdates`] serde implementation.
     ///

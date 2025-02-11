@@ -25,7 +25,8 @@ pub use accounts::*;
 pub use blocks::*;
 pub use integer_list::IntegerList;
 pub use reth_db_models::{
-    AccountBeforeTx, ClientVersion, StoredBlockBodyIndices, StoredBlockWithdrawals,
+    blocks::StaticFileBlockWithdrawals, AccountBeforeTx, ClientVersion, StoredBlockBodyIndices,
+    StoredBlockWithdrawals,
 };
 pub use sharded_key::ShardedKey;
 
@@ -194,8 +195,8 @@ macro_rules! impl_compression_for_compact {
             impl$(<$($generic: core::fmt::Debug + Send + Sync + Compact),*>)? Compress for $name$(<$($generic),*>)? {
                 type Compressed = Vec<u8>;
 
-                fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(self, buf: &mut B) {
-                    let _ = Compact::to_compact(&self, buf);
+                fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(&self, buf: &mut B) {
+                    let _ = Compact::to_compact(self, buf);
                 }
             }
 
@@ -224,6 +225,7 @@ impl_compression_for_compact!(
     StoredBlockBodyIndices,
     StoredBlockOmmers<H>,
     StoredBlockWithdrawals,
+    StaticFileBlockWithdrawals,
     Bytecode,
     AccountBeforeTx,
     TransactionSigned,
@@ -235,6 +237,22 @@ impl_compression_for_compact!(
     GenesisAccount
 );
 
+#[cfg(feature = "op")]
+mod op {
+    use super::*;
+    use reth_optimism_primitives::{OpReceipt, OpTransactionSigned};
+
+    impl_compression_for_compact!(OpTransactionSigned, OpReceipt);
+}
+
+#[cfg(feature = "scroll-alloy-traits")]
+mod scroll {
+    use super::*;
+    use reth_scroll_primitives::{ScrollReceipt, ScrollTransactionSigned};
+
+    impl_compression_for_compact!(ScrollTransactionSigned, ScrollReceipt);
+}
+
 macro_rules! impl_compression_fixed_compact {
     ($($name:tt),+) => {
         $(
@@ -245,8 +263,8 @@ macro_rules! impl_compression_fixed_compact {
                     Some(self.as_ref())
                 }
 
-                fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(self, buf: &mut B) {
-                    let _  = Compact::to_compact(&self, buf);
+                fn compress_to_buf<B: bytes::BufMut + AsMut<[u8]>>(&self, buf: &mut B) {
+                    let _  = Compact::to_compact(self, buf);
                 }
             }
 
@@ -334,10 +352,7 @@ mod tests {
         assert_eq!(PruneCheckpoint::bitflag_encoded_bytes(), 1);
         assert_eq!(PruneMode::bitflag_encoded_bytes(), 1);
         assert_eq!(PruneSegment::bitflag_encoded_bytes(), 1);
-        #[cfg(not(feature = "scroll"))]
         assert_eq!(Receipt::bitflag_encoded_bytes(), 1);
-        #[cfg(feature = "scroll")]
-        assert_eq!(Receipt::bitflag_encoded_bytes(), 2);
         assert_eq!(StageCheckpoint::bitflag_encoded_bytes(), 1);
         assert_eq!(StageUnitCheckpoint::bitflag_encoded_bytes(), 1);
         assert_eq!(StoredBlockBodyIndices::bitflag_encoded_bytes(), 1);
@@ -357,10 +372,7 @@ mod tests {
         validate_bitflag_backwards_compat!(PruneCheckpoint, UnusedBits::NotZero);
         validate_bitflag_backwards_compat!(PruneMode, UnusedBits::Zero);
         validate_bitflag_backwards_compat!(PruneSegment, UnusedBits::Zero);
-        #[cfg(not(feature = "scroll"))]
         validate_bitflag_backwards_compat!(Receipt, UnusedBits::Zero);
-        #[cfg(feature = "scroll")]
-        validate_bitflag_backwards_compat!(Receipt, UnusedBits::NotZero);
         validate_bitflag_backwards_compat!(StageCheckpoint, UnusedBits::NotZero);
         validate_bitflag_backwards_compat!(StageUnitCheckpoint, UnusedBits::Zero);
         validate_bitflag_backwards_compat!(StoredBlockBodyIndices, UnusedBits::Zero);

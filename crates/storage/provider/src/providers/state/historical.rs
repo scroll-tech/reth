@@ -15,15 +15,14 @@ use reth_db_api::{
 };
 use reth_primitives::{Account, Bytecode};
 use reth_storage_api::{
-    BlockNumReader, DBProvider, HashedStorageProvider, KeyHasherProvider, StateCommitmentProvider,
-    StateProofProvider, StorageRootProvider,
+    BlockNumReader, DBProvider, StateCommitmentProvider, StateProofProvider, StorageRootProvider,
 };
 use reth_storage_errors::provider::ProviderResult;
 use reth_trie::{
     proof::{Proof, StorageProof},
     updates::TrieUpdates,
     witness::TrieWitness,
-    AccountProof, HashedPostState, HashedStorage, KeyHasher, MultiProof, MultiProofTargets,
+    AccountProof, HashedPostState, HashedStorage, MultiProof, MultiProofTargets, StateRoot,
     StorageMultiProof, StorageRoot, TrieInput,
 };
 use reth_trie_db::{
@@ -155,13 +154,7 @@ impl<'b, Provider: DBProvider + BlockNumReader + StateCommitmentProvider>
             );
         }
 
-        Ok(
-            HashedStorage::from_reverts::<<Provider::StateCommitment as StateCommitment>::KeyHasher>(
-                self.tx(),
-                address,
-                self.block_number,
-            )?,
-        )
+        Ok(HashedStorage::from_reverts(self.tx(), address, self.block_number)?)
     }
 
     fn history_info<T, K>(
@@ -256,21 +249,21 @@ impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> AccountRea
     for HistoricalStateProviderRef<'_, Provider>
 {
     /// Get basic account information.
-    fn basic_account(&self, address: Address) -> ProviderResult<Option<Account>> {
-        match self.account_history_lookup(address)? {
+    fn basic_account(&self, address: &Address) -> ProviderResult<Option<Account>> {
+        match self.account_history_lookup(*address)? {
             HistoryInfo::NotYetWritten => Ok(None),
             HistoryInfo::InChangeset(changeset_block_number) => Ok(self
                 .tx()
                 .cursor_dup_read::<tables::AccountChangeSets>()?
-                .seek_by_key_subkey(changeset_block_number, address)?
-                .filter(|acc| acc.address == address)
+                .seek_by_key_subkey(changeset_block_number, *address)?
+                .filter(|acc| &acc.address == address)
                 .ok_or(ProviderError::AccountChangesetNotFound {
                     block_number: changeset_block_number,
-                    address,
+                    address: *address,
                 })?
                 .info),
             HistoryInfo::InPlainState | HistoryInfo::MaybeInPlainState => {
-                Ok(self.tx().get::<tables::PlainAccountState>(address)?)
+                Ok(self.tx().get_by_encoded_key::<tables::PlainAccountState>(address)?)
             }
         }
     }
@@ -296,38 +289,27 @@ impl<Provider: DBProvider + BlockNumReader + BlockHashReader> BlockHashReader
 impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> StateRootProvider
     for HistoricalStateProviderRef<'_, Provider>
 {
-    fn state_root_from_state(&self, hashed_state: HashedPostState) -> ProviderResult<B256> {
+    fn state_root(&self, hashed_state: HashedPostState) -> ProviderResult<B256> {
         let mut revert_state = self.revert_state()?;
         revert_state.extend(hashed_state);
-        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root(
-            self.tx(),
-            revert_state,
-        )
-        .map_err(|err| ProviderError::Database(err.into()))
+        StateRoot::overlay_root(self.tx(), revert_state)
+            .map_err(|err| ProviderError::Database(err.into()))
     }
 
     fn state_root_from_nodes(&self, mut input: TrieInput) -> ProviderResult<B256> {
         input.prepend(self.revert_state()?);
-        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_from_nodes(
-            self.tx(),
-            input,
-        )
-        .map_err(|err| ProviderError::Database(err.into()))
+        StateRoot::overlay_root_from_nodes(self.tx(), input)
+            .map_err(|err| ProviderError::Database(err.into()))
     }
 
-    fn state_root_from_state_with_updates(
+    fn state_root_with_updates(
         &self,
         hashed_state: HashedPostState,
     ) -> ProviderResult<(B256, TrieUpdates)> {
         let mut revert_state = self.revert_state()?;
         revert_state.extend(hashed_state);
-        let (root, updates, _state_sorted) =
-            <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_with_updates(
-                self.tx(),
-                revert_state,
-            )
-            .map_err(|err| ProviderError::Database(err.into()))?;
-        Ok((root, updates))
+        StateRoot::overlay_root_with_updates(self.tx(), revert_state)
+            .map_err(|err| ProviderError::Database(err.into()))
     }
 
     fn state_root_from_nodes_with_updates(
@@ -335,7 +317,7 @@ impl<Provider: DBProvider + BlockNumReader + StateCommitmentProvider> StateRootP
         mut input: TrieInput,
     ) -> ProviderResult<(B256, TrieUpdates)> {
         input.prepend(self.revert_state()?);
-        <Provider::StateCommitment as StateCommitment>::StateRoot::overlay_root_from_nodes_with_updates(self.tx(), input)
+        StateRoot::overlay_root_from_nodes_with_updates(self.tx(), input)
             .map_err(|err| ProviderError::Database(err.into()))
     }
 }
@@ -422,24 +404,6 @@ impl<Provider: StateCommitmentProvider> HashedPostStateProvider
     }
 }
 
-impl<Provider: StateCommitmentProvider> HashedStorageProvider
-    for HistoricalStateProviderRef<'_, Provider>
-{
-    fn hashed_storage(&self, account: &revm::db::BundleAccount) -> HashedStorage {
-        HashedStorage::from_bundle_account::<
-            <Provider::StateCommitment as StateCommitment>::KeyHasher,
-        >(account)
-    }
-}
-
-impl<Provider: StateCommitmentProvider> KeyHasherProvider
-    for HistoricalStateProviderRef<'_, Provider>
-{
-    fn hash_key(&self, bytes: &[u8]) -> B256 {
-        <<Provider::StateCommitment as StateCommitment>::KeyHasher as KeyHasher>::hash_key(bytes)
-    }
-}
-
 impl<Provider: DBProvider + BlockNumReader + BlockHashReader + StateCommitmentProvider>
     StateProvider for HistoricalStateProviderRef<'_, Provider>
 {
@@ -474,8 +438,8 @@ impl<Provider: DBProvider + BlockNumReader + BlockHashReader + StateCommitmentPr
     }
 
     /// Get account code by its hash
-    fn bytecode_by_hash(&self, code_hash: B256) -> ProviderResult<Option<Bytecode>> {
-        self.tx().get::<tables::Bytecodes>(code_hash).map_err(Into::into)
+    fn bytecode_by_hash(&self, code_hash: &B256) -> ProviderResult<Option<Bytecode>> {
+        self.tx().get_by_encoded_key::<tables::Bytecodes>(code_hash).map_err(Into::into)
     }
 }
 
@@ -624,49 +588,13 @@ mod tests {
         )
         .unwrap();
 
-        let acc_plain = Account {
-            nonce: 100,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
-        let acc_at15 = Account {
-            nonce: 15,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
-        let acc_at10 = Account {
-            nonce: 10,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
-        let acc_at7 = Account {
-            nonce: 7,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
-        let acc_at3 = Account {
-            nonce: 3,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
+        let acc_plain = Account { nonce: 100, balance: U256::ZERO, bytecode_hash: None };
+        let acc_at15 = Account { nonce: 15, balance: U256::ZERO, bytecode_hash: None };
+        let acc_at10 = Account { nonce: 10, balance: U256::ZERO, bytecode_hash: None };
+        let acc_at7 = Account { nonce: 7, balance: U256::ZERO, bytecode_hash: None };
+        let acc_at3 = Account { nonce: 3, balance: U256::ZERO, bytecode_hash: None };
 
-        let higher_acc_plain = Account {
-            nonce: 4,
-            balance: U256::ZERO,
-            bytecode_hash: None,
-            #[cfg(feature = "scroll")]
-            account_extension: Some(reth_scroll_primitives::AccountExtension::empty()),
-        };
+        let higher_acc_plain = Account { nonce: 4, balance: U256::ZERO, bytecode_hash: None };
 
         // setup
         tx.put::<tables::AccountChangeSets>(1, AccountBeforeTx { address: ADDRESS, info: None })
@@ -705,45 +633,51 @@ mod tests {
         let db = factory.provider().unwrap();
 
         // run
-        assert_eq!(HistoricalStateProviderRef::new(&db, 1).basic_account(ADDRESS), Ok(None));
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 2).basic_account(ADDRESS),
-            Ok(Some(acc_at3))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 3).basic_account(ADDRESS),
-            Ok(Some(acc_at3))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 4).basic_account(ADDRESS),
-            Ok(Some(acc_at7))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 7).basic_account(ADDRESS),
-            Ok(Some(acc_at7))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 9).basic_account(ADDRESS),
-            Ok(Some(acc_at10))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 10).basic_account(ADDRESS),
-            Ok(Some(acc_at10))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 11).basic_account(ADDRESS),
-            Ok(Some(acc_at15))
-        );
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 16).basic_account(ADDRESS),
-            Ok(Some(acc_plain))
-        );
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 1).basic_account(&ADDRESS),
+            Ok(None)
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 2).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at3
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 3).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at3
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 4).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at7
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 7).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at7
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 9).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at10
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 10).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at10
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 11).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_at15
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 16).basic_account(&ADDRESS),
+            Ok(Some(acc)) if acc == acc_plain
+        ));
 
-        assert_eq!(HistoricalStateProviderRef::new(&db, 1).basic_account(HIGHER_ADDRESS), Ok(None));
-        assert_eq!(
-            HistoricalStateProviderRef::new(&db, 1000).basic_account(HIGHER_ADDRESS),
-            Ok(Some(higher_acc_plain))
-        );
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 1).basic_account(&HIGHER_ADDRESS),
+            Ok(None)
+        ));
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 1000).basic_account(&HIGHER_ADDRESS),
+            Ok(Some(acc)) if acc == higher_acc_plain
+        ));
     }
 
     #[test]
@@ -799,43 +733,46 @@ mod tests {
         let db = factory.provider().unwrap();
 
         // run
-        assert_eq!(HistoricalStateProviderRef::new(&db, 0).storage(ADDRESS, STORAGE), Ok(None));
-        assert_eq!(
+        assert!(matches!(
+            HistoricalStateProviderRef::new(&db, 0).storage(ADDRESS, STORAGE),
+            Ok(None)
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 3).storage(ADDRESS, STORAGE),
             Ok(Some(U256::ZERO))
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 4).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_at7.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_at7.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 7).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_at7.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_at7.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 9).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_at10.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_at10.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 10).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_at10.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_at10.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 11).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_at15.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_at15.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 16).storage(ADDRESS, STORAGE),
-            Ok(Some(entry_plain.value))
-        );
-        assert_eq!(
+            Ok(Some(expected_value)) if expected_value == entry_plain.value
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 1).storage(HIGHER_ADDRESS, STORAGE),
             Ok(None)
-        );
-        assert_eq!(
+        ));
+        assert!(matches!(
             HistoricalStateProviderRef::new(&db, 1000).storage(HIGHER_ADDRESS, STORAGE),
-            Ok(Some(higher_entry_plain.value))
-        );
+            Ok(Some(expected_value)) if expected_value == higher_entry_plain.value
+        ));
     }
 
     #[test]
@@ -853,14 +790,14 @@ mod tests {
                 storage_history_block_number: Some(3),
             },
         );
-        assert_eq!(
+        assert!(matches!(
             provider.account_history_lookup(ADDRESS),
-            Err(ProviderError::StateAtBlockPruned(provider.block_number))
-        );
-        assert_eq!(
+            Err(ProviderError::StateAtBlockPruned(number)) if number == provider.block_number
+        ));
+        assert!(matches!(
             provider.storage_history_lookup(ADDRESS, STORAGE),
-            Err(ProviderError::StateAtBlockPruned(provider.block_number))
-        );
+            Err(ProviderError::StateAtBlockPruned(number)) if number == provider.block_number
+        ));
 
         // provider block_number == lowest available block number,
         // i.e. state at provider block is available
@@ -872,11 +809,14 @@ mod tests {
                 storage_history_block_number: Some(2),
             },
         );
-        assert_eq!(provider.account_history_lookup(ADDRESS), Ok(HistoryInfo::MaybeInPlainState));
-        assert_eq!(
+        assert!(matches!(
+            provider.account_history_lookup(ADDRESS),
+            Ok(HistoryInfo::MaybeInPlainState)
+        ));
+        assert!(matches!(
             provider.storage_history_lookup(ADDRESS, STORAGE),
             Ok(HistoryInfo::MaybeInPlainState)
-        );
+        ));
 
         // provider block_number == lowest available block number,
         // i.e. state at provider block is available
@@ -888,10 +828,13 @@ mod tests {
                 storage_history_block_number: Some(1),
             },
         );
-        assert_eq!(provider.account_history_lookup(ADDRESS), Ok(HistoryInfo::MaybeInPlainState));
-        assert_eq!(
+        assert!(matches!(
+            provider.account_history_lookup(ADDRESS),
+            Ok(HistoryInfo::MaybeInPlainState)
+        ));
+        assert!(matches!(
             provider.storage_history_lookup(ADDRESS, STORAGE),
             Ok(HistoryInfo::MaybeInPlainState)
-        );
+        ));
     }
 }
