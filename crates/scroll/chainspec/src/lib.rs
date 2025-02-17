@@ -18,7 +18,7 @@ use reth_chainspec::{
     BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec, EthereumHardforks,
     ForkFilter, ForkId, Hardforks, Head,
 };
-use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition, Hardfork};
+use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition, ForkHash, Hardfork};
 use reth_network_peers::NodeRecord;
 use reth_scroll_forks::{ScrollHardfork, ScrollHardforks};
 
@@ -265,7 +265,38 @@ impl Hardforks for ScrollChainSpec {
     }
 
     fn fork_id(&self, head: &Head) -> ForkId {
-        self.inner.fork_id(head)
+        // TODO: Geth does not support time based hard forks for its `ForkID` calculation. As such,
+        // we are only using block based hard forks for now.
+        // self.inner.fork_id(head)
+
+        // The following code is modified version of self.inner.fork_id(head) to ignore time based
+        // hard forks.
+        let mut forkhash = ForkHash::from(self.inner.genesis_hash());
+
+        let mut current_applied = 0;
+
+        // handle all block forks before handling timestamp based forks. see: https://eips.ethereum.org/EIPS/eip-6122
+        for (_, cond) in self.hardforks.forks_iter() {
+            // handle block based forks and the sepolia merge netsplit block edge case (TTD
+            // ForkCondition with Some(block))
+            if let ForkCondition::Block(block) |
+            ForkCondition::TTD { fork_block: Some(block), .. } = cond
+            {
+                if cond.active_at_head(head) {
+                    // skip duplicated hardforks: hardforks enabled at genesis block
+                    if block != current_applied {
+                        forkhash += block;
+                        current_applied = block;
+                    }
+                } else {
+                    // we can return here because this block fork is not active, so we set the
+                    // `next` value
+                    return ForkId { hash: forkhash, next: block }
+                }
+            }
+        }
+
+        ForkId { hash: forkhash, next: 0 }
     }
 
     fn latest_fork_id(&self) -> ForkId {
