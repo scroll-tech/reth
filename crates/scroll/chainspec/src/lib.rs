@@ -385,7 +385,7 @@ mod tests {
     use crate::*;
     use alloy_genesis::{ChainConfig, Genesis};
     use alloy_primitives::b256;
-    use reth_chainspec::test_fork_ids;
+    use reth_chainspec::{test_fork_ids, ForkFilterKey};
     use reth_ethereum_forks::{EthereumHardfork, ForkHash};
     use reth_scroll_forks::ScrollHardfork;
 
@@ -436,6 +436,26 @@ mod tests {
                 ),
             ],
         );
+    }
+
+    #[test]
+    fn scroll_mainnet_fork_filter_excludes_time_based_forks() {
+        let head = Default::default();
+        let fork_filter = SCROLL_MAINNET.fork_filter(head);
+
+        let forks = vec![
+            ForkFilterKey::Block(0),
+            ForkFilterKey::Block(5220340),
+            ForkFilterKey::Block(7096836),
+        ];
+        let expected_fork_filter = ForkFilter::new(
+            head,
+            SCROLL_MAINNET.genesis_hash(),
+            SCROLL_MAINNET.genesis_timestamp(),
+            forks,
+        );
+
+        assert_eq!(fork_filter, expected_fork_filter);
     }
 
     #[test]
