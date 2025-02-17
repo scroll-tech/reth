@@ -489,6 +489,7 @@ impl ChainSpec {
             Some(match condition {
                 ForkCondition::Block(block) |
                 ForkCondition::TTD { fork_block: Some(block), .. } => ForkFilterKey::Block(block),
+                #[cfg(not(feature = "scroll"))]
                 ForkCondition::Timestamp(time) => ForkFilterKey::Time(time),
                 _ => return None,
             })
@@ -532,28 +533,25 @@ impl ChainSpec {
             }
         }
 
-        #[cfg(not(feature = "scroll"))]
-        {
-            // timestamp are ALWAYS applied after the merge.
-            //
-            // this filter ensures that no block-based forks are returned
-            for timestamp in self.hardforks.forks_iter().filter_map(|(_, cond)| {
-                // ensure we only get timestamp forks activated __after__ the genesis block
-                cond.as_timestamp().filter(|time| time > &self.genesis.timestamp)
-            }) {
-                let cond = ForkCondition::Timestamp(timestamp);
-                if cond.active_at_head(head) {
-                    // skip duplicated hardfork activated at the same timestamp
-                    if timestamp != current_applied {
-                        forkhash += timestamp;
-                        current_applied = timestamp;
-                    }
-                } else {
-                    // can safely return here because we have already handled all block forks and
-                    // have handled all active timestamp forks, and set the next value to the
-                    // timestamp that is known but not active yet
-                    return ForkId { hash: forkhash, next: timestamp }
+        // timestamp are ALWAYS applied after the merge.
+        //
+        // this filter ensures that no block-based forks are returned
+        for timestamp in self.hardforks.forks_iter().filter_map(|(_, cond)| {
+            // ensure we only get timestamp forks activated __after__ the genesis block
+            cond.as_timestamp().filter(|time| time > &self.genesis.timestamp)
+        }) {
+            let cond = ForkCondition::Timestamp(timestamp);
+            if cond.active_at_head(head) {
+                // skip duplicated hardfork activated at the same timestamp
+                if timestamp != current_applied {
+                    forkhash += timestamp;
+                    current_applied = timestamp;
                 }
+            } else {
+                // can safely return here because we have already handled all block forks and
+                // have handled all active timestamp forks, and set the next value to the
+                // timestamp that is known but not active yet
+                return ForkId { hash: forkhash, next: timestamp }
             }
         }
 
