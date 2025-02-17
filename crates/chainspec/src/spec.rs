@@ -489,7 +489,6 @@ impl ChainSpec {
             Some(match condition {
                 ForkCondition::Block(block) |
                 ForkCondition::TTD { fork_block: Some(block), .. } => ForkFilterKey::Block(block),
-                #[cfg(not(feature = "scroll"))]
                 ForkCondition::Timestamp(time) => ForkFilterKey::Time(time),
                 _ => return None,
             })
