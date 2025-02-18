@@ -58,8 +58,8 @@ impl From<TxEip1559> for ScrollTypedTransaction {
 }
 
 impl From<TxEip7702> for ScrollTypedTransaction {
-    fn from(tx: TxEip1559) -> Self {
-        Self::Eip1559(tx)
+    fn from(tx: TxEip7702) -> Self {
+        Self::Eip7702(tx)
     }
 }
 

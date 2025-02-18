@@ -4,7 +4,7 @@ use crate::ScrollTxType;
 use alloc::vec::Vec;
 use alloy_consensus::{
     transaction::RlpEcdsaTx, SignableTransaction, Signed, Transaction, TxEip1559, TxEip2930,
-    TxLegacy, Typed2718,
+    TxEip7702, TxLegacy, Typed2718,
 };
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
@@ -116,6 +116,7 @@ impl SignedTransaction for ScrollTransactionSigned {
             ScrollTypedTransaction::Legacy(tx) => tx.encode_for_signing(buf),
             ScrollTypedTransaction::Eip2930(tx) => tx.encode_for_signing(buf),
             ScrollTypedTransaction::Eip1559(tx) => tx.encode_for_signing(buf),
+            ScrollTypedTransaction::Eip7702(tx) => tx.encode_for_signing(buf),
         };
         recover_signer_unchecked(&self.signature, keccak256(buf))
     }
@@ -174,6 +175,21 @@ impl reth_primitives_traits::FillTxEnv for ScrollTransactionSigned {
                 tx_env.blob_hashes.clear();
                 tx_env.max_fee_per_blob_gas.take();
                 tx_env.authorization_list = None;
+            }
+            ScrollTypedTransaction::Eip7702(tx) => {
+                tx_env.gas_limit = tx.gas_limit;
+                tx_env.gas_price = alloy_primitives::U256::from(tx.max_fee_per_gas);
+                tx_env.gas_priority_fee =
+                    Some(alloy_primitives::U256::from(tx.max_priority_fee_per_gas));
+                tx_env.transact_to = tx.to.into();
+                tx_env.value = tx.value;
+                tx_env.data = tx.input.clone();
+                tx_env.chain_id = Some(tx.chain_id);
+                tx_env.nonce = Some(tx.nonce);
+                tx_env.access_list.clone_from(&tx.access_list.0);
+                tx_env.blob_hashes.clear();
+                tx_env.max_fee_per_blob_gas.take();
+                tx_env.authorization_list = Some(tx.authorization_list.clone().into());
             }
             ScrollTypedTransaction::L1Message(tx) => {
                 tx_env.access_list.clear();
@@ -248,6 +264,9 @@ impl Encodable2718 for ScrollTransactionSigned {
             ScrollTypedTransaction::Eip1559(dynamic_fee_tx) => {
                 dynamic_fee_tx.eip2718_encoded_length(&self.signature)
             }
+            ScrollTypedTransaction::Eip7702(dynamic_fee_tx) => {
+                dynamic_fee_tx.eip2718_encoded_length(&self.signature)
+            }
             ScrollTypedTransaction::L1Message(l1_message) => l1_message.eip2718_encoded_length(),
         }
     }
@@ -264,6 +283,9 @@ impl Encodable2718 for ScrollTransactionSigned {
                 access_list_tx.eip2718_encode(signature, out)
             }
             ScrollTypedTransaction::Eip1559(dynamic_fee_tx) => {
+                dynamic_fee_tx.eip2718_encode(signature, out)
+            }
+            ScrollTypedTransaction::Eip7702(dynamic_fee_tx) => {
                 dynamic_fee_tx.eip2718_encode(signature, out)
             }
             ScrollTypedTransaction::L1Message(l1_message) => l1_message.encode_2718(out),
@@ -284,6 +306,12 @@ impl Decodable2718 for ScrollTransactionSigned {
             ScrollTxType::Eip1559 => {
                 let (tx, signature, hash) = TxEip1559::rlp_decode_signed(buf)?.into_parts();
                 let signed_tx = Self::new_unhashed(ScrollTypedTransaction::Eip1559(tx), signature);
+                signed_tx.hash.get_or_init(|| hash);
+                Ok(signed_tx)
+            }
+            ScrollTxType::Eip7702 => {
+                let (tx, signature, hash) = TxEip7702::rlp_decode_signed(buf)?.into_parts();
+                let signed_tx = Self::new_unhashed(ScrollTypedTransaction::Eip7702(tx), signature);
                 signed_tx.hash.get_or_init(|| hash);
                 Ok(signed_tx)
             }
@@ -544,6 +572,9 @@ impl TryFrom<ScrollTransactionSigned> for ScrollPooledTransaction {
             ScrollTypedTransaction::Eip1559(tx) => {
                 Ok(Self::Eip1559(Signed::new_unchecked(tx, signature, hash)))
             }
+            ScrollTypedTransaction::Eip7702(tx) => {
+                Ok(Self::Eip7702(Signed::new_unchecked(tx, signature, hash)))
+            }
             ScrollTypedTransaction::L1Message(_) => {
                 Err(TryFromRecoveredTransactionError::UnsupportedTransactionType(0xfe))
             }
@@ -557,6 +588,7 @@ impl From<ScrollPooledTransaction> for ScrollTransactionSigned {
             ScrollPooledTransaction::Legacy(tx) => tx.into(),
             ScrollPooledTransaction::Eip2930(tx) => tx.into(),
             ScrollPooledTransaction::Eip1559(tx) => tx.into(),
+            ScrollPooledTransaction::Eip7702(tx) => tx.into(),
         }
     }
 }
@@ -565,7 +597,9 @@ impl From<ScrollPooledTransaction> for ScrollTransactionSigned {
 #[cfg(feature = "serde-bincode-compat")]
 pub mod serde_bincode_compat {
     use alloc::borrow::Cow;
-    use alloy_consensus::transaction::serde_bincode_compat::{TxEip1559, TxEip2930, TxLegacy};
+    use alloy_consensus::transaction::serde_bincode_compat::{
+        TxEip1559, TxEip2930, TxEip7702, TxLegacy,
+    };
     use alloy_primitives::{PrimitiveSignature as Signature, TxHash};
     use reth_primitives_traits::{serde_bincode_compat::SerdeBincodeCompat, SignedTransaction};
     use serde::{Deserialize, Serialize};
@@ -577,6 +611,7 @@ pub mod serde_bincode_compat {
         Legacy(TxLegacy<'a>),
         Eip2930(TxEip2930<'a>),
         Eip1559(TxEip1559<'a>),
+        Eip7702(TxEip7702<'a>),
         L1Message(Cow<'a, scroll_alloy_consensus::TxL1Message>),
     }
 
@@ -586,6 +621,7 @@ pub mod serde_bincode_compat {
                 super::ScrollTypedTransaction::Legacy(tx) => Self::Legacy(TxLegacy::from(tx)),
                 super::ScrollTypedTransaction::Eip2930(tx) => Self::Eip2930(TxEip2930::from(tx)),
                 super::ScrollTypedTransaction::Eip1559(tx) => Self::Eip1559(TxEip1559::from(tx)),
+                super::ScrollTypedTransaction::Eip7702(tx) => Self::Eip7702(TxEip7702::from(tx)),
                 super::ScrollTypedTransaction::L1Message(tx) => Self::L1Message(Cow::Borrowed(tx)),
             }
         }
@@ -597,6 +633,7 @@ pub mod serde_bincode_compat {
                 ScrollTypedTransaction::Legacy(tx) => Self::Legacy(tx.into()),
                 ScrollTypedTransaction::Eip2930(tx) => Self::Eip2930(tx.into()),
                 ScrollTypedTransaction::Eip1559(tx) => Self::Eip1559(tx.into()),
+                ScrollTypedTransaction::Eip7702(tx) => Self::Eip7702(tx.into()),
                 ScrollTypedTransaction::L1Message(tx) => Self::L1Message(tx.into_owned()),
             }
         }
