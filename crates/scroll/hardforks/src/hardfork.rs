@@ -25,6 +25,8 @@ hardfork!(
         Darwin,
         /// DarwinV2 <https://x.com/Scroll_ZKP/status/1830565514755584269>.
         DarwinV2,
+        Euclid,
+        EuclidV2,
     }
 );
 
@@ -80,6 +82,7 @@ impl ScrollHardfork {
                 Self::Curie => Some(4740239),
                 Self::Darwin => Some(6075509),
                 Self::DarwinV2 => Some(6375501),
+                _ => None,
             },
         )
     }
@@ -107,6 +110,7 @@ impl ScrollHardfork {
                 Self::Curie => Some(7096836),
                 Self::Darwin => Some(8568134),
                 Self::DarwinV2 => Some(8923772),
+                _ => None,
             },
         )
     }
@@ -134,6 +138,7 @@ impl ScrollHardfork {
                 Self::Curie => Some(1718616171),
                 Self::Darwin => Some(1723622400),
                 Self::DarwinV2 => Some(1724832000),
+                _ => None,
             },
         )
     }
@@ -161,6 +166,7 @@ impl ScrollHardfork {
                 Self::Curie => Some(1719994277),
                 Self::Darwin => Some(1724227200),
                 Self::DarwinV2 => Some(1725264000),
+                _ => None,
             },
         )
     }

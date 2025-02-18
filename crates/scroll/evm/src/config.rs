@@ -72,7 +72,9 @@ impl ScrollEvmConfig {
     /// Returns the spec id at the given head.
     pub fn spec_id_at_head(&self, head: &Head) -> SpecId {
         let chain_spec = &self.chain_spec;
-        if chain_spec.fork(ScrollHardfork::Curie).active_at_head(head) {
+        if chain_spec.fork(ScrollHardfork::EuclidV2).active_at_head(head) {
+            SpecId::EUCLID_V2
+        } else if chain_spec.fork(ScrollHardfork::Curie).active_at_head(head) {
             SpecId::CURIE
         } else if chain_spec.fork(ScrollHardfork::Bernoulli).active_at_head(head) {
             SpecId::BERNOULLI
