@@ -679,11 +679,11 @@ crunchy = "=0.2.2"
 #
 # revm-inspectors = { git = "https://github.com/paradigmxyz/revm-inspectors", rev = "1207e33" }
 
-[patch.crates-io]
-revm = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v55" }
-revm-precompile = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v55" }
-revm-primitives = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v55" }
-revm-interpreter = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/v55" }
+[patch.crates-io] # FIXME: replace by v55 when it's merged
+revm = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
+revm-precompile = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
+revm-primitives = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
+revm-interpreter = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
 
 ff = { git = "https://github.com/scroll-tech/ff", branch = "feat/sp1" }
 

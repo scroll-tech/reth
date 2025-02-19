@@ -161,6 +161,7 @@ mod scroll {
                 Self::Legacy(tx) => tx.size(),
                 Self::Eip2930(tx) => tx.size(),
                 Self::Eip1559(tx) => tx.size(),
+                Self::Eip7702(tx) => tx.size(),
                 Self::L1Message(tx) => tx.size(),
             }
         }
@@ -172,6 +173,7 @@ mod scroll {
                 Self::Legacy(tx) => tx.size(),
                 Self::Eip2930(tx) => tx.size(),
                 Self::Eip1559(tx) => tx.size(),
+                Self::Eip7702(tx) => tx.size(),
             }
         }
     }

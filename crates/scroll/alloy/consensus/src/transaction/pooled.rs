@@ -4,7 +4,7 @@
 use crate::{ScrollTxEnvelope, ScrollTxType};
 use alloy_consensus::{
     transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxLegacy},
-    SignableTransaction, Signed, Transaction, TxEnvelope, Typed2718,
+    SignableTransaction, Signed, Transaction, TxEip7702, TxEnvelope, Typed2718,
 };
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
@@ -33,6 +33,8 @@ pub enum ScrollPooledTransaction {
     Eip2930(Signed<TxEip2930>),
     /// A [`TxEip1559`] transaction tagged with type 2.
     Eip1559(Signed<TxEip1559>),
+    /// A [`TxEip7702`] transaction tagged with type 4.
+    Eip7702(Signed<TxEip7702>),
 }
 
 impl ScrollPooledTransaction {
@@ -43,6 +45,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.signature_hash(),
             Self::Eip2930(tx) => tx.signature_hash(),
             Self::Eip1559(tx) => tx.signature_hash(),
+            Self::Eip7702(tx) => tx.signature_hash(),
         }
     }
 
@@ -52,6 +55,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.hash(),
             Self::Eip2930(tx) => tx.hash(),
             Self::Eip1559(tx) => tx.hash(),
+            Self::Eip7702(tx) => tx.hash(),
         }
     }
 
@@ -61,6 +65,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.signature(),
             Self::Eip2930(tx) => tx.signature(),
             Self::Eip1559(tx) => tx.signature(),
+            Self::Eip7702(tx) => tx.signature(),
         }
     }
 
@@ -84,6 +89,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.recover_signer(),
             Self::Eip2930(tx) => tx.recover_signer(),
             Self::Eip1559(tx) => tx.recover_signer(),
+            Self::Eip7702(tx) => tx.recover_signer(),
         }
     }
 
@@ -94,6 +100,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().encode_for_signing(out),
             Self::Eip2930(tx) => tx.tx().encode_for_signing(out),
             Self::Eip1559(tx) => tx.tx().encode_for_signing(out),
+            Self::Eip7702(tx) => tx.tx().encode_for_signing(out),
         }
     }
 
@@ -103,6 +110,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.into(),
             Self::Eip2930(tx) => tx.into(),
             Self::Eip1559(tx) => tx.into(),
+            Self::Eip7702(tx) => tx.into(),
         }
     }
 
@@ -112,6 +120,7 @@ impl ScrollPooledTransaction {
             Self::Legacy(tx) => tx.into(),
             Self::Eip2930(tx) => tx.into(),
             Self::Eip1559(tx) => tx.into(),
+            Self::Eip7702(tx) => tx.into(),
         }
     }
 
@@ -138,6 +147,14 @@ impl ScrollPooledTransaction {
             _ => None,
         }
     }
+
+    /// Returns the [`TxEip7702`] variant if the transaction is an EIP-1559 transaction.
+    pub const fn as_eip7702(&self) -> Option<&TxEip7702> {
+        match self {
+            Self::Eip7702(tx) => Some(tx.tx()),
+            _ => None,
+        }
+    }
 }
 
 impl From<Signed<TxLegacy>> for ScrollPooledTransaction {
@@ -155,6 +172,12 @@ impl From<Signed<TxEip2930>> for ScrollPooledTransaction {
 impl From<Signed<TxEip1559>> for ScrollPooledTransaction {
     fn from(v: Signed<TxEip1559>) -> Self {
         Self::Eip1559(v)
+    }
+}
+
+impl From<Signed<TxEip7702>> for ScrollPooledTransaction {
+    fn from(v: Signed<TxEip7702>) -> Self {
+        Self::Eip7702(v)
     }
 }
 
@@ -197,6 +220,7 @@ impl Encodable2718 for ScrollPooledTransaction {
             Self::Legacy(_) => None,
             Self::Eip2930(_) => Some(0x01),
             Self::Eip1559(_) => Some(0x02),
+            Self::Eip7702(_) => Some(0x04),
         }
     }
 
@@ -205,6 +229,7 @@ impl Encodable2718 for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.eip2718_encoded_length(),
             Self::Eip2930(tx) => tx.eip2718_encoded_length(),
             Self::Eip1559(tx) => tx.eip2718_encoded_length(),
+            Self::Eip7702(tx) => tx.eip2718_encoded_length(),
         }
     }
 
@@ -213,6 +238,7 @@ impl Encodable2718 for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.eip2718_encode(out),
             Self::Eip2930(tx) => tx.eip2718_encode(out),
             Self::Eip1559(tx) => tx.eip2718_encode(out),
+            Self::Eip7702(tx) => tx.eip2718_encode(out),
         }
     }
 
@@ -226,6 +252,7 @@ impl Decodable2718 for ScrollPooledTransaction {
         match ty.try_into().map_err(|_| alloy_rlp::Error::Custom("unexpected tx type"))? {
             ScrollTxType::Eip2930 => Ok(TxEip2930::rlp_decode_signed(buf)?.into()),
             ScrollTxType::Eip1559 => Ok(TxEip1559::rlp_decode_signed(buf)?.into()),
+            ScrollTxType::Eip7702 => Ok(TxEip7702::rlp_decode_signed(buf)?.into()),
             ScrollTxType::Legacy => Err(Eip2718Error::UnexpectedType(ScrollTxType::Legacy.into())),
             ScrollTxType::L1Message => {
                 Err(Eip2718Error::UnexpectedType(ScrollTxType::L1Message.into()))
@@ -244,6 +271,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().chain_id(),
             Self::Eip2930(tx) => tx.tx().chain_id(),
             Self::Eip1559(tx) => tx.tx().chain_id(),
+            Self::Eip7702(tx) => tx.tx().chain_id(),
         }
     }
 
@@ -252,6 +280,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().nonce(),
             Self::Eip2930(tx) => tx.tx().nonce(),
             Self::Eip1559(tx) => tx.tx().nonce(),
+            Self::Eip7702(tx) => tx.tx().nonce(),
         }
     }
 
@@ -260,6 +289,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().gas_limit(),
             Self::Eip2930(tx) => tx.tx().gas_limit(),
             Self::Eip1559(tx) => tx.tx().gas_limit(),
+            Self::Eip7702(tx) => tx.tx().gas_limit(),
         }
     }
 
@@ -268,6 +298,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().gas_price(),
             Self::Eip2930(tx) => tx.tx().gas_price(),
             Self::Eip1559(tx) => tx.tx().gas_price(),
+            Self::Eip7702(tx) => tx.tx().gas_price(),
         }
     }
 
@@ -276,6 +307,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip2930(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip1559(tx) => tx.tx().max_fee_per_gas(),
+            Self::Eip7702(tx) => tx.tx().max_fee_per_gas(),
         }
     }
 
@@ -284,6 +316,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip2930(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip1559(tx) => tx.tx().max_priority_fee_per_gas(),
+            Self::Eip7702(tx) => tx.tx().max_priority_fee_per_gas(),
         }
     }
 
@@ -292,6 +325,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip2930(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip1559(tx) => tx.tx().max_fee_per_blob_gas(),
+            Self::Eip7702(tx) => tx.tx().max_fee_per_blob_gas(),
         }
     }
 
@@ -300,6 +334,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip2930(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip1559(tx) => tx.tx().priority_fee_or_price(),
+            Self::Eip7702(tx) => tx.tx().priority_fee_or_price(),
         }
     }
 
@@ -308,6 +343,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip2930(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Eip7702(tx) => tx.tx().effective_gas_price(base_fee),
         }
     }
 
@@ -316,6 +352,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip2930(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
+            Self::Eip7702(tx) => tx.tx().is_dynamic_fee(),
         }
     }
 
@@ -324,6 +361,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().kind(),
             Self::Eip2930(tx) => tx.tx().kind(),
             Self::Eip1559(tx) => tx.tx().kind(),
+            Self::Eip7702(tx) => tx.tx().kind(),
         }
     }
 
@@ -332,6 +370,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().is_create(),
             Self::Eip2930(tx) => tx.tx().is_create(),
             Self::Eip1559(tx) => tx.tx().is_create(),
+            Self::Eip7702(tx) => tx.tx().is_create(),
         }
     }
 
@@ -340,6 +379,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().value(),
             Self::Eip2930(tx) => tx.tx().value(),
             Self::Eip1559(tx) => tx.tx().value(),
+            Self::Eip7702(tx) => tx.tx().value(),
         }
     }
 
@@ -348,6 +388,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().input(),
             Self::Eip2930(tx) => tx.tx().input(),
             Self::Eip1559(tx) => tx.tx().input(),
+            Self::Eip7702(tx) => tx.tx().input(),
         }
     }
 
@@ -356,6 +397,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().access_list(),
             Self::Eip2930(tx) => tx.tx().access_list(),
             Self::Eip1559(tx) => tx.tx().access_list(),
+            Self::Eip7702(tx) => tx.tx().access_list(),
         }
     }
 
@@ -364,6 +406,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip2930(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip1559(tx) => tx.tx().blob_versioned_hashes(),
+            Self::Eip7702(tx) => tx.tx().blob_versioned_hashes(),
         }
     }
 
@@ -372,6 +415,7 @@ impl Transaction for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().authorization_list(),
             Self::Eip2930(tx) => tx.tx().authorization_list(),
             Self::Eip1559(tx) => tx.tx().authorization_list(),
+            Self::Eip7702(tx) => tx.tx().authorization_list(),
         }
     }
 }
@@ -382,6 +426,7 @@ impl Typed2718 for ScrollPooledTransaction {
             Self::Legacy(tx) => tx.tx().ty(),
             Self::Eip2930(tx) => tx.tx().ty(),
             Self::Eip1559(tx) => tx.tx().ty(),
+            Self::Eip7702(tx) => tx.tx().ty(),
         }
     }
 }

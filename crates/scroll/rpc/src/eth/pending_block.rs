@@ -132,6 +132,7 @@ where
             ScrollTxType::Legacy => ScrollReceipt::Legacy(into_scroll_receipt(receipt)),
             ScrollTxType::Eip2930 => ScrollReceipt::Eip2930(into_scroll_receipt(receipt)),
             ScrollTxType::Eip1559 => ScrollReceipt::Eip1559(into_scroll_receipt(receipt)),
+            ScrollTxType::Eip7702 => ScrollReceipt::Eip7702(into_scroll_receipt(receipt)),
             ScrollTxType::L1Message => ScrollReceipt::L1Message(receipt),
         }
     }
