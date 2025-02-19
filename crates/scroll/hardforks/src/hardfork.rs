@@ -2,12 +2,10 @@
 
 use alloc::{format, string::String, vec};
 use core::{
-    any::Any,
     fmt::{self, Display, Formatter},
     str::FromStr,
 };
 
-use alloy_chains::{Chain, NamedChain};
 use reth_ethereum_forks::{hardfork, ChainHardforks, EthereumHardfork, ForkCondition, Hardfork};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
