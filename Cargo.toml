@@ -438,6 +438,7 @@ reth-zstd-compressors = { path = "crates/storage/zstd-compressors", default-feat
 
 # revm
 revm = { version = "19.4.0", default-features = false }
+revm-precompile = { version = "15.0.0", default-features = false }
 revm-primitives = { version = "15.1.0", default-features = false }
 revm-interpreter = { version = "15.0.0", default-features = false }
 revm-inspectors = "0.15.0"
@@ -678,6 +679,7 @@ crunchy = "=0.2.2"
 
 [patch.crates-io]
 revm = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v55" }
+revm-precompile = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v55" }
 revm-primitives = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v55" }
 revm-interpreter = { git = "https://github.com/scroll-tech/revm.git", branch = "scroll-evm-executor/reth/v55" }
 

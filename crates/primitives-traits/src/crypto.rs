@@ -43,7 +43,7 @@ pub mod secp256k1 {
 
         // NOTE: we are removing error from underlying crypto library as it will restrain primitive
         // errors and we care only if recovery is passing or not.
-        imp::recover_signer_unchecked(&sig, &hash.0).map_err(|_| RecoveryError)
+        impl_ecrecover::recover_signer_unchecked(&sig, &hash.0).map_err(|_| RecoveryError)
     }
 
     /// Recover signer address from message hash. This ensures that the signature S value is
@@ -156,6 +156,20 @@ mod impl_k256 {
     pub fn public_key_to_address(public: VerifyingKey) -> Address {
         let hash = keccak256(&public.to_encoded_point(/* compress = */ false).as_bytes()[1..]);
         Address::from_slice(&hash[12..])
+    }
+}
+
+mod impl_ecrecover {
+    use alloy_primitives::{Address, B256, B512};
+    pub(crate) use k256::ecdsa::Error;
+    use revm_precompile::secp256k1::ecrecover;
+    pub fn recover_signer_unchecked(sig: &[u8; 65], msg: &[u8; 32]) -> Result<Address, Error> {
+        let rec_id = sig[64];
+        let sig: &B512 = unsafe { &*(&sig[0..64] as *const _ as *const B512) };
+        let msg: &B256 = unsafe { &*(msg as *const [u8; 32] as *const B256) };
+        let hash = ecrecover(sig, rec_id, msg)?;
+        let address = Address::from_slice(&hash[12..]);
+        Ok(address)
     }
 }
 
