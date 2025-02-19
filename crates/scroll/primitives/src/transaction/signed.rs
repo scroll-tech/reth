@@ -24,7 +24,7 @@ use derive_more::{AsRef, Deref};
 use once_cell::sync::OnceCell as OnceLock;
 use reth_primitives_traits::{
     crypto::secp256k1::{recover_signer, recover_signer_unchecked},
-    transaction::{error::TransactionConversionError, signed::RecoveryError},
+    transaction::{error::TryFromRecoveredTransactionError, signed::RecoveryError},
     InMemorySize, SignedTransaction,
 };
 use scroll_alloy_consensus::{ScrollPooledTransaction, ScrollTypedTransaction, TxL1Message};
@@ -523,8 +523,8 @@ impl<T: Into<ScrollTypedTransaction>> From<Signed<T>> for ScrollTransactionSigne
     }
 }
 
-impl TryFrom<ScrollTransactionSigned> for scroll_alloy_consensus::ScrollPooledTransaction {
-    type Error = TransactionConversionError;
+impl TryFrom<ScrollTransactionSigned> for ScrollPooledTransaction {
+    type Error = TryFromRecoveredTransactionError;
 
     fn try_from(value: ScrollTransactionSigned) -> Result<Self, Self::Error> {
         let hash = *value.tx_hash();
@@ -541,7 +541,7 @@ impl TryFrom<ScrollTransactionSigned> for scroll_alloy_consensus::ScrollPooledTr
                 Ok(Self::Eip1559(Signed::new_unchecked(tx, signature, hash)))
             }
             ScrollTypedTransaction::L1Message(_) => {
-                Err(TransactionConversionError::UnsupportedForP2P)
+                Err(TryFromRecoveredTransactionError::UnsupportedTransactionType(0xfe))
             }
         }
     }
