@@ -137,7 +137,9 @@ where
                 )
                 .into())
             }
-            if transaction.is_eip7702() {
+            if transaction.is_eip7702() &&
+                !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp)
+            {
                 return Err(ConsensusError::InvalidTransaction(
                     InvalidTransactionError::Eip7702Disabled,
                 )
