@@ -443,10 +443,10 @@ reth-zstd-compressors = { path = "crates/storage/zstd-compressors", default-feat
 #revm-precompile = { version = "16.0.0", default-features = false }
 #revm-primitives = { version = "15.1.0", default-features = false }
 #revm-interpreter = { version = "15.1.0", default-features = false }
-revm = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
-revm-interpreter = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
-revm-precompile = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
-revm-primitives = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2" }
+revm = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2", default-features = false }
+revm-interpreter = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2", default-features = false }
+revm-precompile = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2", default-features = false }
+revm-primitives = { git = "https://github.com/scroll-tech/revm", branch = "scroll-evm-executor/feat/v55/euclid-v2", default-features = false }
 
 
 revm-inspectors = "0.15.0"
