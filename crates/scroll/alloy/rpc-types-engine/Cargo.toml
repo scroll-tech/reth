@@ -28,8 +28,8 @@ serde_json.workspace = true
 [features]
 default = ["std"]
 arbitrary = [
-	"dep:arbitrary",
-	"alloy-primitives/arbitrary"
+    "dep:arbitrary",
+    "alloy-primitives/arbitrary",
 ]
 std = [
     "alloy-primitives/std",
