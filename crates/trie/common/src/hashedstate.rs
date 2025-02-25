@@ -1,32 +1,46 @@
 use crate::{
     prefix_set::{PrefixSetMut, TriePrefixSetsMut},
-    Nibbles,
+    KeyHasher, Nibbles,
 };
+use alloc::{borrow::Cow, vec::Vec};
 use alloy_primitives::{
-    map::{hash_map, B256HashMap, B256HashSet, HashMap, HashSet},
+    keccak256,
+    map::{hash_map, B256Map, B256Set, HashMap, HashSet},
     Address, B256, U256,
 };
 use itertools::Itertools;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use reth_primitives_traits::Account;
-use reth_trie_common::KeyHasher;
 use revm::db::{AccountStatus, BundleAccount};
-use std::borrow::Cow;
+
+#[cfg(feature = "rayon")]
+pub use rayon::*;
+
+#[cfg(feature = "rayon")]
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 /// Representation of in-memory hashed state.
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct HashedPostState {
     /// Mapping of hashed address to account info, `None` if destroyed.
-    pub accounts: B256HashMap<Option<Account>>,
+    pub accounts: B256Map<Option<Account>>,
     /// Mapping of hashed address to hashed storage.
-    pub storages: B256HashMap<HashedStorage>,
+    pub storages: B256Map<HashedStorage>,
 }
 
 impl HashedPostState {
+    /// Create new instance of [`HashedPostState`].
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            accounts: B256Map::with_capacity_and_hasher(capacity, Default::default()),
+            storages: B256Map::with_capacity_and_hasher(capacity, Default::default()),
+        }
+    }
+
     /// Initialize [`HashedPostState`] from bundle state.
     /// Hashes all changed accounts and storage entries that are currently stored in the bundle
     /// state.
     #[inline]
+    #[cfg(feature = "rayon")]
     pub fn from_bundle_state<'a, KH: KeyHasher>(
         state: impl IntoParallelIterator<Item = (&'a Address, &'a BundleAccount)>,
     ) -> Self {
@@ -34,8 +48,39 @@ impl HashedPostState {
             .into_par_iter()
             .map(|(address, account)| {
                 let hashed_address = KH::hash_key(address);
-                let hashed_account = account.info.clone().map(Into::into);
-                let hashed_storage = HashedStorage::from_plain_storage::<KH>(
+                let hashed_account = account.info.as_ref().map(Into::into);
+                let hashed_storage = HashedStorage::from_plain_storage(
+                    account.status,
+                    account.storage.iter().map(|(slot, value)| (slot, &value.present_value)),
+                );
+                (hashed_address, (hashed_account, hashed_storage))
+            })
+            .collect::<Vec<(B256, (Option<Account>, HashedStorage))>>();
+
+        let mut accounts = HashMap::with_capacity_and_hasher(hashed.len(), Default::default());
+        let mut storages = HashMap::with_capacity_and_hasher(hashed.len(), Default::default());
+        for (address, (account, storage)) in hashed {
+            accounts.insert(address, account);
+            if !storage.is_empty() {
+                storages.insert(address, storage);
+            }
+        }
+        Self { accounts, storages }
+    }
+
+    /// Initialize [`HashedPostState`] from bundle state.
+    /// Hashes all changed accounts and storage entries that are currently stored in the bundle
+    /// state.
+    #[cfg(not(feature = "rayon"))]
+    pub fn from_bundle_state<'a, KH: KeyHasher>(
+        state: impl IntoIterator<Item = (&'a Address, &'a BundleAccount)>,
+    ) -> Self {
+        let hashed = state
+            .into_iter()
+            .map(|(address, account)| {
+                let hashed_address = KH::hash_key(address);
+                let hashed_account = account.info.as_ref().map(Into::into);
+                let hashed_storage = HashedStorage::from_plain_storage(
                     account.status,
                     account.storage.iter().map(|(slot, value)| (slot, &value.present_value)),
                 );
@@ -104,7 +149,6 @@ impl HashedPostState {
         let mut storage_prefix_sets =
             HashMap::with_capacity_and_hasher(self.storages.len(), Default::default());
         for (hashed_address, hashed_storage) in &self.storages {
-            // TODO(scroll): replace this with abstraction.
             account_prefix_set.insert(Nibbles::unpack(hashed_address));
             storage_prefix_sets.insert(*hashed_address, hashed_storage.construct_prefix_set());
         }
@@ -186,7 +230,7 @@ pub struct HashedStorage {
     /// Flag indicating whether the storage was wiped or not.
     pub wiped: bool,
     /// Mapping of hashed storage slot to storage value.
-    pub storage: B256HashMap<U256>,
+    pub storage: B256Map<U256>,
 }
 
 impl HashedStorage {
@@ -205,25 +249,14 @@ impl HashedStorage {
         Self { wiped, storage: HashMap::from_iter(iter) }
     }
 
-    /// Create a new hashed storage from the provided [`BundleAccount`]
-    ///
-    /// This function will use the present value of the storage slots in the account to create the
-    /// hashed storage.
-    pub fn from_bundle_account<KH: KeyHasher>(account: &BundleAccount) -> Self {
-        Self::from_plain_storage::<KH>(
-            account.status,
-            account.storage.iter().map(|(slot, value)| (slot, &value.present_value)),
-        )
-    }
-
     /// Create new hashed storage from account status and plain storage.
-    pub fn from_plain_storage<'a, KH: KeyHasher>(
+    pub fn from_plain_storage<'a>(
         status: AccountStatus,
         storage: impl IntoIterator<Item = (&'a U256, &'a U256)>,
     ) -> Self {
         Self::from_iter(
             status.was_destroyed(),
-            storage.into_iter().map(|(key, value)| (KH::hash_key(B256::from(*key)), *value)),
+            storage.into_iter().map(|(key, value)| (keccak256(B256::from(*key)), *value)),
         )
     }
 
@@ -271,16 +304,16 @@ impl HashedStorage {
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct HashedPostStateSorted {
     /// Updated state of accounts.
-    pub(crate) accounts: HashedAccountsSorted,
+    pub accounts: HashedAccountsSorted,
     /// Map of hashed addresses to hashed storage.
-    pub(crate) storages: B256HashMap<HashedStorageSorted>,
+    pub storages: B256Map<HashedStorageSorted>,
 }
 
 impl HashedPostStateSorted {
     /// Create new instance of [`HashedPostStateSorted`]
     pub const fn new(
         accounts: HashedAccountsSorted,
-        storages: B256HashMap<HashedStorageSorted>,
+        storages: B256Map<HashedStorageSorted>,
     ) -> Self {
         Self { accounts, storages }
     }
@@ -291,7 +324,7 @@ impl HashedPostStateSorted {
     }
 
     /// Returns reference to hashed account storages.
-    pub const fn account_storages(&self) -> &B256HashMap<HashedStorageSorted> {
+    pub const fn account_storages(&self) -> &B256Map<HashedStorageSorted> {
         &self.storages
     }
 }
@@ -300,9 +333,9 @@ impl HashedPostStateSorted {
 #[derive(Clone, Eq, PartialEq, Default, Debug)]
 pub struct HashedAccountsSorted {
     /// Sorted collection of hashed addresses and their account info.
-    pub(crate) accounts: Vec<(B256, Account)>,
+    pub accounts: Vec<(B256, Account)>,
     /// Set of destroyed account keys.
-    pub(crate) destroyed_accounts: B256HashSet,
+    pub destroyed_accounts: B256Set,
 }
 
 impl HashedAccountsSorted {
@@ -320,11 +353,11 @@ impl HashedAccountsSorted {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct HashedStorageSorted {
     /// Sorted hashed storage slots with non-zero value.
-    pub(crate) non_zero_valued_slots: Vec<(B256, U256)>,
+    pub non_zero_valued_slots: Vec<(B256, U256)>,
     /// Slots that have been zero valued.
-    pub(crate) zero_valued_slots: B256HashSet,
+    pub zero_valued_slots: B256Set,
     /// Flag indicating whether the storage was wiped or not.
-    pub(crate) wiped: bool,
+    pub wiped: bool,
 }
 
 impl HashedStorageSorted {
@@ -345,10 +378,9 @@ impl HashedStorageSorted {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::needless_update)]
     use super::*;
-    use alloy_primitives::{keccak256, Address, Bytes};
-    use reth_trie_common::KeccakKeyHasher;
+    use crate::KeccakKeyHasher;
+    use alloy_primitives::Bytes;
     use revm::{
         db::{states::StorageSlot, StorageWithOriginalValues},
         primitives::{AccountInfo, Bytecode},

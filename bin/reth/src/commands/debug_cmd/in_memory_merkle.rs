@@ -15,23 +15,24 @@ use reth_cli_commands::common::{AccessRights, CliNodeTypes, Environment, Environ
 use reth_cli_runner::CliContext;
 use reth_cli_util::get_secret_key;
 use reth_config::Config;
-use reth_errors::BlockValidationError;
+use reth_ethereum_primitives::EthPrimitives;
 use reth_evm::execute::{BlockExecutorProvider, Executor};
 use reth_execution_types::ExecutionOutcome;
 use reth_network::{BlockDownloaderProvider, NetworkHandle};
 use reth_network_api::NetworkInfo;
 use reth_node_api::NodePrimitives;
 use reth_node_ethereum::{consensus::EthBeaconConsensus, EthExecutorProvider};
-use reth_primitives::{EthPrimitives, SealedBlock};
+use reth_primitives_traits::SealedBlock;
 use reth_provider::{
     providers::ProviderNodeTypes, AccountExtReader, ChainSpecProvider, DatabaseProviderFactory,
     HashedPostStateProvider, HashingWriter, LatestStateProviderRef, OriginalValuesKnown,
-    ProviderFactory, StageCheckpointReader, StateRootProvider, StateRootProviderExt, StateWriter,
-    StorageLocation, StorageReader,
+    ProviderFactory, StageCheckpointReader, StateWriter, StorageLocation, StorageReader,
 };
 use reth_revm::database::StateProviderDatabase;
 use reth_stages::StageId;
 use reth_tasks::TaskExecutor;
+use reth_trie::StateRoot;
+use reth_trie_db::DatabaseStateRoot;
 use std::{path::PathBuf, sync::Arc};
 use tracing::*;
 
@@ -61,9 +62,9 @@ impl<C: ChainSpecParser<ChainSpec = ChainSpec>> Command<C> {
         N: ProviderNodeTypes<
             ChainSpec = C::ChainSpec,
             Primitives: NodePrimitives<
-                Block = reth_primitives::Block,
-                Receipt = reth_primitives::Receipt,
-                BlockHeader = reth_primitives::Header,
+                Block = reth_ethereum_primitives::Block,
+                Receipt = reth_ethereum_primitives::Receipt,
+                BlockHeader = alloy_consensus::Header,
             >,
         >,
     >(
@@ -151,10 +152,10 @@ impl<C: ChainSpecParser<ChainSpec = ChainSpec>> Command<C> {
         let execution_outcome = ExecutionOutcome::from((block_execution_output, block.number()));
 
         // Unpacked `BundleState::state_root_slow` function
-        let (in_memory_state_root, in_memory_updates) = state_provider
-            .state_root_from_state_with_updates(
-                state_provider.hashed_post_state(execution_outcome.state()),
-            )?;
+        let (in_memory_state_root, in_memory_updates) = StateRoot::overlay_root_with_updates(
+            provider.tx_ref(),
+            state_provider.hashed_post_state(execution_outcome.state()),
+        )?;
 
         if in_memory_state_root == block.state_root() {
             info!(target: "reth::cli", state_root = ?in_memory_state_root, "Computed in-memory state root matches");
@@ -164,9 +165,7 @@ impl<C: ChainSpecParser<ChainSpec = ChainSpec>> Command<C> {
         let provider_rw = provider_factory.database_provider_rw()?;
 
         // Insert block, state and hashes
-        provider_rw.insert_historical_block(
-            block.clone().try_recover().map_err(|_| BlockValidationError::SenderRecoveryError)?,
-        )?;
+        provider_rw.insert_historical_block(block.clone().try_recover()?)?;
         provider_rw.write_state(
             &execution_outcome,
             OriginalValuesKnown::No,
@@ -181,8 +180,10 @@ impl<C: ChainSpecParser<ChainSpec = ChainSpec>> Command<C> {
         let accounts = provider_rw.basic_accounts(account_lists)?;
         provider_rw.insert_account_for_hashing(accounts)?;
 
-        let (state_root, incremental_trie_updates) =
-            state_provider.incremental_state_root_with_updates(block.number()..=block.number())?;
+        let (state_root, incremental_trie_updates) = StateRoot::incremental_root_with_updates(
+            provider_rw.tx_ref(),
+            block.number..=block.number(),
+        )?;
         if state_root != block.state_root() {
             eyre::bail!(
                 "Computed incremental state root mismatch. Expected: {:?}. Got: {:?}",

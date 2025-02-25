@@ -150,9 +150,6 @@ impl InsertBlockErrorKind {
                     BlockExecutionError::Validation(err) => {
                         Ok(InsertBlockValidationError::Validation(err))
                     }
-                    BlockExecutionError::Consensus(err) => {
-                        Ok(InsertBlockValidationError::Consensus(err))
-                    }
                     // these are internal errors, not caused by an invalid block
                     BlockExecutionError::Internal(error) => {
                         Err(InsertBlockFatalError::BlockExecutionError(error))
@@ -188,11 +185,4 @@ pub enum InsertBlockValidationError {
     /// Validation error, transparently wrapping [`BlockValidationError`]
     #[error(transparent)]
     Validation(#[from] BlockValidationError),
-}
-
-impl InsertBlockValidationError {
-    /// Returns true if this is a block pre merge error.
-    pub const fn is_block_pre_merge(&self) -> bool {
-        matches!(self, Self::Validation(BlockValidationError::BlockPreMerge { .. }))
-    }
 }

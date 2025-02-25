@@ -1,6 +1,8 @@
 use crate::{DBProvider, OmmersProvider, StorageLocation};
+use alloc::vec::Vec;
 use alloy_consensus::Header;
 use alloy_primitives::BlockNumber;
+use core::marker::PhantomData;
 use reth_chainspec::{ChainSpecProvider, EthereumHardforks};
 use reth_db::{
     cursor::{DbCursorRO, DbCursorRW},
@@ -9,7 +11,7 @@ use reth_db::{
     transaction::{DbTx, DbTxMut},
     DbTxUnwindExt,
 };
-use reth_primitives::TransactionSigned;
+use reth_ethereum_primitives::TransactionSigned;
 use reth_primitives_traits::{
     Block, BlockBody, FullBlockHeader, FullNodePrimitives, SignedTransaction,
 };
@@ -83,7 +85,7 @@ impl<T, Provider, Primitives: FullNodePrimitives> ChainStorageReader<Provider, P
 
 /// Ethereum storage implementation.
 #[derive(Debug, Clone, Copy)]
-pub struct EthStorage<T = TransactionSigned, H = Header>(std::marker::PhantomData<(T, H)>);
+pub struct EthStorage<T = TransactionSigned, H = Header>(PhantomData<(T, H)>);
 
 impl<T, H> Default for EthStorage<T, H> {
     fn default() -> Self {
@@ -91,7 +93,7 @@ impl<T, H> Default for EthStorage<T, H> {
     }
 }
 
-impl<Provider, T, H> BlockBodyWriter<Provider, reth_primitives::BlockBody<T, H>>
+impl<Provider, T, H> BlockBodyWriter<Provider, alloy_consensus::BlockBody<T, H>>
     for EthStorage<T, H>
 where
     Provider: DBProvider<Tx: DbTxMut>,
@@ -101,7 +103,7 @@ where
     fn write_block_bodies(
         &self,
         provider: &Provider,
-        bodies: Vec<(u64, Option<reth_primitives::BlockBody<T, H>>)>,
+        bodies: Vec<(u64, Option<alloy_consensus::BlockBody<T, H>>)>,
         _write_to: StorageLocation,
     ) -> ProviderResult<()> {
         let mut ommers_cursor = provider.tx_ref().cursor_write::<tables::BlockOmmers<H>>()?;
@@ -148,7 +150,7 @@ where
     T: SignedTransaction,
     H: FullBlockHeader,
 {
-    type Block = reth_primitives::Block<T, H>;
+    type Block = alloy_consensus::Block<T, H>;
 
     fn read_block_bodies(
         &self,
@@ -180,7 +182,7 @@ where
                 provider.ommers(header.number().into())?.unwrap_or_default()
             };
 
-            bodies.push(reth_primitives::BlockBody { transactions, ommers, withdrawals });
+            bodies.push(alloy_consensus::BlockBody { transactions, ommers, withdrawals });
         }
 
         Ok(bodies)

@@ -18,9 +18,8 @@ reth-primitives-traits.workspace = true
 reth-stages-types.workspace = true
 reth-storage-errors.workspace = true
 reth-trie-sparse.workspace = true
-reth-trie-common.workspace = true
+reth-trie-common = { workspace = true, features = ["rayon"] }
 
-# revm re-export scroll
 revm.workspace = true
 
 # alloy
@@ -34,7 +33,6 @@ alloy-trie.workspace = true
 tracing.workspace = true
 
 # misc
-rayon.workspace = true
 auto_impl.workspace = true
 itertools.workspace = true
 
@@ -70,6 +68,7 @@ serde = [
     "revm/serde",
     "reth-trie-common/serde",
     "reth-primitives-traits/serde",
+    "reth-stages-types/serde",
 ]
 test-utils = [
     "triehash",

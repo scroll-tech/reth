@@ -1,19 +1,19 @@
 use super::ExecutedBlockWithTrieUpdates;
 use alloy_consensus::BlockHeader;
 use alloy_primitives::{
-    keccak256, map::B256HashMap, Address, BlockNumber, Bytes, StorageKey, StorageValue, B256,
+    keccak256, map::B256Map, Address, BlockNumber, Bytes, StorageKey, StorageValue, B256,
 };
 use reth_errors::ProviderResult;
 use reth_primitives::{Account, Bytecode, NodePrimitives};
 use reth_storage_api::{
-    AccountReader, BlockHashReader, HashedPostStateProvider, HashedStorageProvider,
-    KeyHasherProvider, StateProofProvider, StateProvider, StateRootProvider, StorageRootProvider,
+    AccountReader, BlockHashReader, HashedPostStateProvider, StateProofProvider, StateProvider,
+    StateRootProvider, StorageRootProvider,
 };
 use reth_trie::{
     updates::TrieUpdates, AccountProof, HashedPostState, HashedStorage, MultiProof,
     MultiProofTargets, StorageMultiProof, TrieInput,
 };
-use revm::db::{BundleAccount, BundleState};
+use revm::db::BundleState;
 use std::sync::OnceLock;
 
 /// A state provider that stores references to in-memory blocks along with their state as well as a
@@ -111,7 +111,7 @@ impl<N: NodePrimitives> AccountReader for MemoryOverlayStateProviderRef<'_, N> {
 }
 
 impl<N: NodePrimitives> StateRootProvider for MemoryOverlayStateProviderRef<'_, N> {
-    fn state_root_from_state(&self, state: HashedPostState) -> ProviderResult<B256> {
+    fn state_root(&self, state: HashedPostState) -> ProviderResult<B256> {
         self.state_root_from_nodes(TrieInput::from_state(state))
     }
 
@@ -121,7 +121,7 @@ impl<N: NodePrimitives> StateRootProvider for MemoryOverlayStateProviderRef<'_, 
         self.historical.state_root_from_nodes(input)
     }
 
-    fn state_root_from_state_with_updates(
+    fn state_root_with_updates(
         &self,
         state: HashedPostState,
     ) -> ProviderResult<(B256, TrieUpdates)> {
@@ -203,7 +203,7 @@ impl<N: NodePrimitives> StateProofProvider for MemoryOverlayStateProviderRef<'_,
         &self,
         mut input: TrieInput,
         target: HashedPostState,
-    ) -> ProviderResult<B256HashMap<Bytes>> {
+    ) -> ProviderResult<B256Map<Bytes>> {
         let MemoryOverlayTrieState { nodes, state } = self.trie_state().clone();
         input.prepend_cached(nodes, state);
         self.historical.witness(input, target)
@@ -213,18 +213,6 @@ impl<N: NodePrimitives> StateProofProvider for MemoryOverlayStateProviderRef<'_,
 impl<N: NodePrimitives> HashedPostStateProvider for MemoryOverlayStateProviderRef<'_, N> {
     fn hashed_post_state(&self, bundle_state: &BundleState) -> HashedPostState {
         self.historical.hashed_post_state(bundle_state)
-    }
-}
-
-impl<N: NodePrimitives> HashedStorageProvider for MemoryOverlayStateProviderRef<'_, N> {
-    fn hashed_storage(&self, account: &BundleAccount) -> HashedStorage {
-        self.historical.hashed_storage(account)
-    }
-}
-
-impl<N: NodePrimitives> KeyHasherProvider for MemoryOverlayStateProviderRef<'_, N> {
-    fn hash_key(&self, bytes: &[u8]) -> B256 {
-        self.historical.hash_key(bytes)
     }
 }
 

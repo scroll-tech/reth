@@ -11,6 +11,7 @@ use reth_primitives::{NodePrimitives, SealedBlock};
 
 /// Represents a built payload type that contains a built `SealedBlock` and can be converted into
 /// engine API execution payloads.
+#[auto_impl::auto_impl(&, Arc)]
 pub trait BuiltPayload: Send + Sync + fmt::Debug {
     /// The node's primitive types
     type Primitives: NodePrimitives;
@@ -26,7 +27,7 @@ pub trait BuiltPayload: Send + Sync + fmt::Debug {
         None
     }
 
-    /// Returns the EIP-7865 requests for the payload if any.
+    /// Returns the EIP-7685 requests for the payload if any.
     fn requests(&self) -> Option<Requests>;
 }
 

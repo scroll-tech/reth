@@ -166,7 +166,6 @@ impl From<OpTxEnvelope> for OpTransactionSigned {
             OpTxEnvelope::Eip1559(tx) => tx.into(),
             OpTxEnvelope::Eip7702(tx) => tx.into(),
             OpTxEnvelope::Deposit(tx) => tx.into(),
-            _ => unreachable!(),
         }
     }
 }
@@ -779,6 +778,10 @@ pub mod serde_bincode_compat {
 
         fn as_repr(&self) -> Self::BincodeRepr<'_> {
             self.into()
+        }
+
+        fn from_repr(repr: Self::BincodeRepr<'_>) -> Self {
+            repr.into()
         }
     }
 }
