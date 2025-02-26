@@ -227,10 +227,17 @@ pub(crate) trait ScrollConfigureEvm: ConfigureEvm {
         db: DB,
         header: &'a Self::Header,
     ) -> <Self as ScrollConfigureEvm>::Evm<'a, DB, ()>;
+
+    fn scroll_evm_for_block_with_inspector<'a, DB: Database, I: 'a + GetInspector<DB>>(
+        &'a self,
+        db: DB,
+        header: &'a Self::Header,
+        inspector: I,
+    ) -> <Self as ScrollConfigureEvm>::Evm<'a, DB, I>;
 }
 
 impl ScrollConfigureEvm for ScrollEvmConfig {
-    type Evm<'a, DB: Database + 'a, I: 'a> = ScrollEvm<'a, (), DB>;
+    type Evm<'a, DB: Database + 'a, I: 'a> = ScrollEvm<'a, I, DB>;
 
     fn scroll_evm_for_block<'a, DB: Database>(
         &'a self,
@@ -238,6 +245,16 @@ impl ScrollConfigureEvm for ScrollEvmConfig {
         header: &'a Self::Header,
     ) -> <Self as ScrollConfigureEvm>::Evm<'a, DB, ()> {
         self.evm_for_block(db, header)
+    }
+
+    fn scroll_evm_for_block_with_inspector<'a, DB: Database, I: 'a + GetInspector<DB>>(
+        &'a self,
+        db: DB,
+        header: &'a Self::Header,
+        inspector: I,
+    ) -> <Self as ScrollConfigureEvm>::Evm<'a, DB, I> {
+        let evm_env = self.evm_env(header);
+        self.evm_with_env_and_inspector(db, evm_env, inspector)
     }
 }
 
@@ -248,7 +265,7 @@ pub(crate) trait ScrollEvmT {
     fn l1_fee(&self) -> Option<U256>;
 }
 
-impl<DB> ScrollEvmT for ScrollEvm<'_, (), DB>
+impl<EXT, DB> ScrollEvmT for ScrollEvm<'_, EXT, DB>
 where
     DB: Database,
 {

@@ -9465,6 +9465,7 @@ dependencies = [
  "reth-consensus",
  "reth-ethereum-consensus",
  "reth-evm",
+ "reth-execution-types",
  "reth-primitives",
  "reth-primitives-traits",
  "reth-revm",

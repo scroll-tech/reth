@@ -11,11 +11,13 @@ use reth_chainspec::EthereumHardforks;
 use reth_consensus::ConsensusError;
 use reth_evm::{
     execute::{
-        BasicBlockExecutorProvider, BlockExecutionError, BlockExecutionStrategy,
-        BlockExecutionStrategyFactory, BlockValidationError, ExecuteOutput,
+        BasicBlockExecutor, BasicBlockExecutorProvider, BlockExecutionError, BlockExecutionOutput,
+        BlockExecutionStrategy, BlockExecutionStrategyFactory, BlockValidationError, ExecuteOutput,
+        Executor,
     },
-    Database, Evm,
+    ConfigureEvm, ConfigureEvmEnv, Database, Evm,
 };
+use reth_execution_types::BlockExecutionResult;
 use reth_primitives::{gas_spent_by_transactions, GotExpected, InvalidTransactionError};
 use reth_primitives_traits::{BlockBody, NodePrimitives, RecoveredBlock, SignedTransaction};
 use reth_revm::primitives::U256;
@@ -24,8 +26,9 @@ use reth_scroll_consensus::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS};
 use reth_scroll_forks::{ScrollHardfork, ScrollHardforks};
 use reth_scroll_primitives::{transaction::signed::IsL1Message, ScrollPrimitives, ScrollReceipt};
 use revm::{
+    db::states::bundle_state::BundleRetention,
     primitives::{ExecutionResult, ResultAndState},
-    DatabaseCommit, State,
+    DatabaseCommit, GetInspector, Inspector, State,
 };
 use std::{fmt::Debug, sync::Arc};
 use tracing::trace;
@@ -52,6 +55,109 @@ where
         receipt_builder: Arc<dyn ScrollReceiptBuilder<N::SignedTx, Receipt = N::Receipt>>,
     ) -> Self {
         Self { evm_config, state, receipt_builder }
+    }
+}
+
+impl<DB, N, EvmConfig> ScrollExecutionStrategy<DB, N, EvmConfig>
+where
+    DB: Database,
+    N: NodePrimitives<BlockHeader = Header, Receipt = ScrollReceipt, SignedTx: IsL1Message>,
+    EvmConfig: ScrollConfigureEvm<Header = N::BlockHeader, Transaction = N::SignedTx>
+        + ChainSpecProvider<ChainSpec = ScrollChainSpec>,
+{
+    fn execute_transactions_with_inspector<'a, I: GetInspector<&'a mut State<DB>>>(
+        &'a mut self,
+        block: &RecoveredBlock<N::Block>,
+        inspector: I,
+    ) -> Result<ExecuteOutput<N::Receipt>, <Self as BlockExecutionStrategy>::Error> {
+        let mut evm = self.evm_config.scroll_evm_for_block_with_inspector(
+            &mut self.state,
+            block.header(),
+            inspector,
+        );
+
+        let mut cumulative_gas_used = 0;
+        let mut receipts = Vec::with_capacity(block.body().transactions().len());
+        let chain_spec = self.evm_config.chain_spec();
+
+        for (sender, transaction) in block.transactions_with_sender() {
+            // The sum of the transaction’s gas limit and the gas utilized in this block prior,
+            // must be no greater than the block’s gasLimit.
+            let block_available_gas = block.header().gas_limit - cumulative_gas_used;
+            if transaction.gas_limit() > block_available_gas {
+                return Err(BlockValidationError::TransactionGasLimitMoreThanAvailableBlockGas {
+                    transaction_gas_limit: transaction.gas_limit(),
+                    block_available_gas,
+                }
+                .into())
+            }
+
+            // verify the transaction type is accepted by the current fork.
+            if transaction.is_eip2930() && !chain_spec.is_curie_active_at_block(block.number) {
+                return Err(ScrollBlockExecutionError::consensus(
+                    ConsensusError::InvalidTransaction(InvalidTransactionError::Eip2930Disabled),
+                )
+                .into())
+            }
+            if transaction.is_eip1559() && !chain_spec.is_curie_active_at_block(block.number) {
+                return Err(ScrollBlockExecutionError::consensus(
+                    ConsensusError::InvalidTransaction(InvalidTransactionError::Eip1559Disabled),
+                )
+                .into())
+            }
+            if transaction.is_eip4844() {
+                return Err(ScrollBlockExecutionError::consensus(
+                    ConsensusError::InvalidTransaction(InvalidTransactionError::Eip4844Disabled),
+                )
+                .into())
+            }
+            if transaction.is_eip7702() {
+                return Err(ScrollBlockExecutionError::consensus(
+                    ConsensusError::InvalidTransaction(InvalidTransactionError::Eip7702Disabled),
+                )
+                .into())
+            }
+
+            let tx_env = self.evm_config.tx_env(transaction, *sender);
+
+            // disable the base fee checks for l1 messages.
+            evm.with_base_fee_check(!transaction.is_l1_message());
+
+            // execute the transaction and commit the result to the database
+            let ResultAndState { result, state } =
+                evm.transact(tx_env).map_err(|err| BlockValidationError::EVM {
+                    hash: transaction.recalculate_hash(),
+                    error: Box::new(err),
+                })?;
+            evm.db_mut().commit(state);
+
+            trace!(target: "evm", ?transaction, "executed transaction");
+
+            let l1_fee = if transaction.is_l1_message() {
+                // l1 messages do not get any gas refunded
+                if let ExecutionResult::Success { gas_refunded, .. } = result {
+                    cumulative_gas_used += gas_refunded
+                }
+
+                U256::ZERO
+            } else {
+                // compute l1 fee for all non-l1 transaction
+                evm.l1_fee().expect("l1 fee loaded")
+            };
+
+            cumulative_gas_used += result.gas_used();
+
+            let ctx = ReceiptBuilderCtx {
+                header: block.header(),
+                tx: transaction,
+                result,
+                cumulative_gas_used,
+                l1_fee,
+            };
+            receipts.push(self.receipt_builder.build_receipt(ctx))
+        }
+
+        Ok(ExecuteOutput { receipts, gas_used: cumulative_gas_used })
     }
 }
 
@@ -318,6 +424,45 @@ impl ScrollExecutorProvider {
             evm_config,
             receipt_builder,
         ))
+    }
+}
+
+pub trait ScrollExecutorWithInspector<'a, DB: 'a + Database>: Executor<DB> {
+    /// Consumes the type and executes the block.
+    ///
+    /// # Note
+    /// Execution happens without any validation of the output.
+    ///
+    /// # Returns
+    /// The output of the block execution.
+    fn execute_with_inspector<I: GetInspector<&'a mut State<DB>>>(
+        &'a mut self,
+        block: &RecoveredBlock<reth_scroll_primitives::ScrollBlock>,
+        inspector: I,
+    ) -> Result<BlockExecutionOutput<reth_scroll_primitives::ScrollReceipt>, BlockExecutionError>;
+}
+
+impl<'a, DB: 'a + Database> ScrollExecutorWithInspector<'a, DB>
+    for BasicBlockExecutor<ScrollExecutionStrategy<DB, ScrollPrimitives, ScrollEvmConfig>>
+where
+    DB: Database,
+{
+    fn execute_with_inspector<I: GetInspector<&'a mut State<DB>>>(
+        &'a mut self,
+        block: &RecoveredBlock<reth_scroll_primitives::ScrollBlock>,
+        inspector: I,
+    ) -> Result<BlockExecutionOutput<reth_scroll_primitives::ScrollReceipt>, BlockExecutionError>
+    {
+        self.strategy.apply_pre_execution_changes(block)?;
+        let ExecuteOutput { receipts, gas_used } =
+            { self.strategy.execute_transactions_with_inspector(block, inspector)? };
+        let requests = self.strategy.apply_post_execution_changes(block, &receipts)?;
+        self.strategy.state_mut().merge_transitions(BundleRetention::Reverts);
+
+        let result = BlockExecutionResult { receipts, requests, gas_used };
+        let mut state = self.into_state();
+
+        Ok(BlockExecutionOutput { state: state.take_bundle(), result })
     }
 }
 

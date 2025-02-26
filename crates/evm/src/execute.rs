@@ -280,7 +280,7 @@ where
 #[allow(missing_debug_implementations, dead_code)]
 pub struct BasicBlockExecutor<S> {
     /// Block execution strategy.
-    pub(crate) strategy: S,
+    pub strategy: S,
 }
 
 impl<S> BasicBlockExecutor<S> {
