@@ -47,8 +47,11 @@ impl<ChainSpec: ScrollHardforks> ScrollEvmConfig<ChainSpec> {
             ScrollSpecId::DARWIN
         } else if chain_spec.scroll_fork_activation(ScrollHardfork::Curie).active_at_head(head) {
             ScrollSpecId::CURIE
-        } else {
+        } else if chain_spec.scroll_fork_activation(ScrollHardfork::Bernoulli).active_at_head(head)
+        {
             ScrollSpecId::BERNOULLI
+        } else {
+            ScrollSpecId::SHANGHAI
         }
     }
 }
