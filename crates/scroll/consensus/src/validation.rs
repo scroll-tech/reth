@@ -175,7 +175,7 @@ fn validate_header_base_fee<H: BlockHeader, ChainSpec: ScrollHardforks>(
 /// we modify this validation compared to
 /// [`reth_consensus_common::validation::validate_against_parent_timestamp`].
 #[inline]
-pub fn validate_against_parent_timestamp<H: BlockHeader>(
+fn validate_against_parent_timestamp<H: BlockHeader>(
     header: &H,
     parent: &H,
 ) -> Result<(), ConsensusError> {
