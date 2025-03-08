@@ -206,7 +206,7 @@ impl ScrollHardfork {
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
-            (EthereumHardfork::London.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::London.boxed(), ForkCondition::Never),
             (Self::Archimedes.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Shanghai.boxed(), ForkCondition::Block(0)),
             (Self::Bernoulli.boxed(), ForkCondition::Block(3747132)),

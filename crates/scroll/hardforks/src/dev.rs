@@ -16,7 +16,7 @@ pub static DEV_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(|| {
         (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
-        (EthereumHardfork::London.boxed(), ForkCondition::Block(0)),
+        (EthereumHardfork::London.boxed(), ForkCondition::Never),
         (crate::ScrollHardfork::Archimedes.boxed(), ForkCondition::Block(0)),
         (EthereumHardfork::Shanghai.boxed(), ForkCondition::Timestamp(0)),
         (crate::ScrollHardfork::Bernoulli.boxed(), ForkCondition::Block(0)),
