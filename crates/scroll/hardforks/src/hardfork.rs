@@ -64,16 +64,16 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Homestead |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
-                EthereumHardfork::Byzantium |
-                EthereumHardfork::Constantinople |
-                EthereumHardfork::Petersburg |
-                EthereumHardfork::Istanbul |
-                EthereumHardfork::Berlin |
-                EthereumHardfork::London |
-                EthereumHardfork::Shanghai => Some(0),
+                EthereumHardfork::Homestead
+                | EthereumHardfork::Tangerine
+                | EthereumHardfork::SpuriousDragon
+                | EthereumHardfork::Byzantium
+                | EthereumHardfork::Constantinople
+                | EthereumHardfork::Petersburg
+                | EthereumHardfork::Istanbul
+                | EthereumHardfork::Berlin
+                | EthereumHardfork::London
+                | EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
@@ -92,16 +92,16 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Homestead |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
-                EthereumHardfork::Byzantium |
-                EthereumHardfork::Constantinople |
-                EthereumHardfork::Petersburg |
-                EthereumHardfork::Istanbul |
-                EthereumHardfork::Berlin |
-                EthereumHardfork::London |
-                EthereumHardfork::Shanghai => Some(0),
+                EthereumHardfork::Homestead
+                | EthereumHardfork::Tangerine
+                | EthereumHardfork::SpuriousDragon
+                | EthereumHardfork::Byzantium
+                | EthereumHardfork::Constantinople
+                | EthereumHardfork::Petersburg
+                | EthereumHardfork::Istanbul
+                | EthereumHardfork::Berlin
+                | EthereumHardfork::London
+                | EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
@@ -120,16 +120,16 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Homestead |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
-                EthereumHardfork::Byzantium |
-                EthereumHardfork::Constantinople |
-                EthereumHardfork::Petersburg |
-                EthereumHardfork::Istanbul |
-                EthereumHardfork::Berlin |
-                EthereumHardfork::London |
-                EthereumHardfork::Shanghai => Some(0),
+                EthereumHardfork::Homestead
+                | EthereumHardfork::Tangerine
+                | EthereumHardfork::SpuriousDragon
+                | EthereumHardfork::Byzantium
+                | EthereumHardfork::Constantinople
+                | EthereumHardfork::Petersburg
+                | EthereumHardfork::Istanbul
+                | EthereumHardfork::Berlin
+                | EthereumHardfork::London
+                | EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
@@ -148,16 +148,16 @@ impl ScrollHardfork {
         match_hardfork(
             fork,
             |fork| match fork {
-                EthereumHardfork::Homestead |
-                EthereumHardfork::Tangerine |
-                EthereumHardfork::SpuriousDragon |
-                EthereumHardfork::Byzantium |
-                EthereumHardfork::Constantinople |
-                EthereumHardfork::Petersburg |
-                EthereumHardfork::Istanbul |
-                EthereumHardfork::Berlin |
-                EthereumHardfork::London |
-                EthereumHardfork::Shanghai => Some(0),
+                EthereumHardfork::Homestead
+                | EthereumHardfork::Tangerine
+                | EthereumHardfork::SpuriousDragon
+                | EthereumHardfork::Byzantium
+                | EthereumHardfork::Constantinople
+                | EthereumHardfork::Petersburg
+                | EthereumHardfork::Istanbul
+                | EthereumHardfork::Berlin
+                | EthereumHardfork::London
+                | EthereumHardfork::Shanghai => Some(0),
                 _ => None,
             },
             |fork| match fork {
@@ -199,14 +199,17 @@ impl ScrollHardfork {
     pub fn scroll_sepolia() -> ChainHardforks {
         ChainHardforks::new(vec![
             (EthereumHardfork::Homestead.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::Dao.boxed(), ForkCondition::Never),
             (EthereumHardfork::Tangerine.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::SpuriousDragon.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Byzantium.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Constantinople.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Petersburg.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Istanbul.boxed(), ForkCondition::Block(0)),
+            (EthereumHardfork::MuirGlacier.boxed(), ForkCondition::Never),
             (EthereumHardfork::Berlin.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::London.boxed(), ForkCondition::Never),
+            (EthereumHardfork::ArrowGlacier.boxed(), ForkCondition::Never),
             (Self::Archimedes.boxed(), ForkCondition::Block(0)),
             (EthereumHardfork::Shanghai.boxed(), ForkCondition::Block(0)),
             (Self::Bernoulli.boxed(), ForkCondition::Block(3747132)),
