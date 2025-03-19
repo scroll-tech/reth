@@ -151,6 +151,7 @@ impl ConfigureEvmEnv for ScrollEvmConfig {
         });
 
         let mut cfg_env = CfgEnv::default();
+        cfg_env.disable_eip3607 = true;
         cfg_env.chain_id = self.chain_spec.chain().id();
         cfg_env.perf_analyse_created_bytecodes = AnalysisKind::default();
 
