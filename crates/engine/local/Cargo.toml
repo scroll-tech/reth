@@ -32,6 +32,7 @@ alloy-rpc-types-engine.workspace = true
 
 # scroll
 scroll-alloy-rpc-types-engine = { workspace = true, optional = true }
+reth-scroll-chainspec = { workspace = true, optional = true }
 
 # async
 tokio.workspace = true
@@ -57,6 +58,7 @@ op = [
 ]
 scroll-alloy-traits = [
     "dep:scroll-alloy-rpc-types-engine",
+    "dep:reth-scroll-chainspec",
     "reth-evm/scroll-alloy-traits",
     "reth-payload-primitives/scroll-alloy-traits",
 ]

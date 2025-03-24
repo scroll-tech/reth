@@ -68,11 +68,20 @@ where
 impl<ChainSpec> PayloadAttributesBuilder<scroll_alloy_rpc_types_engine::ScrollPayloadAttributes>
     for LocalPayloadAttributesBuilder<ChainSpec>
 where
-    ChainSpec: Send + Sync + EthereumHardforks + 'static,
+    ChainSpec: Send
+        + Sync
+        + reth_scroll_chainspec::ChainConfig<Config = reth_scroll_chainspec::ScrollChainConfig>
+        + EthereumHardforks
+        + 'static,
 {
     fn build(&self, timestamp: u64) -> scroll_alloy_rpc_types_engine::ScrollPayloadAttributes {
+        let mut payload_attributes: alloy_rpc_types_engine::PayloadAttributes =
+            self.build(timestamp);
+        if let Some(coinbase) = self.chain_spec.chain_config().fee_vault_address {
+            payload_attributes.suggested_fee_recipient = coinbase;
+        }
         scroll_alloy_rpc_types_engine::ScrollPayloadAttributes {
-            payload_attributes: self.build(timestamp),
+            payload_attributes,
             transactions: None,
             no_tx_pool: false,
         }

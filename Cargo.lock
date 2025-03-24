@@ -7579,6 +7579,7 @@ dependencies = [
  "reth-payload-primitives",
  "reth-provider",
  "reth-prune",
+ "reth-scroll-chainspec",
  "reth-stages-api",
  "reth-transaction-pool",
  "scroll-alloy-rpc-types-engine",
