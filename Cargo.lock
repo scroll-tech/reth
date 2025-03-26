@@ -9958,7 +9958,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "19.4.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/feat/v55/euclid-upgrade#44b3191164a5e31adc18b852cfeb2903632691ed"
+source = "git+https://github.com/scroll-tech/revm.git?branch=rohit/dbg-pairing#1d83448db49bf698d08c82b10bfb89fbeb0cb84b"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -9993,7 +9993,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "15.1.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/feat/v55/euclid-upgrade#44b3191164a5e31adc18b852cfeb2903632691ed"
+source = "git+https://github.com/scroll-tech/revm.git?branch=rohit/dbg-pairing#1d83448db49bf698d08c82b10bfb89fbeb0cb84b"
 dependencies = [
  "revm-primitives",
  "serde",
@@ -10002,7 +10002,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "16.0.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/feat/v55/euclid-upgrade#44b3191164a5e31adc18b852cfeb2903632691ed"
+source = "git+https://github.com/scroll-tech/revm.git?branch=rohit/dbg-pairing#1d83448db49bf698d08c82b10bfb89fbeb0cb84b"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -10021,7 +10021,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "15.1.0"
-source = "git+https://github.com/scroll-tech/revm.git?branch=scroll-evm-executor/feat/v55/euclid-upgrade#44b3191164a5e31adc18b852cfeb2903632691ed"
+source = "git+https://github.com/scroll-tech/revm.git?branch=rohit/dbg-pairing#1d83448db49bf698d08c82b10bfb89fbeb0cb84b"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
