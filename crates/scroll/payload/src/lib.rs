@@ -2,8 +2,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod builder;
-pub use builder::{ScrollEmptyPayloadBuilder, ScrollPayloadTransactions};
+#[cfg(not(feature = "std"))]
+extern crate alloc as std;
+
+pub mod builder;
+pub use builder::{ScrollEmptyPayloadBuilder, ScrollPayloadBuilder, ScrollPayloadTransactions};
+
+mod error;
+pub use error::ScrollPayloadBuilderError;
+
+mod traits;
 
 #[cfg(feature = "test-utils")]
 mod test_utils;

@@ -1,6 +1,7 @@
 //! Payload related types
 
 use alloc::vec::Vec;
+use std::fmt::Debug;
 
 use alloy_eips::{eip2718::Decodable2718, eip4895::Withdrawals};
 use alloy_primitives::{keccak256, Address, B256};
@@ -136,6 +137,12 @@ pub(crate) fn payload_id_scroll(
     let mut out = hasher.finalize();
     out[0] = payload_version;
     PayloadId::new(out.as_slice()[..8].try_into().expect("sufficient length"))
+}
+
+impl From<EthPayloadBuilderAttributes> for ScrollPayloadBuilderAttributes {
+    fn from(value: EthPayloadBuilderAttributes) -> Self {
+        Self { payload_attributes: value, ..Default::default() }
+    }
 }
 
 #[cfg(test)]
