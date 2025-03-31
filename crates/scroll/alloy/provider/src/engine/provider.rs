@@ -112,6 +112,7 @@ mod tests {
     };
     use reth_scroll_node::ScrollEngineValidator;
     use reth_scroll_payload::NoopPayloadJobGenerator;
+    use reth_scroll_primitives::ScrollTransactionSigned;
     use reth_tasks::TokioTaskExecutor;
     use reth_transaction_pool::noop::NoopTransactionPool;
     use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -120,12 +121,15 @@ mod tests {
     fn spawn_test_payload_service<T>() -> PayloadBuilderHandle<T>
     where
         T: PayloadTypes<
-                PayloadBuilderAttributes = ScrollPayloadBuilderAttributes,
+                PayloadBuilderAttributes = ScrollPayloadBuilderAttributes<ScrollTransactionSigned>,
                 BuiltPayload = ScrollBuiltPayload,
             > + 'static,
     {
         let (service, handle) = PayloadBuilderService::<
-            NoopPayloadJobGenerator<ScrollPayloadBuilderAttributes, ScrollBuiltPayload>,
+            NoopPayloadJobGenerator<
+                ScrollPayloadBuilderAttributes<ScrollTransactionSigned>,
+                ScrollBuiltPayload,
+            >,
             futures_util::stream::Empty<CanonStateNotification>,
             T,
         >::new(Default::default(), futures_util::stream::empty());

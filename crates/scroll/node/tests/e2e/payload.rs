@@ -7,7 +7,8 @@ use tokio::sync::Mutex;
 async fn can_sync() -> eyre::Result<()> {
     reth_tracing::init_test_tracing();
 
-    let (node, _tasks, wallet) = setup(true).await?;
+    let (mut node, _tasks, wallet) = setup(1).await?;
+    let mut node = node.pop().unwrap();
     let wallet = Arc::new(Mutex::new(wallet));
 
     let tip: usize = 90;

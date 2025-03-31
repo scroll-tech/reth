@@ -10,22 +10,33 @@ use alloy_rpc_types_engine::PayloadId;
 use reth_payload_builder::EthPayloadBuilderAttributes;
 use reth_payload_primitives::PayloadBuilderAttributes;
 use reth_primitives::transaction::WithEncoded;
-use reth_scroll_primitives::ScrollTransactionSigned;
 use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 
 /// Scroll Payload Builder Attributes
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ScrollPayloadBuilderAttributes {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScrollPayloadBuilderAttributes<T> {
     /// Inner ethereum payload builder attributes
     pub payload_attributes: EthPayloadBuilderAttributes,
     /// `NoTxPool` option for the generated payload
     pub no_tx_pool: bool,
     /// Decoded transactions and the original EIP-2718 encoded bytes as received in the payload
     /// attributes.
-    pub transactions: Vec<WithEncoded<ScrollTransactionSigned>>,
+    pub transactions: Vec<WithEncoded<T>>,
 }
 
-impl PayloadBuilderAttributes for ScrollPayloadBuilderAttributes {
+impl<T> Default for ScrollPayloadBuilderAttributes<T> {
+    fn default() -> Self {
+        Self {
+            payload_attributes: Default::default(),
+            no_tx_pool: false,
+            transactions: Default::default(),
+        }
+    }
+}
+
+impl<T: Decodable2718 + Send + Sync + Debug> PayloadBuilderAttributes
+    for ScrollPayloadBuilderAttributes<T>
+{
     type RpcPayloadAttributes = ScrollPayloadAttributes;
     type Error = alloy_rlp::Error;
 
@@ -139,7 +150,7 @@ pub(crate) fn payload_id_scroll(
     PayloadId::new(out.as_slice()[..8].try_into().expect("sufficient length"))
 }
 
-impl From<EthPayloadBuilderAttributes> for ScrollPayloadBuilderAttributes {
+impl<T> From<EthPayloadBuilderAttributes> for ScrollPayloadBuilderAttributes<T> {
     fn from(value: EthPayloadBuilderAttributes) -> Self {
         Self { payload_attributes: value, ..Default::default() }
     }

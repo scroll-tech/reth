@@ -3,16 +3,17 @@ use alloy_genesis::Genesis;
 use alloy_primitives::{Address, B256};
 use alloy_rpc_types_engine::PayloadAttributes;
 use reth_e2e_test_utils::{
-    node::NodeTestContext, transaction::TransactionTestContext, wallet::Wallet, NodeBuilderHelper,
-    NodeHelperType, TmpDB,
+    node::NodeTestContext, transaction::TransactionTestContext, wallet::Wallet, NodeHelperType,
+    TmpDB,
 };
-use reth_node_api::NodeTypesWithDBAdapter;
+use reth_node_api::{NodePrimitives, NodeTypes, NodeTypesWithDBAdapter};
 use reth_node_builder::{Node, NodeBuilder, NodeConfig, NodeHandle};
 use reth_node_core::args::{DiscoveryArgs, NetworkArgs, RpcServerArgs};
 use reth_payload_builder::EthPayloadBuilderAttributes;
 use reth_provider::providers::BlockchainProvider;
 use reth_rpc_server_types::RpcModuleSelection;
 use reth_scroll_chainspec::{ScrollChainSpec, ScrollChainSpecBuilder};
+use reth_scroll_primitives::ScrollPrimitives;
 use reth_tasks::TaskManager;
 use reth_transaction_pool::PeerId;
 use std::sync::Arc;
@@ -24,51 +25,23 @@ pub(crate) type ScrollNode = NodeHelperType<
     BlockchainProvider<NodeTypesWithDBAdapter<OtherScrollNode, TmpDB>>,
 >;
 
-pub async fn setup_engine(
-    chain_spec: Arc<ScrollChainSpec>,
-    is_dev: bool,
-) -> eyre::Result<(ScrollNode, TaskManager, PeerId)> {
-    // Create a [`TaskManager`] to manage the tasks.
-    let tasks = TaskManager::current();
-    let exec = tasks.executor();
-
-    // Define the network configuration with discovery disabled.
-    let network_config = NetworkArgs {
-        discovery: DiscoveryArgs { disable_discovery: true, ..DiscoveryArgs::default() },
-        ..NetworkArgs::default()
-    };
-
-    // Create the node config
-    let node_config = NodeConfig::new(chain_spec.clone())
-        .with_network(network_config.clone())
-        .with_rpc(RpcServerArgs::default().with_http().with_http_api(RpcModuleSelection::All))
-        .set_dev(is_dev);
-
-    // Create the node for a bridge node that will bridge messages from the eth-wire protocol
-    // to the scroll-wire protocol.
-    let node = OtherScrollNode;
-    let NodeHandle { node, node_exit_future: _ } = NodeBuilder::new(node_config.clone())
-        .testing_node(exec.clone())
-        .with_types_and_provider::<OtherScrollNode, BlockchainProvider<_>>()
-        .with_components(node.components_builder())
-        .with_add_ons(node.add_ons())
-        .launch()
-        .await?;
-    let peer_id = *node.network.peer_id();
-    let node = NodeTestContext::new(node, scroll_payload_attributes).await?;
-
-    Ok((node, tasks, peer_id))
-}
-
 /// Creates the initial setup with `num_nodes` of the node config, started and connected.
-pub async fn setup(is_dev: bool) -> eyre::Result<(ScrollNode, TaskManager, Wallet)> {
+pub async fn setup(num_nodes: usize) -> eyre::Result<(Vec<ScrollNode>, TaskManager, Wallet)> {
     let genesis: Genesis =
         serde_json::from_str(include_str!("../tests/assets/genesis.json")).unwrap();
-    let chain_spec =
-        ScrollChainSpecBuilder::scroll_mainnet().genesis(genesis).build(Default::default());
-    let chain_id = chain_spec.chain().into();
-    let (node, task_manager, _peer_id) = setup_engine(Arc::new(chain_spec), is_dev).await.unwrap();
-    Ok((node, task_manager, Wallet::default().with_chain_id(chain_id)))
+    println!("{:?}", genesis);
+    reth_e2e_test_utils::setup_engine(
+        num_nodes,
+        Arc::new(
+            ScrollChainSpecBuilder::scroll_mainnet()
+                .genesis(genesis)
+                .darwin_v2_activated()
+                .build(Default::default()),
+        ),
+        false,
+        scroll_payload_attributes::<ScrollPrimitives>,
+    )
+    .await
 }
 
 /// Advance the chain with sequential payloads returning them in the end.
@@ -94,7 +67,9 @@ pub async fn advance_chain(
 }
 
 /// Helper function to create a new eth payload attributes
-pub fn scroll_payload_attributes(timestamp: u64) -> ScrollPayloadBuilderAttributes {
+pub fn scroll_payload_attributes<N: NodePrimitives>(
+    timestamp: u64,
+) -> ScrollPayloadBuilderAttributes<N::SignedTx> {
     let attributes = PayloadAttributes {
         timestamp,
         prev_randao: B256::ZERO,

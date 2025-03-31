@@ -15,9 +15,6 @@ pub use addons::{ScrollAddOns, ScrollAddOnsBuilder};
 mod node;
 pub use node::ScrollNode;
 
-mod pool;
-pub use pool::{ScrollNoopTransactionPool, ScrollPooledTransaction};
-
 mod storage;
 pub use storage::ScrollStorage;
 

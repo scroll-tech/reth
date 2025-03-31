@@ -15,6 +15,8 @@ workspace = true
 # reth
 reth-basic-payload-builder.workspace = true
 reth-chainspec.workspace = true
+reth-db = { workspace = true, features = ["scroll-alloy-traits"] }
+reth-engine-local = { workspace = true, features = ["scroll-alloy-traits"] }
 reth-rpc-eth-types.workspace = true
 reth-eth-wire-types.workspace = true
 reth-evm = { workspace = true, features = ["scroll-alloy-traits"] }
@@ -50,6 +52,7 @@ reth-scroll-evm.workspace = true
 reth-scroll-payload.workspace = true
 reth-scroll-primitives = { workspace = true, features = ["serde", "serde-bincode-compat", "reth-codec"] }
 reth-scroll-rpc.workspace = true
+reth-scroll-txpool.workspace = true
 scroll-alloy-consensus.workspace = true
 scroll-alloy-evm.workspace = true
 scroll-alloy-hardforks.workspace = true
@@ -62,6 +65,7 @@ alloy-genesis = { workspace = true, optional = true }
 # misc
 eyre.workspace = true
 serde_json = { workspace = true, optional = true }
+tracing.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 
@@ -81,11 +85,9 @@ alloy-consensus.workspace = true
 futures.workspace = true
 
 [features]
-default = ["reth-codec"]
+default = ["reth-codec", "scroll-alloy-traits"]
 reth-codec = [
-    "reth-primitives/reth-codec",
-    "reth-primitives-traits/reth-codec",
-    "reth-scroll-primitives/reth-codec",
+    "reth-scroll-primitives/reth-codec"
 ]
 skip-state-root-validation = [
     "reth-provider/skip-state-root-validation",
@@ -112,4 +114,10 @@ test-utils = [
 	"reth-db/test-utils",
 	"reth-revm/test-utils",
 	"reth-scroll-node/test-utils"
+]
+scroll-alloy-traits = [
+	"reth-db/scroll-alloy-traits",
+	"reth-evm/scroll-alloy-traits",
+	"reth-primitives-traits/scroll-alloy-traits",
+	"reth-scroll-node/scroll-alloy-traits"
 ]

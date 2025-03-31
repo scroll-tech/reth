@@ -22,7 +22,7 @@ use reth_payload_primitives::{BuiltPayload, PayloadTypes};
 use reth_primitives::{Block, BlockBody, Header};
 use reth_primitives_traits::{NodePrimitives, SealedBlock};
 use reth_scroll_chainspec::ScrollChainSpec;
-use reth_scroll_primitives::ScrollBlock;
+use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
 use scroll_alloy_hardforks::ScrollHardfork;
 use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 
@@ -74,13 +74,16 @@ where
 /// A default payload type for [`ScrollEngineTypes`]
 #[derive(Debug, Default, Clone, serde::Deserialize, serde::Serialize)]
 #[non_exhaustive]
-pub struct ScrollPayloadTypes;
+pub struct ScrollPayloadTypes<N: NodePrimitives = ScrollPrimitives>(core::marker::PhantomData<N>);
 
-impl PayloadTypes for ScrollPayloadTypes {
+impl<N: NodePrimitives> PayloadTypes for ScrollPayloadTypes<N>
+where
+    ScrollBuiltPayload<N>: BuiltPayload<Primitives: NodePrimitives<Block = ScrollBlock>>,
+{
     type ExecutionData = ExecutionData;
-    type BuiltPayload = ScrollBuiltPayload;
+    type BuiltPayload = ScrollBuiltPayload<N>;
     type PayloadAttributes = ScrollPayloadAttributes;
-    type PayloadBuilderAttributes = ScrollPayloadBuilderAttributes;
+    type PayloadBuilderAttributes = ScrollPayloadBuilderAttributes<N::SignedTx>;
 
     fn block_to_payload(
         block: SealedBlock<

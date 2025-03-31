@@ -39,7 +39,7 @@ impl ScrollNode {
     {
         ComponentsBuilder::default()
             .node_types::<Node>()
-            .pool(ScrollPoolBuilder)
+            .pool(ScrollPoolBuilder::default())
             .payload(BasicPayloadServiceBuilder::new(ScrollPayloadBuilder::default()))
             .network(ScrollNetworkBuilder)
             .executor(ScrollExecutorBuilder)
