@@ -11,8 +11,6 @@ pub use builder::{ScrollPayloadBuilder, ScrollPayloadTransactions};
 mod error;
 pub use error::ScrollPayloadBuilderError;
 
-mod traits;
-
 #[cfg(feature = "test-utils")]
 mod test_utils;
 #[cfg(feature = "test-utils")]

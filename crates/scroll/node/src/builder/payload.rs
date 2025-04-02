@@ -16,7 +16,7 @@ pub struct ScrollPayloadBuilder<Txs = ()> {
 }
 
 impl<Txs> ScrollPayloadBuilder<Txs> {
-    /// A helper method to initialize [`reth_optimism_payload_builder::OpPayloadBuilder`] with the
+    /// A helper method to initialize [`reth_scroll_payload::ScrollPayloadBuilder`] with the
     /// given EVM config.
     pub fn build<Node, Evm, Pool>(
         self,
@@ -49,49 +49,6 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
     }
 }
 
-// impl<Node, Pool, Txs> PayloadServiceBuilder<Node, Pool> for ScrollPayloadBuilder<Txs>
-// where
-//     Node: FullNodeTypes,
-//     Node::Types: NodeTypesWithEngine<
-//         Primitives = ScrollPrimitives,
-//         Engine = ScrollEngineTypes,
-//         ChainSpec = ScrollChainSpec,
-//     >,
-//     Pool: TransactionPool<Transaction: PoolTransaction<Consensus = TxTy<Node::Types>>>
-//         + Unpin
-//         + 'static,
-//     Txs: ScrollPayloadTransactions<Pool::Transaction>,
-// {
-//     async fn spawn_payload_builder_service(
-//         self,
-//         ctx: &BuilderContext<Node>,
-//         _pool: Pool,
-//     ) -> eyre::Result<PayloadBuilderHandle<<Node::Types as NodeTypesWithEngine>::Engine>> {
-//         let payload_builder = reth_scroll_payload::ScrollPayloadBuilder::default();
-
-//         let conf = ctx.config().builder.clone();
-
-//         let payload_job_config = BasicPayloadJobGeneratorConfig::default()
-//             .interval(conf.interval)
-//             .deadline(conf.deadline)
-//             .max_payload_tasks(conf.max_payload_tasks);
-
-//         let payload_generator = BasicPayloadJobGenerator::with_builder(
-//             ctx.provider().clone(),
-//             ctx.task_executor().clone(),
-//             payload_job_config,
-//             payload_builder,
-//         );
-//         let (payload_service, payload_service_handle) =
-//             PayloadBuilderService::new(payload_generator,
-// ctx.provider().canonical_state_stream());
-
-//         ctx.task_executor().spawn_critical("payload builder service", Box::pin(payload_service));
-
-//         Ok(payload_service_handle)
-//     }
-// }
-
 impl<Node, Pool, Txs> PayloadBuilderBuilder<Node, Pool> for ScrollPayloadBuilder<Txs>
 where
     Node: FullNodeTypes<
@@ -105,7 +62,6 @@ where
         + Unpin
         + 'static,
     Txs: ScrollPayloadTransactions<Pool::Transaction>,
-    <Pool as TransactionPool>::Transaction: PoolTransaction<Consensus = ScrollTransactionSigned>,
 {
     type PayloadBuilder =
         reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, ScrollEvmConfig, Txs>;

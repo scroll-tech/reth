@@ -10001,7 +10001,6 @@ dependencies = [
  "derive_more 2.0.1",
  "futures-util",
  "metrics",
- "op-alloy-flz",
  "parking_lot",
  "reth-chain-state",
  "reth-chainspec",

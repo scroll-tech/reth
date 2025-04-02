@@ -12,7 +12,7 @@ use reth_transaction_pool::{
 };
 use scroll_alloy_hardforks::ScrollHardforks;
 
-/// A basic optimism transaction pool.
+/// A basic scroll transaction pool.
 ///
 /// This contains various settings that can be configured and take precedence over the node's
 /// config.

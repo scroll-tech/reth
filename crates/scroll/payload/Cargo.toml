@@ -43,9 +43,9 @@ reth-payload-util.workspace = true
 # scroll
 reth-scroll-primitives.workspace = true
 reth-scroll-engine-primitives.workspace = true
-futures-util = { workspace = true, optional = true }
 
 # misc
+futures-util = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 

@@ -1,6 +1,6 @@
 //! Scroll's payload builder implementation.
 
-use super::{traits::ScrollPayloadPrimitives, ScrollPayloadBuilderError};
+use super::ScrollPayloadBuilderError;
 use alloy_consensus::{Transaction, Typed2718};
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
@@ -67,7 +67,7 @@ pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
 }
 
 impl<Pool, Evm, Client> ScrollPayloadBuilder<Pool, Client, Evm> {
-    /// Creates a new `ScrollPayloadBuilder`.
+    /// Creates a new [`ScrollPayloadBuilder`].
     pub fn new(pool: Pool, evm_config: Evm, client: Client) -> Self {
         Self { evm_config, pool, client, best_transactions: () }
     }
@@ -303,8 +303,7 @@ pub struct ScrollPayloadBuilderCtx<Evm: ConfigureEvm, ChainSpec> {
 
 impl<Evm, ChainSpec> ScrollPayloadBuilderCtx<Evm, ChainSpec>
 where
-    Evm:
-        ConfigureEvm<Primitives: ScrollPayloadPrimitives, NextBlockEnvCtx = NextBlockEnvAttributes>,
+    Evm: ConfigureEvm<Primitives = ScrollPrimitives, NextBlockEnvCtx = NextBlockEnvAttributes>,
     ChainSpec: EthChainSpec + ScrollHardforks,
 {
     /// Returns the parent block the payload will be build on.
@@ -318,23 +317,6 @@ where
         &self.config.attributes
     }
 
-    // Returns the extra data for the block.
-    //
-    // After holocene this extracts the extra data from the payload
-    // pub fn extra_data(&self) -> Result<Bytes, PayloadBuilderError> {
-    //     if self.is_holocene_active() {
-    //         self.attributes()
-    //             .get_holocene_extra_data(
-    //                 self.chain_spec.base_fee_params_at_timestamp(
-    //                     self.attributes().payload_attributes.timestamp,
-    //                 ),
-    //             )
-    //             .map_err(PayloadBuilderError::other)
-    //     } else {
-    //         Ok(Default::default())
-    //     }
-    // }
-
     /// Returns the current fee settings for transactions from the mempool
     pub fn best_transaction_attributes(&self, block_env: &BlockEnv) -> BestTransactionsAttributes {
         BestTransactionsAttributes::new(
@@ -347,11 +329,6 @@ where
     pub fn payload_id(&self) -> PayloadId {
         self.attributes().payload_id()
     }
-
-    // Returns true if holocene is active for the payload.
-    // pub fn is_holocene_active(&self) -> bool {
-    //     self.chain_spec.is_holocene_active_at_timestamp(self.attributes().timestamp())
-    // }
 
     /// Returns true if the fees are higher than the previous payload.
     pub fn is_better_payload(&self, total_fees: U256) -> bool {
@@ -536,10 +513,6 @@ impl ExecutionInfo {
 
     /// Returns true if the transaction would exceed the block limits:
     /// - block gas limit: ensures the transaction still fits into the block.
-    /// - tx DA limit: if configured, ensures the tx does not exceed the maximum allowed DA limit
-    ///   per tx.
-    /// - block DA limit: if configured, ensures the transaction's DA size does not exceed the
-    ///   maximum allowed DA limit per block.
     pub fn is_tx_over_limits(
         &self,
         tx: &(impl Encodable + Transaction),

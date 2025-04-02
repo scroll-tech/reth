@@ -18,11 +18,7 @@
         "bedrockBlock": 0,
         "regolithTime": 0,
         "terminalTotalDifficulty": 0,
-        "terminalTotalDifficultyPassed": true,
-        "optimism": {
-            "eip1559Elasticity": 6,
-            "eip1559Denominator": 50
-        }
+        "terminalTotalDifficultyPassed": true
     },
     "nonce": "0x0",
     "timestamp": "0x0",

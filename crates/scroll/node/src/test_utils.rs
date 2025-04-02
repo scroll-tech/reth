@@ -14,7 +14,7 @@ use reth_tasks::TaskManager;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-/// Optimism Node Helper type
+/// Scroll Node Helper type
 pub(crate) type ScrollNode = NodeHelperType<
     OtherScrollNode,
     BlockchainProvider<NodeTypesWithDBAdapter<OtherScrollNode, TmpDB>>,

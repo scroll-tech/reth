@@ -106,7 +106,7 @@ impl ScrollPooledTransaction {
         }
     }
 
-    /// Converts the transaction into the optimism [`ScrollTxEnvelope`].
+    /// Converts the transaction into the scroll [`ScrollTxEnvelope`].
     pub fn into_op_envelope(self) -> ScrollTxEnvelope {
         match self {
             Self::Legacy(tx) => tx.into(),
