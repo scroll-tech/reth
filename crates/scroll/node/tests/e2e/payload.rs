@@ -6,14 +6,14 @@ use tokio::sync::Mutex;
 async fn can_sync() -> eyre::Result<()> {
     reth_tracing::init_test_tracing();
 
-    let (mut node, _tasks, wallet) = setup(3, false).await?;
+    let (mut node, _tasks, wallet) = setup(1, false).await?;
     let mut node = node.pop().unwrap();
     let wallet = Arc::new(Mutex::new(wallet));
 
     let tip: usize = 90;
 
-    // On first node, create a chain up to block number 90a
-    let canonical_payload_chain = advance_chain(tip, &mut node, wallet.clone()).await?;
+    // Create a chain of 90 blocks
+    let _canonical_payload_chain = advance_chain(tip, &mut node, wallet.clone()).await?;
 
     Ok(())
 }

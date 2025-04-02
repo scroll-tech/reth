@@ -3,7 +3,6 @@
 use core::iter;
 use std::sync::Arc;
 
-use alloy_consensus::Block;
 use alloy_eips::eip7685::Requests;
 use alloy_primitives::U256;
 use alloy_rpc_types_engine::{
@@ -13,29 +12,28 @@ use alloy_rpc_types_engine::{
 };
 use reth_chain_state::ExecutedBlockWithTrieUpdates;
 use reth_payload_primitives::BuiltPayload;
-use reth_primitives::NodePrimitives;
-use reth_primitives_traits::{SealedBlock, SignedTransaction};
-use reth_scroll_primitives::ScrollPrimitives;
+use reth_primitives_traits::SealedBlock;
+use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
 
 /// Contains the built payload.
 #[derive(Debug, Clone, Default)]
-pub struct ScrollBuiltPayload<N: NodePrimitives = ScrollPrimitives> {
+pub struct ScrollBuiltPayload {
     /// Identifier of the payload
     pub(crate) id: PayloadId,
     /// Sealed block
-    pub(crate) block: Arc<SealedBlock<N::Block>>,
+    pub(crate) block: Arc<SealedBlock<ScrollBlock>>,
     /// Block execution data for the payload
-    pub(crate) executed_block: Option<ExecutedBlockWithTrieUpdates<N>>,
+    pub(crate) executed_block: Option<ExecutedBlockWithTrieUpdates<ScrollPrimitives>>,
     /// The fees of the block
     pub(crate) fees: U256,
 }
 
-impl<N: NodePrimitives> ScrollBuiltPayload<N> {
+impl ScrollBuiltPayload {
     /// Initializes the payload with the given initial block.
     pub const fn new(
         id: PayloadId,
-        block: Arc<SealedBlock<N::Block>>,
-        executed_block: Option<ExecutedBlockWithTrieUpdates<N>>,
+        block: Arc<SealedBlock<ScrollBlock>>,
+        executed_block: Option<ExecutedBlockWithTrieUpdates<ScrollPrimitives>>,
         fees: U256,
     ) -> Self {
         Self { id, block, executed_block, fees }
@@ -48,7 +46,7 @@ impl<N: NodePrimitives> ScrollBuiltPayload<N> {
 
     /// Returns the built block(sealed)
     #[allow(clippy::missing_const_for_fn)]
-    pub fn block(&self) -> &SealedBlock<N::Block> {
+    pub fn block(&self) -> &SealedBlock<ScrollBlock> {
         &self.block
     }
 
@@ -58,15 +56,15 @@ impl<N: NodePrimitives> ScrollBuiltPayload<N> {
     }
 
     /// Converts the value into [`SealedBlock`].
-    pub fn into_sealed_block(self) -> SealedBlock<N::Block> {
+    pub fn into_sealed_block(self) -> SealedBlock<ScrollBlock> {
         Arc::unwrap_or_clone(self.block)
     }
 }
 
-impl<N: NodePrimitives> BuiltPayload for ScrollBuiltPayload<N> {
-    type Primitives = N;
+impl BuiltPayload for ScrollBuiltPayload {
+    type Primitives = ScrollPrimitives;
 
-    fn block(&self) -> &SealedBlock<N::Block> {
+    fn block(&self) -> &SealedBlock<ScrollBlock> {
         self.block()
     }
 
@@ -74,7 +72,7 @@ impl<N: NodePrimitives> BuiltPayload for ScrollBuiltPayload<N> {
         self.fees
     }
 
-    fn executed_block(&self) -> Option<ExecutedBlockWithTrieUpdates<N>> {
+    fn executed_block(&self) -> Option<ExecutedBlockWithTrieUpdates<Self::Primitives>> {
         self.executed_block.clone()
     }
 
@@ -84,12 +82,8 @@ impl<N: NodePrimitives> BuiltPayload for ScrollBuiltPayload<N> {
 }
 
 // V1 engine_getPayloadV1 response
-impl<T, N> From<ScrollBuiltPayload<N>> for ExecutionPayloadV1
-where
-    T: SignedTransaction,
-    N: NodePrimitives<Block = Block<T>>,
-{
-    fn from(value: ScrollBuiltPayload<N>) -> Self {
+impl From<ScrollBuiltPayload> for ExecutionPayloadV1 {
+    fn from(value: ScrollBuiltPayload) -> Self {
         Self::from_block_unchecked(
             value.block().hash(),
             &Arc::unwrap_or_clone(value.block).into_block(),
@@ -98,12 +92,8 @@ where
 }
 
 // V2 engine_getPayloadV2 response
-impl<T, N> From<ScrollBuiltPayload<N>> for ExecutionPayloadEnvelopeV2
-where
-    T: SignedTransaction,
-    N: NodePrimitives<Block = Block<T>>,
-{
-    fn from(value: ScrollBuiltPayload<N>) -> Self {
+impl From<ScrollBuiltPayload> for ExecutionPayloadEnvelopeV2 {
+    fn from(value: ScrollBuiltPayload) -> Self {
         let ScrollBuiltPayload { block, fees, .. } = value;
 
         Self {
@@ -116,12 +106,8 @@ where
     }
 }
 
-impl<T, N> From<ScrollBuiltPayload<N>> for ExecutionPayloadEnvelopeV3
-where
-    T: SignedTransaction,
-    N: NodePrimitives<Block = Block<T>>,
-{
-    fn from(value: ScrollBuiltPayload<N>) -> Self {
+impl From<ScrollBuiltPayload> for ExecutionPayloadEnvelopeV3 {
+    fn from(value: ScrollBuiltPayload) -> Self {
         let ScrollBuiltPayload { block, fees, .. } = value;
 
         Self {
@@ -143,12 +129,8 @@ where
         }
     }
 }
-impl<T, N> From<ScrollBuiltPayload<N>> for ExecutionPayloadEnvelopeV4
-where
-    T: SignedTransaction,
-    N: NodePrimitives<Block = Block<T>>,
-{
-    fn from(value: ScrollBuiltPayload<N>) -> Self {
+impl From<ScrollBuiltPayload> for ExecutionPayloadEnvelopeV4 {
+    fn from(value: ScrollBuiltPayload) -> Self {
         Self { envelope_inner: value.into(), execution_requests: Default::default() }
     }
 }

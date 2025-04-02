@@ -3,19 +3,14 @@ use alloy_genesis::Genesis;
 use alloy_primitives::{Address, B256};
 use alloy_rpc_types_engine::PayloadAttributes;
 use reth_e2e_test_utils::{
-    node::NodeTestContext, transaction::TransactionTestContext, wallet::Wallet, NodeHelperType,
-    TmpDB,
+    transaction::TransactionTestContext, wallet::Wallet, NodeHelperType, TmpDB,
 };
-use reth_node_api::{NodePrimitives, NodeTypes, NodeTypesWithDBAdapter};
-use reth_node_builder::{Node, NodeBuilder, NodeConfig, NodeHandle};
-use reth_node_core::args::{DiscoveryArgs, NetworkArgs, RpcServerArgs};
+use reth_node_api::NodeTypesWithDBAdapter;
+
 use reth_payload_builder::EthPayloadBuilderAttributes;
 use reth_provider::providers::BlockchainProvider;
-use reth_rpc_server_types::RpcModuleSelection;
-use reth_scroll_chainspec::{ScrollChainSpec, ScrollChainSpecBuilder};
-use reth_scroll_primitives::ScrollPrimitives;
+use reth_scroll_chainspec::ScrollChainSpecBuilder;
 use reth_tasks::TaskManager;
-use reth_transaction_pool::PeerId;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -41,7 +36,7 @@ pub async fn setup(
                 .build(Default::default()),
         ),
         is_dev,
-        scroll_payload_attributes::<ScrollPrimitives>,
+        scroll_payload_attributes,
     )
     .await
 }
@@ -69,9 +64,7 @@ pub async fn advance_chain(
 }
 
 /// Helper function to create a new eth payload attributes
-pub fn scroll_payload_attributes<N: NodePrimitives>(
-    timestamp: u64,
-) -> ScrollPayloadBuilderAttributes<N::SignedTx> {
+pub fn scroll_payload_attributes(timestamp: u64) -> ScrollPayloadBuilderAttributes {
     let attributes = PayloadAttributes {
         timestamp,
         prev_randao: B256::ZERO,

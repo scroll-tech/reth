@@ -1,36 +1,16 @@
-use alloy_consensus::{constants::EIP1559_TX_TYPE_ID, Transaction, Typed2718};
-use alloy_eips::{
-    eip1559::ETHEREUM_BLOCK_GAS_LIMIT_30M,
-    eip2718::Encodable2718,
-    eip2930::AccessList,
-    eip4844::{BlobAndProofV1, BlobTransactionSidecar, BlobTransactionValidationError},
-    eip7702::SignedAuthorization,
-};
-use alloy_primitives::{Address, Bytes, ChainId, TxHash, TxKind, B256, U256};
-use reth_eth_wire_types::HandleMempoolData;
 use reth_node_api::{FullNodeTypes, NodeTypes};
 use reth_node_builder::{
     components::{PoolBuilder, PoolBuilderConfigOverrides},
     BuilderContext, TxTy,
 };
-use reth_primitives::{kzg::KzgSettings, Recovered};
-use reth_primitives_traits::{
-    transaction::error::TryFromRecoveredTransactionError, SignedTransaction,
-};
+
 use reth_provider::CanonStateSubscriptions;
-use reth_scroll_primitives::ScrollTransactionSigned;
 use reth_scroll_txpool::{ScrollTransactionPool, ScrollTransactionValidator};
 use reth_transaction_pool::{
-    blobstore::DiskFileBlobStore, error::PoolError, AllPoolTransactions, AllTransactionsEvents,
-    BestTransactions, BestTransactionsAttributes, BlobStoreError, BlockInfo, CoinbaseTipOrdering,
-    EthBlobTransactionSidecar, EthPoolTransaction, EthPooledTransaction, GetPooledTransactionLimit,
-    NewBlobSidecar, NewTransactionEvent, PoolResult, PoolSize, PoolTransaction,
-    PropagatedTransactions, TransactionEvents, TransactionListenerKind, TransactionOrigin,
-    TransactionPool, TransactionValidationTaskExecutor, ValidPoolTransaction,
+    blobstore::DiskFileBlobStore, CoinbaseTipOrdering, EthPoolTransaction,
+    TransactionValidationTaskExecutor,
 };
 use scroll_alloy_hardforks::ScrollHardforks;
-use std::{collections::HashSet, sync::Arc};
-use tokio::sync::{mpsc, mpsc::Receiver};
 
 /// A basic optimism transaction pool.
 ///
@@ -102,7 +82,6 @@ where
 
         // spawn txpool maintenance tasks
         {
-            let pool = transaction_pool.clone();
             let chain_events = ctx.provider().canonical_state_stream();
             let client = ctx.provider().clone();
             let transactions_backup_config =
@@ -113,7 +92,7 @@ where
                 |shutdown| {
                     reth_transaction_pool::maintain::backup_local_transactions_task(
                         shutdown,
-                        pool.clone(),
+                        transaction_pool.clone(),
                         transactions_backup_config,
                     )
                 },
@@ -124,11 +103,11 @@ where
                 "txpool maintenance task",
                 reth_transaction_pool::maintain::maintain_transaction_pool_future(
                     client,
-                    pool.clone(),
+                    transaction_pool.clone(),
                     chain_events,
                     ctx.task_executor().clone(),
                     reth_transaction_pool::maintain::MaintainPoolConfig {
-                        max_tx_lifetime: pool.config().max_queued_lifetime,
+                        max_tx_lifetime: transaction_pool.config().max_queued_lifetime,
                         ..Default::default()
                     },
                 ),
