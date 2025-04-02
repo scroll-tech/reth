@@ -1,6 +1,6 @@
 use reth_node_api::{ConfigureEvm, PrimitivesTy};
 use reth_node_builder::{components::PayloadBuilderBuilder, BuilderContext, FullNodeTypes};
-use reth_node_types::{NodeTypesWithEngine, TxTy};
+use reth_node_types::{NodeTypes, TxTy};
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
 use reth_scroll_evm::ScrollEvmConfig;
@@ -26,8 +26,8 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
     ) -> eyre::Result<reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, Evm, Txs>>
     where
         Node: FullNodeTypes<
-            Types: NodeTypesWithEngine<
-                Engine = ScrollEngineTypes,
+            Types: NodeTypes<
+                Payload = ScrollEngineTypes,
                 ChainSpec = ScrollChainSpec,
                 Primitives = ScrollPrimitives,
             >,
@@ -52,8 +52,8 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
 impl<Node, Pool, Txs> PayloadBuilderBuilder<Node, Pool> for ScrollPayloadBuilder<Txs>
 where
     Node: FullNodeTypes<
-        Types: NodeTypesWithEngine<
-            Engine = ScrollEngineTypes,
+        Types: NodeTypes<
+            Payload = ScrollEngineTypes,
             ChainSpec = ScrollChainSpec,
             Primitives = ScrollPrimitives,
         >,
