@@ -84,7 +84,7 @@ where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
     Tx: EthPoolTransaction,
 {
-    /// Create a new [`OpTransactionValidator`].
+    /// Create a new [`ScrollTransactionValidator`].
     pub fn new(inner: EthTransactionValidator<Client, Tx>) -> Self {
         let this = Self::with_block_info(inner, ScrollL1BlockInfo::default());
         if let Ok(Some(block)) =

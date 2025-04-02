@@ -4,7 +4,7 @@ mod transaction;
 pub use transaction::ScrollPooledTransaction;
 
 mod validator;
-pub use validator::ScrollTransactionValidator;
+pub use validator::{ScrollL1BlockInfo, ScrollTransactionValidator};
 
 use reth_transaction_pool::{CoinbaseTipOrdering, Pool, TransactionValidationTaskExecutor};
 

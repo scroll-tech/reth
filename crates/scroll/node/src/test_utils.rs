@@ -63,7 +63,7 @@ pub async fn advance_chain(
     .await
 }
 
-/// Helper function to create a new eth payload attributes
+/// Helper function to create a new scroll payload attributes
 pub fn scroll_payload_attributes(timestamp: u64) -> ScrollPayloadBuilderAttributes {
     let attributes = PayloadAttributes {
         timestamp,

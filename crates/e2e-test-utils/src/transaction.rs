@@ -26,7 +26,7 @@ impl TransactionTestContext {
         signed.encoded_2718().into()
     }
 
-    /// Crates a transfer with a nonce and signs it, returning bytes.
+    /// Creates a transfer with a nonce and signs it, returning bytes.
     pub async fn transfer_tx_nonce_bytes(
         chain_id: u64,
         wallet: PrivateKeySigner,

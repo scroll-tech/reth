@@ -107,7 +107,7 @@ impl ScrollPooledTransaction {
     }
 
     /// Converts the transaction into the scroll [`ScrollTxEnvelope`].
-    pub fn into_op_envelope(self) -> ScrollTxEnvelope {
+    pub fn into_scroll_envelope(self) -> ScrollTxEnvelope {
         match self {
             Self::Legacy(tx) => tx.into(),
             Self::Eip2930(tx) => tx.into(),
@@ -394,7 +394,7 @@ impl From<ScrollPooledTransaction> for TxEnvelope {
 
 impl From<ScrollPooledTransaction> for ScrollTxEnvelope {
     fn from(tx: ScrollPooledTransaction) -> Self {
-        tx.into_op_envelope()
+        tx.into_scroll_envelope()
     }
 }
 
