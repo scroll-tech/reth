@@ -32,32 +32,6 @@ use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 const SCROLL_GAS_LIMIT_10M: u64 = 10_000_000;
 
-/// A type that implements [`PayloadBuilder`] by building empty payloads.
-#[derive(Debug, Default, Clone)]
-#[non_exhaustive]
-pub struct ScrollEmptyPayloadBuilder;
-
-impl PayloadBuilder for ScrollEmptyPayloadBuilder {
-    type Attributes =
-        ScrollPayloadBuilderAttributes<<ScrollPrimitives as NodePrimitives>::SignedTx>;
-    type BuiltPayload = ScrollBuiltPayload;
-
-    fn try_build(
-        &self,
-        _args: BuildArguments<Self::Attributes, Self::BuiltPayload>,
-    ) -> Result<BuildOutcome<Self::BuiltPayload>, PayloadBuilderError> {
-        // we can't currently actually build a payload, so we mark the outcome as cancelled.
-        Ok(BuildOutcome::Cancelled)
-    }
-
-    fn build_empty_payload(
-        &self,
-        _config: PayloadConfig<Self::Attributes, HeaderForPayload<Self::BuiltPayload>>,
-    ) -> Result<Self::BuiltPayload, PayloadBuilderError> {
-        Ok(ScrollBuiltPayload::default())
-    }
-}
-
 /// A type that returns the [`PayloadTransactions`] that should be included in the pool.
 pub trait ScrollPayloadTransactions<Transaction>: Clone + Send + Sync + Unpin + 'static {
     /// Returns an iterator that yields the transaction in the order they should get included in the

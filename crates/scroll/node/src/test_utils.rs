@@ -26,10 +26,12 @@ pub(crate) type ScrollNode = NodeHelperType<
 >;
 
 /// Creates the initial setup with `num_nodes` of the node config, started and connected.
-pub async fn setup(num_nodes: usize) -> eyre::Result<(Vec<ScrollNode>, TaskManager, Wallet)> {
+pub async fn setup(
+    num_nodes: usize,
+    is_dev: bool,
+) -> eyre::Result<(Vec<ScrollNode>, TaskManager, Wallet)> {
     let genesis: Genesis =
         serde_json::from_str(include_str!("../tests/assets/genesis.json")).unwrap();
-    println!("{:?}", genesis);
     reth_e2e_test_utils::setup_engine(
         num_nodes,
         Arc::new(
@@ -38,7 +40,7 @@ pub async fn setup(num_nodes: usize) -> eyre::Result<(Vec<ScrollNode>, TaskManag
                 .darwin_v2_activated()
                 .build(Default::default()),
         ),
-        false,
+        is_dev,
         scroll_payload_attributes::<ScrollPrimitives>,
     )
     .await

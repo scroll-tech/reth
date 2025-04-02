@@ -119,5 +119,6 @@ scroll-alloy-traits = [
 	"reth-db/scroll-alloy-traits",
 	"reth-evm/scroll-alloy-traits",
 	"reth-primitives-traits/scroll-alloy-traits",
-	"reth-scroll-node/scroll-alloy-traits"
+	"reth-scroll-node/scroll-alloy-traits",
+	"reth-engine-local/scroll-alloy-traits"
 ]

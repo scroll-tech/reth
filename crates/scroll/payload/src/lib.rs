@@ -6,7 +6,7 @@
 extern crate alloc as std;
 
 pub mod builder;
-pub use builder::{ScrollEmptyPayloadBuilder, ScrollPayloadBuilder, ScrollPayloadTransactions};
+pub use builder::{ScrollPayloadBuilder, ScrollPayloadTransactions};
 
 mod error;
 pub use error::ScrollPayloadBuilderError;

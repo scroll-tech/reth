@@ -224,7 +224,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTypedTransaction, TxL1Message};
     #[test]
-    fn validate_optimism_transaction() {
+    fn validate_scroll_transaction() {
         let client = MockEthProvider::default().with_chain_spec(SCROLL_MAINNET.clone());
         let validator = EthTransactionValidatorBuilder::new(client)
             .no_shanghai()

@@ -92,12 +92,9 @@ where
         {
             // genesis block has no txs, so we can't extract L1 info, we set the block info to empty
             // so that we will accept txs into the pool before the first block
-            if block.header().number() == 0 {
-                this.block_info.timestamp.store(block.header().timestamp(), Ordering::Relaxed);
-                this.block_info.number.store(block.header().number(), Ordering::Relaxed);
-            } else {
-                this.update_l1_block_info(block.header());
-            }
+            this.block_info.timestamp.store(block.header().timestamp(), Ordering::Relaxed);
+            this.block_info.number.store(block.header().number(), Ordering::Relaxed);
+            this.update_l1_block_info(block.header());
         }
 
         this
