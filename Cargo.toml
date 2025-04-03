@@ -517,7 +517,7 @@ scroll-alloy-evm = { path = "crates/scroll/alloy/evm" }
 scroll-alloy-hardforks = { path = "crates/scroll/alloy/hardforks", default-features = false }
 scroll-alloy-network = { path = "crates/scroll/alloy/network" }
 scroll-alloy-rpc-types = { path = "crates/scroll/alloy/rpc-types" }
-scroll-alloy-rpc-types-engine = { path = "crates/scroll/alloy/rpc-types-engine",default-features = false }
+scroll-alloy-rpc-types-engine = { path = "crates/scroll/alloy/rpc-types-engine", default-features = false }
 scroll-alloy-provider = { path = "crates/scroll/alloy/provider" }
 reth-scroll-chainspec = { path = "crates/scroll/chainspec", default-features = false }
 reth-scroll-cli = { path = "crates/scroll/cli" }
