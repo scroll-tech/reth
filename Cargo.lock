@@ -11361,7 +11361,6 @@ dependencies = [
  "reth-scroll-engine-primitives",
  "reth-scroll-node",
  "reth-scroll-payload",
- "reth-scroll-primitives",
  "reth-tasks",
  "reth-tracing",
  "reth-transaction-pool",
