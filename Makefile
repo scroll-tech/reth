@@ -519,3 +519,11 @@ check-features:
 		--package reth-primitives-traits \
 		--package reth-primitives \
 		--feature-powerset
+
+check-features-scroll:
+	cargo hack check \
+		--package reth-scroll-chainspec \
+		--package reth-scroll-engine-primitives \
+		--package scroll-alloy-consensus \
+		--package scroll-alloy-rpc-types-engine \
+		--each-feature

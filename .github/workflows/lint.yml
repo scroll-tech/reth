@@ -251,7 +251,9 @@ jobs:
           cache-on-failure: true
       - name: cargo install cargo-hack
         uses: taiki-e/install-action@cargo-hack
-      - run: make check-features
+      - run: |
+          make check-features
+          make check-features-scroll
         env:
           RUSTFLAGS: -D warnings
 
