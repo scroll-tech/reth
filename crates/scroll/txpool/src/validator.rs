@@ -1,4 +1,4 @@
-use alloy_consensus::BlockHeader;
+use alloy_consensus::{BlockHeader, Sealable};
 use alloy_eips::Encodable2718;
 use parking_lot::RwLock;
 use reth_chainspec::ChainSpecProvider;
@@ -90,6 +90,11 @@ where
         if let Ok(Some(block)) =
             this.inner.client().block_by_number_or_tag(alloy_eips::BlockNumberOrTag::Latest)
         {
+            if block.header().number() == 0 {
+                println!("genesis block header: {:?}", block.header());
+                println!("genesis block hash: {:?}", block.header().hash_slow());
+            }
+
             this.block_info.timestamp.store(block.header().timestamp(), Ordering::Relaxed);
             this.block_info.number.store(block.header().number(), Ordering::Relaxed);
             this.update_l1_block_info(block.header());

@@ -27,14 +27,15 @@ pub async fn setup(
 ) -> eyre::Result<(Vec<ScrollNode>, TaskManager, Wallet)> {
     let genesis: Genesis =
         serde_json::from_str(include_str!("../tests/assets/genesis.json")).unwrap();
+    let chain_spec = ScrollChainSpecBuilder::scroll_mainnet()
+        .genesis(genesis)
+        .darwin_v2_activated()
+        .build(Default::default());
+    println!("genesis header: {:#?}", chain_spec.genesis_header);
+    println!("genesis hash: {:#?}", chain_spec.genesis_header().hash_slow());
     reth_e2e_test_utils::setup_engine(
         num_nodes,
-        Arc::new(
-            ScrollChainSpecBuilder::scroll_mainnet()
-                .genesis(genesis)
-                .darwin_v2_activated()
-                .build(Default::default()),
-        ),
+        Arc::new(chain_spec),
         is_dev,
         scroll_payload_attributes,
     )
