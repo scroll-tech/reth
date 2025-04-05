@@ -65,11 +65,14 @@ where
             )
             .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
             .map(|validator| {
+                println!("creating a tx validator");
                 ScrollTransactionValidator::new(validator)
                     // In --dev mode we can't require gas fees because we're unable to decode
                     // the L1 block info
                     .require_l1_data_gas_fee(!ctx.config().dev.dev)
             });
+
+        println!("we have created a tx validator");
 
         let transaction_pool = reth_transaction_pool::Pool::new(
             validator,
@@ -77,6 +80,9 @@ where
             blob_store,
             pool_config_overrides.apply(ctx.pool_config()),
         );
+
+        println!("we have created a tx pool");
+
         tracing::info!(target: "reth::cli", "Transaction pool initialized");
         let transactions_path = data_dir.txpool_transactions();
 
@@ -114,6 +120,8 @@ where
             );
             tracing::debug!(target: "reth::cli", "Spawned txpool maintenance task");
         }
+
+        println!("we have spawned txpool maintenance tasks");
 
         Ok(transaction_pool)
     }
