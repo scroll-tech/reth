@@ -100,6 +100,11 @@ where
             this.update_l1_block_info(block.header());
         }
 
+        println!(
+            "ScrollTransactionValidator created with block info: {:?}",
+            this.block_info.l1_block_info.read()
+        );
+
         this
     }
 
@@ -116,6 +121,7 @@ where
     where
         H: BlockHeader,
     {
+        println!("update l1 block info: {:?}", header.number());
         self.block_info.timestamp.store(header.timestamp(), Ordering::Relaxed);
         self.block_info.number.store(header.number(), Ordering::Relaxed);
 
@@ -126,6 +132,7 @@ where
             spec_id_at_timestamp_and_number(header.timestamp(), header.number(), self.chain_spec());
         if let Ok(l1_block_info) = L1BlockInfo::try_fetch(&mut db, spec_id) {
             *self.block_info.l1_block_info.write() = l1_block_info;
+            println!("updated l1 block info: {:?}", self.block_info.l1_block_info.read());
         }
     }
 
@@ -140,6 +147,7 @@ where
         origin: TransactionOrigin,
         transaction: Tx,
     ) -> TransactionValidationOutcome<Tx> {
+        println!("validate one");
         if transaction.is_eip4844() {
             return TransactionValidationOutcome::Invalid(
                 transaction,
