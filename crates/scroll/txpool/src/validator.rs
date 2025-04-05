@@ -251,6 +251,7 @@ where
     where
         B: Block,
     {
+        println!("on new head block: {:?}", new_tip_block.header().number());
         self.inner.on_new_head_block(new_tip_block);
         self.update_l1_block_info(new_tip_block.header());
     }
