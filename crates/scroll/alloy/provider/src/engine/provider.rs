@@ -43,7 +43,7 @@ impl ScrollAuthEngineApiProvider {
 }
 
 #[async_trait::async_trait]
-impl ScrollEngineApi<scroll_alloy_network::Scroll> for ScrollAuthEngineApiProvider {
+impl ScrollEngineApi for ScrollAuthEngineApiProvider {
     async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> TransportResult<PayloadStatus> {
         self.auth_provider.new_payload_v1(payload).await
     }

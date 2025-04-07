@@ -15,7 +15,7 @@ use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 /// Note:
 /// > The provider should use a JWT authentication layer.
 #[async_trait::async_trait]
-pub trait ScrollEngineApi<N> {
+pub trait ScrollEngineApi {
     /// See also <https://github.com/ethereum/execution-apis/blob/6709c2a795b707202e93c4f2867fa0bf2640a84f/src/engine/paris.md#engine_newpayloadv1>
     /// Caution: This should not accept the `withdrawals` field
     async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> TransportResult<PayloadStatus>;
@@ -92,10 +92,9 @@ pub trait ScrollEngineApi<N> {
 }
 
 #[async_trait::async_trait]
-impl<N, P> ScrollEngineApi<N> for P
+impl<P> ScrollEngineApi for P
 where
-    N: Network,
-    P: Provider<N>,
+    P: Provider<scroll_alloy_network::Scroll>,
 {
     async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> TransportResult<PayloadStatus> {
         self.client().request("engine_newPayloadV1", (payload,)).await
