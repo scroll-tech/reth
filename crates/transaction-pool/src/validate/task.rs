@@ -49,7 +49,9 @@ impl ValidationTask {
     ///
     /// This will run as long as the channel is alive and is expected to be spawned as a task.
     pub async fn run(self) {
+        println!("Validation task started");
         while let Some(task) = self.validation_jobs.lock().await.next().await {
+            println!("Received validation job");
             task.await;
         }
     }
