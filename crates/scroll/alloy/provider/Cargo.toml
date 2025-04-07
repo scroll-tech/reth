@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 # alloy
+alloy-json-rpc.workspace = true
 alloy-provider.workspace = true
 alloy-primitives.workspace = true
 alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
@@ -37,6 +38,9 @@ eyre.workspace = true
 http-body-util.workspace = true
 reqwest.workspace = true
 tower.workspace = true
+thiserror.workspace = true
+jsonrpsee.workspace = true
+jsonrpsee-types.workspace = true
 
 [dev-dependencies]
 reth-payload-builder = { workspace = true, features = ["test-utils"] }
