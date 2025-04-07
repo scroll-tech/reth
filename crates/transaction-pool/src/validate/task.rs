@@ -6,6 +6,7 @@ use crate::{
     EthTransactionValidator, PoolTransaction, TransactionOrigin, TransactionValidationOutcome,
     TransactionValidator,
 };
+use alloy_consensus::BlockHeader;
 use futures_util::{lock::Mutex, StreamExt};
 use reth_primitives_traits::{Block, SealedBlock};
 use reth_tasks::TaskSpawner;
@@ -206,6 +207,7 @@ where
     where
         B: Block,
     {
+        println!("on new head block: {:?}", new_tip_block.header().number());
         self.validator.on_new_head_block(new_tip_block)
     }
 }
