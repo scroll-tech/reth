@@ -87,39 +87,39 @@ where
         let transactions_path = data_dir.txpool_transactions();
 
         // spawn txpool maintenance tasks
-        {
-            let chain_events = ctx.provider().canonical_state_stream();
-            let client = ctx.provider().clone();
-            let transactions_backup_config =
-                reth_transaction_pool::maintain::LocalTransactionBackupConfig::with_local_txs_backup(transactions_path);
+        // {
+        //     let chain_events = ctx.provider().canonical_state_stream();
+        //     let client = ctx.provider().clone();
+        //     let transactions_backup_config =
+        //         reth_transaction_pool::maintain::LocalTransactionBackupConfig::with_local_txs_backup(transactions_path);
 
-            ctx.task_executor().spawn_critical_with_graceful_shutdown_signal(
-                "local transactions backup task",
-                |shutdown| {
-                    reth_transaction_pool::maintain::backup_local_transactions_task(
-                        shutdown,
-                        transaction_pool.clone(),
-                        transactions_backup_config,
-                    )
-                },
-            );
+        //     ctx.task_executor().spawn_critical_with_graceful_shutdown_signal(
+        //         "local transactions backup task",
+        //         |shutdown| {
+        //             reth_transaction_pool::maintain::backup_local_transactions_task(
+        //                 shutdown,
+        //                 transaction_pool.clone(),
+        //                 transactions_backup_config,
+        //             )
+        //         },
+        //     );
 
-            // spawn the main maintenance task
-            ctx.task_executor().spawn_critical(
-                "txpool maintenance task",
-                reth_transaction_pool::maintain::maintain_transaction_pool_future(
-                    client,
-                    transaction_pool.clone(),
-                    chain_events,
-                    ctx.task_executor().clone(),
-                    reth_transaction_pool::maintain::MaintainPoolConfig {
-                        max_tx_lifetime: transaction_pool.config().max_queued_lifetime,
-                        ..Default::default()
-                    },
-                ),
-            );
-            tracing::debug!(target: "reth::cli", "Spawned txpool maintenance task");
-        }
+        //     // spawn the main maintenance task
+        //     ctx.task_executor().spawn_critical(
+        //         "txpool maintenance task",
+        //         reth_transaction_pool::maintain::maintain_transaction_pool_future(
+        //             client,
+        //             transaction_pool.clone(),
+        //             chain_events,
+        //             ctx.task_executor().clone(),
+        //             reth_transaction_pool::maintain::MaintainPoolConfig {
+        //                 max_tx_lifetime: transaction_pool.config().max_queued_lifetime,
+        //                 ..Default::default()
+        //             },
+        //         ),
+        //     );
+        //     tracing::debug!(target: "reth::cli", "Spawned txpool maintenance task");
+        // }
 
         println!("we have spawned txpool maintenance tasks");
 

@@ -842,12 +842,14 @@ impl<Client> EthTransactionValidatorBuilder<Client> {
         T: TaskSpawner,
         S: BlobStore,
     {
+        println!("Building transaction validation service");
         let additional_tasks = self.additional_tasks;
         let validator = self.build(blob_store);
 
         let (tx, task) = ValidationTask::new();
 
         // Spawn validation tasks, they are blocking because they perform db lookups
+        println!("spawning additional tasks");
         for _ in 0..additional_tasks {
             let task = task.clone();
             tasks.spawn_blocking(Box::pin(async move {
@@ -857,6 +859,7 @@ impl<Client> EthTransactionValidatorBuilder<Client> {
 
         // we spawn them on critical tasks because validation, especially for EIP-4844 can be quite
         // heavy
+        println!("spawning critical tasks");
         tasks.spawn_critical_blocking(
             "transaction-validation-service",
             Box::pin(async move {
@@ -864,6 +867,7 @@ impl<Client> EthTransactionValidatorBuilder<Client> {
             }),
         );
 
+        println!("turn sender into a mutex");
         let to_validation_task = Arc::new(Mutex::new(tx));
 
         TransactionValidationTaskExecutor { validator, to_validation_task }
