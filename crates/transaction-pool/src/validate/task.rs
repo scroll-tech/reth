@@ -72,6 +72,7 @@ impl ValidationJobSender {
         &self,
         job: Pin<Box<dyn Future<Output = ()> + Send>>,
     ) -> Result<(), TransactionValidatorError> {
+        println!("Sending validation job");
         self.tx.send(job).await.map_err(|_| TransactionValidatorError::ValidationServiceUnreachable)
     }
 }
@@ -181,6 +182,7 @@ where
                     .await
             };
             if res.is_err() {
+                println!("received error from validation task");
                 return TransactionValidationOutcome::Error(
                     hash,
                     Box::new(TransactionValidatorError::ValidationServiceUnreachable),
@@ -190,10 +192,13 @@ where
 
         match rx.await {
             Ok(res) => res,
-            Err(_) => TransactionValidationOutcome::Error(
-                hash,
-                Box::new(TransactionValidatorError::ValidationServiceUnreachable),
-            ),
+            Err(_) => {
+                println!("received error waiting for validation task");
+                TransactionValidationOutcome::Error(
+                    hash,
+                    Box::new(TransactionValidatorError::ValidationServiceUnreachable),
+                )
+            }
         }
     }
 
