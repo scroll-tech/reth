@@ -44,6 +44,8 @@ std = [
     "serde/std",
     "alloy-consensus/std",
     "alloy-eips/std",
+    "scroll-alloy-consensus/std",
+    "scroll-alloy-hardforks/std",
 ]
 serde = [
     "dep:serde",

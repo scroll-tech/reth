@@ -62,4 +62,5 @@ std = [
     "derive_more/std",
     "reth-network-peers/std",
     "serde_json/std",
+    "scroll-alloy-hardforks/std",
 ]

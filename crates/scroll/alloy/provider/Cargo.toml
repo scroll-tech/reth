@@ -64,4 +64,5 @@ std = [
     "reth-primitives-traits/std",
     "reth-scroll-payload/std",
     "futures-util/std",
+    "reth-scroll-chainspec/std",
 ]
