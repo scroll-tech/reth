@@ -33,10 +33,10 @@ crates_to_check=(
 
     ## scroll
     reth-scroll-chainspec
-   	scroll-alloy-consensus
-   	scroll-alloy-evm
-   	scroll-alloy-rpc-types
-   	scroll-alloy-rpc-types-engine
+    scroll-alloy-consensus
+    scroll-alloy-evm
+    scroll-alloy-rpc-types
+    scroll-alloy-rpc-types-engine
 
 )
 
