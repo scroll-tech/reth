@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_payload_id() {
         let expected =
-            PayloadId::new(FixedBytes::<8>::from_str("0x03aa2163b02acd8a").unwrap().into());
+            PayloadId::new(FixedBytes::<8>::from_str("0x0322b5f17cf26e85").unwrap().into());
         let attrs = ScrollPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: 1728933301,
