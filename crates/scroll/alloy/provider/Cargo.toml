@@ -26,7 +26,7 @@ scroll-alloy-network.workspace = true
 scroll-alloy-rpc-types-engine = { workspace = true, features = ["serde"] }
 
 # reth
-reth-rpc-api.workspace = true
+reth-rpc-api = { workspace = true, features = ["client"] }
 
 # reth-scroll
 reth-scroll-engine-primitives.workspace = true
