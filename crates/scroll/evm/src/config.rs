@@ -111,7 +111,7 @@ where
             gas_limit: attributes.gas_limit,
             // calculate basefee based on parent block's gas usage
             // TODO(scroll): update with correct block fee calculation for block building.
-            basefee: parent.base_fee_per_gas().unwrap_or_default(),
+            basefee: 100,
             blob_excess_gas_and_price: None,
         };
 
