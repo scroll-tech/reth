@@ -293,7 +293,7 @@ mod tests {
             prevrandao: Some(attributes.prev_randao),
             difficulty: U256::ZERO,
             // TODO(scroll): this shouldn't be 0 at curie fork
-            basefee: 0,
+            basefee: 100,
             gas_limit: header.gas_limit,
             blob_excess_gas_and_price: None,
         };
