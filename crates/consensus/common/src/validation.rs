@@ -4,6 +4,7 @@ use alloy_consensus::{
     constants::MAXIMUM_EXTRA_DATA_SIZE, BlockHeader as _, EMPTY_OMMER_ROOT_HASH,
 };
 use alloy_eips::{calc_next_block_base_fee, eip4844::DATA_GAS_PER_BLOB, eip7840::BlobParams};
+use alloy_primitives::B256;
 use reth_chainspec::{EthChainSpec, EthereumHardfork, EthereumHardforks};
 use reth_consensus::ConsensusError;
 use reth_primitives_traits::{
@@ -343,6 +344,17 @@ pub fn validate_against_parent_4844<H: BlockHeader>(
             parent_excess_blob_gas,
             parent_blob_gas_used,
         })
+    }
+
+    Ok(())
+}
+
+/// Validate the provided state root against the block's state root.
+pub fn validate_state_root<H: BlockHeader>(header: &H, root: B256) -> Result<(), ConsensusError> {
+    if header.state_root() != root {
+        return Err(ConsensusError::BodyStateRootDiff(
+            GotExpected { got: root, expected: header.state_root() }.into(),
+        ))
     }
 
     Ok(())

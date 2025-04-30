@@ -1,5 +1,6 @@
 use crate::{Consensus, ConsensusError, FullConsensus, HeaderValidator};
 use alloc::sync::Arc;
+use alloy_primitives::B256;
 use reth_execution_types::BlockExecutionResult;
 use reth_primitives_traits::{Block, NodePrimitives, RecoveredBlock, SealedBlock, SealedHeader};
 
@@ -25,6 +26,10 @@ impl<H> HeaderValidator<H> for NoopConsensus {
         _header: &SealedHeader<H>,
         _parent: &SealedHeader<H>,
     ) -> Result<(), ConsensusError> {
+        Ok(())
+    }
+
+    fn validate_state_root(&self, _header: &H, _root: B256) -> Result<(), ConsensusError> {
         Ok(())
     }
 }

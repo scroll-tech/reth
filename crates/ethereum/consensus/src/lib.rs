@@ -14,13 +14,14 @@ extern crate alloc;
 use alloc::{fmt::Debug, sync::Arc};
 use alloy_consensus::EMPTY_OMMER_ROOT_HASH;
 use alloy_eips::eip7840::BlobParams;
+use alloy_primitives::B256;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_consensus::{Consensus, ConsensusError, FullConsensus, HeaderValidator};
 use reth_consensus_common::validation::{
     validate_4844_header_standalone, validate_against_parent_4844,
     validate_against_parent_eip1559_base_fee, validate_against_parent_hash_number,
     validate_against_parent_timestamp, validate_block_pre_execution, validate_body_against_header,
-    validate_header_base_fee, validate_header_extra_data, validate_header_gas,
+    validate_header_base_fee, validate_header_extra_data, validate_header_gas, validate_state_root,
 };
 use reth_execution_types::BlockExecutionResult;
 use reth_primitives_traits::{
@@ -236,6 +237,10 @@ where
         }
 
         Ok(())
+    }
+
+    fn validate_state_root(&self, header: &H, root: B256) -> Result<(), ConsensusError> {
+        validate_state_root(header, root)
     }
 }
 

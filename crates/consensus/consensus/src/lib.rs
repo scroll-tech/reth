@@ -121,6 +121,9 @@ pub trait HeaderValidator<H = Header>: Debug + Send + Sync {
         }
         Ok(())
     }
+
+    /// Validate the block header against a provided expected state root.
+    fn validate_state_root(&self, header: &H, root: B256) -> Result<(), ConsensusError>;
 }
 
 /// Consensus Errors
