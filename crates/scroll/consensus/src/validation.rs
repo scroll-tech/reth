@@ -5,10 +5,11 @@ use crate::error::ScrollConsensusError;
 use alloy_consensus::{BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH};
 use alloy_primitives::B256;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
-use reth_consensus::{Consensus, ConsensusError, FullConsensus, HeaderValidator};
+use reth_consensus::{
+    validate_state_root, Consensus, ConsensusError, FullConsensus, HeaderValidator,
+};
 use reth_consensus_common::validation::{
     validate_against_parent_hash_number, validate_body_against_header, validate_header_gas,
-    validate_state_root,
 };
 use reth_execution_types::BlockExecutionResult;
 use reth_primitives_traits::{
