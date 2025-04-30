@@ -18,7 +18,7 @@ use std::{fmt::Debug, sync::Arc};
 use tracing::*;
 
 use alloy_primitives::{BlockNumber, Sealable, B256};
-use reth_consensus::{noop::NoopConsensus, Consensus, ConsensusError, HeaderValidator};
+use reth_consensus::{Consensus, ConsensusError, HeaderValidator};
 use reth_primitives_traits::{NodePrimitives, SealedHeader};
 use reth_stages_api::BlockErrorKind;
 
@@ -122,7 +122,8 @@ where
     pub fn consensus(&self) -> Arc<dyn Consensus<P::Block, Error = ConsensusError>> {
         match self {
             Self::Execution { consensus, .. } | Self::Unwind { consensus } => consensus.clone(),
-            Self::Both { .. } => NoopConsensus::arc(),
+            #[cfg(any(test, feature = "test-utils"))]
+            Self::Both { .. } => reth_consensus::noop::NoopConsensus::arc(),
         }
     }
 
