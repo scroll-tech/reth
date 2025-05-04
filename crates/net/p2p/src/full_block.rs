@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy_consensus::BlockHeader;
 use alloy_primitives::{Sealable, B256};
-use reth_consensus::{Consensus, ConsensusError};
+use reth_consensus::{Consensus, ConsensusError, HeaderValidator};
 use reth_eth_wire_types::HeadersDirection;
 use reth_network_peers::WithPeerId;
 use reth_primitives_traits::{SealedBlock, SealedHeader};
@@ -198,7 +198,7 @@ where
                             let (peer, maybe_header) =
                                 maybe_header.map(|h| h.map(SealedHeader::seal_slow)).split();
                             if let Some(header) = maybe_header {
-                                if header.hash() == this.hash {
+                                if this.consensus.validate_hash(&header, this.hash).is_ok() {
                                     this.header = Some(header);
                                 } else {
                                     debug!(target: "downloaders", expected=?this.hash, received=?header.hash(), "Received wrong header");

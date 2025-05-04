@@ -126,6 +126,11 @@ pub trait HeaderValidator<H: BlockHeader = Header>: Debug + Send + Sync {
     fn validate_state_root(&self, header: &H, root: B256) -> Result<(), ConsensusError> {
         validate_state_root(header, root)
     }
+
+    /// Validate the block header against a provided expected hash.
+    fn validate_hash(&self, header: &H, hash: B256) -> Result<(), ConsensusError> {
+        validate_header_hash(header, hash)
+    }
 }
 
 /// Validate the provided state root against the block's state root.
@@ -134,6 +139,16 @@ pub fn validate_state_root<H: BlockHeader>(header: &H, root: B256) -> Result<(),
         return Err(ConsensusError::BodyStateRootDiff(
             GotExpected { got: root, expected: header.state_root() }.into(),
         ))
+    }
+
+    Ok(())
+}
+
+/// Validate the provided header hash against the block's computed hash.
+pub fn validate_header_hash<H: BlockHeader>(header: &H, hash: B256) -> Result<(), ConsensusError> {
+    let got = header.hash_slow();
+    if got != hash {
+        return Err(ConsensusError::Other(GotExpected { got, expected: hash }.to_string()))
     }
 
     Ok(())

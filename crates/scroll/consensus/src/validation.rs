@@ -1,12 +1,17 @@
+use crate::error::ScrollConsensusError;
 use alloc::sync::Arc;
 use core::fmt::Debug;
 
-use crate::error::ScrollConsensusError;
 use alloy_consensus::{BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH};
-use alloy_primitives::B256;
+use alloy_primitives::{
+    keccak256,
+    private::{alloy_rlp, alloy_rlp::Encodable},
+    B256, U256,
+};
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_consensus::{
-    validate_state_root, Consensus, ConsensusError, FullConsensus, HeaderValidator,
+    validate_header_hash, validate_state_root, Consensus, ConsensusError, FullConsensus,
+    HeaderValidator,
 };
 use reth_consensus_common::validation::{
     validate_against_parent_hash_number, validate_body_against_header, validate_header_gas,
@@ -156,6 +161,72 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
 
         Ok(())
     }
+
+    fn validate_hash(&self, header: &H, hash: B256) -> Result<(), ConsensusError> {
+        if self.chain_spec.is_euclid_active_at_timestamp(header.timestamp()) {
+            let got = euclid_header_hash(header);
+            if got != hash {
+                return Err(ConsensusError::Other(GotExpected { got, expected: hash }.to_string()))
+            }
+            Ok(())
+        } else {
+            validate_header_hash(header, hash)
+        }
+    }
+}
+
+/// Encode and hash the header. The function is similar to `Header::encode` but skips the
+/// `extra_data` field.
+fn euclid_header_hash<H: BlockHeader>(header: &H) -> B256 {
+    let out = &mut Vec::new();
+    let list_header =
+        alloy_rlp::Header { list: true, payload_length: sig_header_payload_length(header) };
+    list_header.encode(out);
+    header.parent_hash().encode(out);
+    header.ommers_hash().encode(out);
+    header.beneficiary().encode(out);
+    header.state_root().encode(out);
+    header.transactions_root().encode(out);
+    header.receipts_root().encode(out);
+    header.logs_bloom().encode(out);
+    header.difficulty().encode(out);
+    U256::from(header.number()).encode(out);
+    U256::from(header.gas_limit()).encode(out);
+    U256::from(header.gas_used()).encode(out);
+    header.timestamp().encode(out);
+    header.mix_hash().unwrap_or_default().encode(out);
+    header.nonce().unwrap_or_default().encode(out);
+
+    // Encode all the fork specific fields
+    if let Some(ref base_fee) = header.base_fee_per_gas() {
+        U256::from(*base_fee).encode(out);
+    }
+    keccak256(&out)
+}
+
+/// Returns the header payload length for signature.
+fn sig_header_payload_length<H: BlockHeader>(header: &H) -> usize {
+    let mut length = 0;
+    length += header.parent_hash().length();
+    length += header.ommers_hash().length();
+    length += header.beneficiary().length();
+    length += header.state_root().length();
+    length += header.transactions_root().length();
+    length += header.receipts_root().length();
+    length += header.logs_bloom().length();
+    length += header.difficulty().length();
+    length += U256::from(header.number()).length();
+    length += U256::from(header.gas_limit()).length();
+    length += U256::from(header.gas_used()).length();
+    length += header.timestamp().length();
+    length += header.mix_hash().unwrap_or_default().length();
+    length += header.nonce().unwrap_or_default().length();
+
+    if let Some(base_fee) = header.base_fee_per_gas() {
+        // Adding base fee length if it exists.
+        length += U256::from(base_fee).length();
+    }
+    length
 }
 
 /// Ensure the EIP-1559 base fee is set if the Curie hardfork is active.
