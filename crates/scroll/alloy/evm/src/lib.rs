@@ -167,16 +167,18 @@ where
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {
-        &mut self.journaled_state.database
+        &mut self.journaled_state.inner.database
     }
 
     fn finish(self) -> (Self::DB, EvmEnv<Self::Spec>)
     where
         Self: Sized,
     {
-        let Context { block: block_env, cfg: cfg_env, journaled_state, .. } = self.inner.0.data.ctx;
+        let ScrollContext {
+            inner: Context { block: block_env, cfg: cfg_env, journaled_state, .. },
+        } = self.inner.0.data.ctx;
 
-        (journaled_state.database, EvmEnv { block_env, cfg_env })
+        (journaled_state.inner.database, EvmEnv { block_env, cfg_env })
     }
 
     fn set_inspector_enabled(&mut self, enabled: bool) {
@@ -203,7 +205,7 @@ impl EvmFactory for ScrollEvmFactory {
         input: EvmEnv<ScrollSpecId>,
     ) -> Self::Evm<DB, NoOpInspector> {
         ScrollEvm {
-            inner: Context::scroll()
+            inner: ScrollContext::scroll()
                 .with_db(db)
                 .with_block(input.block_env)
                 .with_cfg(input.cfg_env)
@@ -219,7 +221,7 @@ impl EvmFactory for ScrollEvmFactory {
         inspector: I,
     ) -> Self::Evm<DB, I> {
         ScrollEvm {
-            inner: Context::scroll()
+            inner: ScrollContext::scroll()
                 .with_db(db)
                 .with_block(input.block_env)
                 .with_cfg(input.cfg_env)

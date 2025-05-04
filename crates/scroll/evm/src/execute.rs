@@ -156,6 +156,12 @@ mod tests {
                 gas_limit,
                 ..Default::default()
             }),
+            ScrollTxType::Eip7702 => ScrollTypedTransaction::Eip7702(alloy_consensus::TxEip7702 {
+                to: Address::ZERO,
+                chain_id: SCROLL_CHAIN_ID,
+                gas_limit,
+                ..Default::default()
+            }),
             ScrollTxType::L1Message => {
                 ScrollTypedTransaction::L1Message(scroll_alloy_consensus::TxL1Message {
                     sender: Address::random(),
@@ -241,6 +247,7 @@ mod tests {
                 ScrollTxType::Legacy => ScrollReceipt::Legacy(into_scroll_receipt(inner)),
                 ScrollTxType::Eip2930 => ScrollReceipt::Eip2930(into_scroll_receipt(inner)),
                 ScrollTxType::Eip1559 => ScrollReceipt::Eip1559(into_scroll_receipt(inner)),
+                ScrollTxType::Eip7702 => ScrollReceipt::Eip7702(into_scroll_receipt(inner)),
                 ScrollTxType::L1Message => ScrollReceipt::L1Message(inner),
             };
             let expected = vec![receipt];

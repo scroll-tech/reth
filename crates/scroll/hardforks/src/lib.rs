@@ -79,5 +79,7 @@ pub static DEV_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(|| {
         (ScrollHardfork::Curie.boxed(), ForkCondition::Block(0)),
         (ScrollHardfork::Darwin.boxed(), ForkCondition::Timestamp(0)),
         (ScrollHardfork::DarwinV2.boxed(), ForkCondition::Timestamp(0)),
+        (ScrollHardfork::Euclid.boxed(), ForkCondition::Timestamp(0)),
+        (ScrollHardfork::EuclidV2.boxed(), ForkCondition::Timestamp(0)),
     ])
 });
