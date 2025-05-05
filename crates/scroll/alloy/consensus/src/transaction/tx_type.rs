@@ -1,10 +1,11 @@
 //! Contains the transaction type identifier for Scroll.
 
 use alloy_consensus::Typed2718;
-use alloy_eips::{eip2718::Eip2718Error, eip7702::constants::EIP7702_TX_TYPE_ID};
+use alloy_eips::eip2718::Eip2718Error;
 use alloy_primitives::{U64, U8};
 use alloy_rlp::{BufMut, Decodable, Encodable};
 use derive_more::Display;
+#[cfg(feature = "reth-codec")]
 use reth_codecs::{
     __private::bytes,
     txtype::{
@@ -127,6 +128,7 @@ impl Decodable for ScrollTxType {
     }
 }
 
+#[cfg(feature = "reth-codec")]
 impl Compact for ScrollTxType {
     fn to_compact<B>(&self, buf: &mut B) -> usize
     where
@@ -137,7 +139,7 @@ impl Compact for ScrollTxType {
             Self::Eip2930 => COMPACT_IDENTIFIER_EIP2930,
             Self::Eip1559 => COMPACT_IDENTIFIER_EIP1559,
             Self::Eip7702 => {
-                buf.put_u8(EIP7702_TX_TYPE_ID);
+                buf.put_u8(alloy_eips::eip7702::constants::EIP7702_TX_TYPE_ID);
                 COMPACT_EXTENDED_IDENTIFIER_FLAG
             }
             Self::L1Message => {
@@ -160,7 +162,7 @@ impl Compact for ScrollTxType {
                 COMPACT_EXTENDED_IDENTIFIER_FLAG => {
                     let extended_identifier = buf.get_u8();
                     match extended_identifier {
-                        EIP7702_TX_TYPE_ID => Self::Eip7702,
+                        alloy_eips::eip7702::constants::EIP7702_TX_TYPE_ID => Self::Eip7702,
                         L1_MESSAGE_TX_TYPE_ID => Self::L1Message,
                         _ => panic!("Unsupported TxType identifier: {extended_identifier}"),
                     }
