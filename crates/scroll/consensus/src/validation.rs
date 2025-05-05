@@ -162,6 +162,14 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
         Ok(())
     }
 
+    fn validate_state_root(&self, header: &H, root: B256) -> Result<(), ConsensusError> {
+        if self.chain_spec.is_euclid_active_at_timestamp(header.timestamp()) {
+            validate_state_root(header, root)?;
+        }
+
+        Ok(())
+    }
+
     fn validate_hash(&self, header: &H, hash: B256) -> Result<(), ConsensusError> {
         if self.chain_spec.is_euclid_active_at_timestamp(header.timestamp()) {
             let got = euclid_header_hash(header);
