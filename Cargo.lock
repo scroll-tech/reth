@@ -10865,9 +10865,10 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm#ccf29efd0762f6e45f7dc1c290668c643658080e"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Feuclid#b30aa9d6e040474a90be1d25b035241b18aa722d"
 dependencies = [
  "auto_impl",
+ "derive-where",
  "enumn",
  "once_cell",
  "revm",
