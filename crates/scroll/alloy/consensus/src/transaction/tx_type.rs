@@ -73,7 +73,7 @@ impl TryFrom<u8> for ScrollTxType {
             x if x == Self::Legacy as u8 => Self::Legacy,
             x if x == Self::Eip2930 as u8 => Self::Eip2930,
             x if x == Self::Eip1559 as u8 => Self::Eip1559,
-            x if x == Self::Eip7702 as u8 => Self::Eip1559,
+            x if x == Self::Eip7702 as u8 => Self::Eip7702,
             x if x == Self::L1Message as u8 => Self::L1Message,
             _ => return Err(Eip2718Error::UnexpectedType(value)),
         })

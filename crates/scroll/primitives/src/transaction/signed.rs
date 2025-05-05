@@ -175,8 +175,8 @@ impl Encodable2718 for ScrollTransactionSigned {
             ScrollTypedTransaction::Eip1559(dynamic_fee_tx) => {
                 dynamic_fee_tx.eip2718_encoded_length(&self.signature)
             }
-            ScrollTypedTransaction::Eip7702(dynamic_fee_tx) => {
-                dynamic_fee_tx.eip2718_encoded_length(&self.signature)
+            ScrollTypedTransaction::Eip7702(authorization_list_tx) => {
+                authorization_list_tx.eip2718_encoded_length(&self.signature)
             }
             ScrollTypedTransaction::L1Message(l1_message) => l1_message.eip2718_encoded_length(),
         }
@@ -196,8 +196,8 @@ impl Encodable2718 for ScrollTransactionSigned {
             ScrollTypedTransaction::Eip1559(dynamic_fee_tx) => {
                 dynamic_fee_tx.eip2718_encode(signature, out)
             }
-            ScrollTypedTransaction::Eip7702(dynamic_fee_tx) => {
-                dynamic_fee_tx.eip2718_encode(signature, out)
+            ScrollTypedTransaction::Eip7702(authorization_list_tx) => {
+                authorization_list_tx.eip2718_encode(signature, out)
             }
             ScrollTypedTransaction::L1Message(l1_message) => l1_message.encode_2718(out),
         }
