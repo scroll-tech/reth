@@ -6,7 +6,7 @@ use alloy_consensus::{BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH};
 use alloy_primitives::{
     keccak256,
     private::{alloy_rlp, alloy_rlp::Encodable},
-    B256, U256,
+    Bytes, B256, U256,
 };
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_consensus::{
@@ -137,7 +137,11 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
         header: &SealedHeader<H>,
         parent: &SealedHeader<H>,
     ) -> Result<(), ConsensusError> {
-        validate_against_parent_hash_number(header.header(), parent)?;
+        if self.chain_spec.is_euclid_v2_active_at_timestamp(parent.timestamp()) {
+            euclid_validate_against_parent_hash_number(header.header(), parent)?;
+        } else {
+            validate_against_parent_hash_number(header.header(), parent)?;
+        }
         validate_against_parent_timestamp(header.header(), parent.header())?;
 
         // TODO(scroll): we should have a way to validate the base fee from the header
@@ -163,7 +167,7 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
     }
 
     fn validate_hash(&self, header: &H, hash: B256) -> Result<(), ConsensusError> {
-        if self.chain_spec.is_euclid_active_at_timestamp(header.timestamp()) {
+        if self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
             let got = euclid_header_hash(header);
             if got != hash {
                 return Err(ConsensusError::Other(GotExpected { got, expected: hash }.to_string()))
@@ -175,12 +179,36 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
     }
 }
 
+/// Validate the parent header hash and number against the header. Uses [`euclid_header_hash`] to
+/// compute the parent header hash.
+fn euclid_validate_against_parent_hash_number<H: BlockHeader>(
+    header: &H,
+    parent: &SealedHeader<H>,
+) -> Result<(), ConsensusError> {
+    // Parent number is consistent.
+    if parent.number() + 1 != header.number() {
+        return Err(ConsensusError::ParentBlockNumberMismatch {
+            parent_block_number: parent.number(),
+            block_number: header.number(),
+        })
+    }
+
+    let parent_hash = euclid_header_hash(parent.as_ref());
+    if parent_hash != header.parent_hash() {
+        return Err(ConsensusError::ParentHashMismatch(
+            GotExpected { got: header.parent_hash(), expected: parent_hash }.into(),
+        ))
+    }
+
+    Ok(())
+}
+
 /// Encode and hash the header. The function is similar to `Header::encode` but skips the
 /// `extra_data` field.
 fn euclid_header_hash<H: BlockHeader>(header: &H) -> B256 {
     let out = &mut Vec::new();
     let list_header =
-        alloy_rlp::Header { list: true, payload_length: sig_header_payload_length(header) };
+        alloy_rlp::Header { list: true, payload_length: euclid_header_payload_length(header) };
     list_header.encode(out);
     header.parent_hash().encode(out);
     header.ommers_hash().encode(out);
@@ -194,6 +222,7 @@ fn euclid_header_hash<H: BlockHeader>(header: &H) -> B256 {
     U256::from(header.gas_limit()).encode(out);
     U256::from(header.gas_used()).encode(out);
     header.timestamp().encode(out);
+    Bytes::default().encode(out);
     header.mix_hash().unwrap_or_default().encode(out);
     header.nonce().unwrap_or_default().encode(out);
 
@@ -205,7 +234,7 @@ fn euclid_header_hash<H: BlockHeader>(header: &H) -> B256 {
 }
 
 /// Returns the header payload length for signature.
-fn sig_header_payload_length<H: BlockHeader>(header: &H) -> usize {
+fn euclid_header_payload_length<H: BlockHeader>(header: &H) -> usize {
     let mut length = 0;
     length += header.parent_hash().length();
     length += header.ommers_hash().length();
@@ -219,6 +248,7 @@ fn sig_header_payload_length<H: BlockHeader>(header: &H) -> usize {
     length += U256::from(header.gas_limit()).length();
     length += U256::from(header.gas_used()).length();
     length += header.timestamp().length();
+    length += Bytes::default().length();
     length += header.mix_hash().unwrap_or_default().length();
     length += header.nonce().unwrap_or_default().length();
 
