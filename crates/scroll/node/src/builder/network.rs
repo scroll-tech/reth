@@ -1,4 +1,3 @@
-use reth_chainspec::ChainSpec;
 use reth_network::{
     config::NetworkMode, transform::header::HeaderTransform, NetworkConfig, NetworkManager,
     NetworkPrimitives, PeersInfo,
@@ -80,10 +79,12 @@ pub struct ScrollHeaderTransform<ChainSpec> {
 }
 
 impl<ChainSpec: ScrollHardforks + Debug + Send + Sync + 'static> ScrollHeaderTransform<ChainSpec> {
-    pub fn new(chain_spec: ChainSpec) -> Self {
+    /// Returns a new instance of the [`ScrollHeaderTransform`] from the provider chain spec.
+    pub const fn new(chain_spec: ChainSpec) -> Self {
         Self { chain_spec }
     }
 
+    /// Returns a new [`ScrollHeaderTransform`] as a [`HeaderTransform`] trait object.
     pub fn boxed<H: BlockHeader>(chain_spec: ChainSpec) -> Box<dyn HeaderTransform<H>> {
         Box::new(Self { chain_spec })
     }
