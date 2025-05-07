@@ -198,7 +198,7 @@ where
                             let (peer, maybe_header) =
                                 maybe_header.map(|h| h.map(SealedHeader::seal_slow)).split();
                             if let Some(header) = maybe_header {
-                                if this.consensus.validate_hash(&header, this.hash).is_ok() {
+                                if header.hash() == this.hash {
                                     this.header = Some(header);
                                 } else {
                                     debug!(target: "downloaders", expected=?this.hash, received=?header.hash(), "Received wrong header");

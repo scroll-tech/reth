@@ -405,7 +405,7 @@ where
 
                 match sync_target {
                     SyncTargetBlock::Hash(hash) | SyncTargetBlock::HashAndNumber { hash, .. } => {
-                        if self.consensus.validate_hash(&target, hash).is_err() {
+                        if target.hash() != hash {
                             return Err(HeadersResponseError {
                                 request,
                                 peer_id: Some(peer_id),
