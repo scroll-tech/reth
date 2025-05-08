@@ -11338,6 +11338,7 @@ dependencies = [
  "alloy-consensus",
  "alloy-network",
  "alloy-primitives",
+ "alloy-provider",
  "alloy-rpc-types-eth",
  "alloy-signer",
  "scroll-alloy-consensus",
