@@ -76,7 +76,7 @@ mod tests {
         state.insert_account_with_storage(
             L1_GAS_PRICE_ORACLE_ADDRESS,
             Default::default(),
-            oracle_storage_pre_fork.clone(),
+            oracle_storage_pre_fork,
         );
 
         // fetch base fee from db.
