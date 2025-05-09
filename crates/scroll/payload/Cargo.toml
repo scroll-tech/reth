@@ -72,6 +72,7 @@ std = [
     "reth-scroll-forks/std",
     "scroll-alloy-consensus/std",
     "scroll-alloy-hardforks/std",
+    "scroll-alloy-evm/std",
 ]
 test-utils = [
     "dep:futures-util",
