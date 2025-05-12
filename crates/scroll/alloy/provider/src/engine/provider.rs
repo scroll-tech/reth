@@ -69,7 +69,7 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
         &self,
         payload: ExecutionPayloadV1,
     ) -> ScrollEngineApiResult<PayloadStatus> {
-        Ok(self.provider.root().client().request("engine_newPayloadV1", (payload,)).await?)
+        Ok(self.provider.client().request("engine_newPayloadV1", (payload,)).await?)
     }
 
     async fn fork_choice_updated_v1(
@@ -79,7 +79,6 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
     ) -> ScrollEngineApiResult<ForkchoiceUpdated> {
         Ok(self
             .provider
-            .root()
             .client()
             .request("engine_forkchoiceUpdatedV1", (fork_choice_state, payload_attributes))
             .await?)
@@ -89,7 +88,7 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
         &self,
         payload_id: PayloadId,
     ) -> ScrollEngineApiResult<ExecutionPayloadV1> {
-        Ok(self.provider.root().client().request("engine_getPayloadV1", (payload_id,)).await?)
+        Ok(self.provider.client().request("engine_getPayloadV1", (payload_id,)).await?)
     }
 
     async fn get_payload_bodies_by_hash_v1(
@@ -98,7 +97,6 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
     ) -> ScrollEngineApiResult<ExecutionPayloadBodiesV1> {
         Ok(self
             .provider
-            .root()
             .client()
             .request("engine_getPayloadBodiesByHashV1", (block_hashes,))
             .await?)
@@ -111,7 +109,6 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
     ) -> ScrollEngineApiResult<ExecutionPayloadBodiesV1> {
         Ok(self
             .provider
-            .root()
             .client()
             .request("engine_getPayloadBodiesByRangeV1", (start, count))
             .await?)
@@ -121,24 +118,14 @@ impl ScrollEngineApi for ScrollAuthEngineApiProvider {
         &self,
         client_version: ClientVersionV1,
     ) -> ScrollEngineApiResult<Vec<ClientVersionV1>> {
-        Ok(self
-            .provider
-            .root()
-            .client()
-            .request("engine_getClientVersionV1", (client_version,))
-            .await?)
+        Ok(self.provider.client().request("engine_getClientVersionV1", (client_version,)).await?)
     }
 
     async fn exchange_capabilities(
         &self,
         capabilities: Vec<String>,
     ) -> ScrollEngineApiResult<Vec<String>> {
-        Ok(self
-            .provider
-            .root()
-            .client()
-            .request("engine_exchangeCapabilities", (capabilities,))
-            .await?)
+        Ok(self.provider.client().request("engine_exchangeCapabilities", (capabilities,)).await?)
     }
 }
 
