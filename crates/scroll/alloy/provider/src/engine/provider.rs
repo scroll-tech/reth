@@ -18,27 +18,17 @@ use std::{fmt::Debug, sync::Arc};
 
 /// An authenticated [`alloy_provider::Provider`] to the [`ScrollEngineApi`].
 #[derive(Clone)]
-pub struct ScrollAuthEngineApiProvider {
-    provider: Arc<dyn Provider<Scroll>>,
+pub struct ScrollAuthEngineApiProvider<P> {
+    provider: P,
 }
 
-impl Debug for ScrollAuthEngineApiProvider {
+impl<P> Debug for ScrollAuthEngineApiProvider<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScrollAuthEngineApiProvider").field("provider", &"provider").finish()
     }
 }
 
-struct AuthProvider {
-    provider: RootProvider<Scroll>,
-}
-
-impl Provider<Scroll> for AuthProvider {
-    fn root(&self) -> &RootProvider<Scroll> {
-        &self.provider
-    }
-}
-
-impl ScrollAuthEngineApiProvider {
+impl ScrollAuthEngineApiProvider<RootProvider<Scroll>> {
     /// Returns a new [`ScrollAuthEngineApiProvider`], authenticated for interfacing with the Engine
     /// API server at the provided URL using the passed JWT secret.
     pub fn new(jwt_secret: JwtSecret, url: Url) -> Self {
@@ -54,17 +44,19 @@ impl ScrollAuthEngineApiProvider {
         let client = RpcClient::new(http, is_url_local);
 
         let provider = RootProvider::<Scroll>::new(client);
-        Self { provider: Arc::new(AuthProvider { provider }) }
+        Self { provider }
     }
+}
 
+impl<P> ScrollAuthEngineApiProvider<P> {
     /// Returns a new [`ScrollAuthEngineApiProvider`] from the given provider.
-    pub fn from_provider(provider: Arc<dyn Provider<Scroll>>) -> Self {
+    pub fn from_provider(provider: P) -> Self {
         Self { provider }
     }
 }
 
 #[async_trait::async_trait]
-impl ScrollEngineApi for ScrollAuthEngineApiProvider {
+impl<P: Provider<Scroll>> ScrollEngineApi for ScrollAuthEngineApiProvider<P> {
     async fn new_payload_v1(
         &self,
         payload: ExecutionPayloadV1,
