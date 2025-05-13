@@ -233,7 +233,7 @@ impl<N: NetworkPrimitives> EthWireBlockListenerProvider for NetworkHandle<N> {
     ) -> Result<EventStream<NewBlockWithPeer<Self::Block>>, oneshot::error::RecvError> {
         let (tx, rx) = oneshot::channel();
         self.send_message(NetworkHandleMessage::EthWireBlockListener(tx));
-        Ok(rx.await?)
+        rx.await
     }
 }
 
