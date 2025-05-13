@@ -39,7 +39,7 @@ where
         // query storage.
         let parent_l1_base_fee = self.storage(L1_GAS_PRICE_ORACLE_ADDRESS, L1_BASE_FEE_SLOT)?;
 
-        // l1 base fee * scalar / precision.
+        // l1 base fee * scalar / precision + overhead.
         let mut base_fee =
             parent_l1_base_fee * L1_BASE_FEE_SCALAR / L1_BASE_FEE_PRECISION + L1_BASE_FEE_OVERHEAD;
 
