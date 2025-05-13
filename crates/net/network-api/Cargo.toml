@@ -26,6 +26,7 @@ alloy-rpc-types-admin.workspace = true
 enr = { workspace = true, default-features = false, features = ["rust-secp256k1"] }
 
 # async
+async-trait.workspace = true
 futures.workspace = true
 tokio-stream.workspace = true
 

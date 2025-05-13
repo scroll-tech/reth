@@ -8650,6 +8650,7 @@ version = "1.3.12"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-admin",
+ "async-trait",
  "auto_impl",
  "derive_more",
  "enr",

@@ -20,6 +20,9 @@ pub mod events;
 /// Implementation of network traits for that does nothing.
 pub mod noop;
 
+/// Type used for the eth wire bridge.
+pub mod block;
+
 pub mod test_utils;
 use test_utils::PeersHandleProvider;
 
