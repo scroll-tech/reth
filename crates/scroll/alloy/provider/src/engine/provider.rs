@@ -14,7 +14,7 @@ use http_body_util::Full;
 use reqwest::Url;
 use scroll_alloy_network::Scroll;
 use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 /// An authenticated [`alloy_provider::Provider`] to the [`ScrollEngineApi`].
 #[derive(Clone)]
@@ -50,7 +50,7 @@ impl ScrollAuthEngineApiProvider<RootProvider<Scroll>> {
 
 impl<P> ScrollAuthEngineApiProvider<P> {
     /// Returns a new [`ScrollAuthEngineApiProvider`] from the given provider.
-    pub fn from_provider(provider: P) -> Self {
+    pub const fn from_provider(provider: P) -> Self {
         Self { provider }
     }
 }
