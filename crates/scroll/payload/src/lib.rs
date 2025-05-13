@@ -5,8 +5,8 @@
 extern crate alloc as std;
 
 pub use base_fee::{
-    PayloadBuildingBaseFeeProvider, L1_BASE_FEE_SLOT, L1_BASE_FEE_VERIFICATION_FEE_DIVIDER,
-    L1_BASE_FEE_VERIFICATION_FEE_MULTIPLIER, L2_SEQUENCER_FEE, MAX_L2_BASE_FEE, PROVING_FEE,
+    PayloadBuildingBaseFeeProvider, L1_BASE_FEE_OVERHEAD, L1_BASE_FEE_PRECISION,
+    L1_BASE_FEE_SCALAR, L1_BASE_FEE_SLOT, MAX_L2_BASE_FEE,
 };
 mod base_fee;
 
