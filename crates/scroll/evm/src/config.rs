@@ -107,7 +107,7 @@ where
             beneficiary: coinbase,
             timestamp: attributes.timestamp,
             difficulty: U256::ZERO,
-            prevrandao: Some(attributes.prev_randao),
+            prevrandao: None,
             gas_limit: attributes.gas_limit,
             basefee: attributes.base_fee,
             blob_excess_gas_and_price: None,
@@ -269,7 +269,6 @@ mod tests {
         let attributes = ScrollNextBlockEnvAttributes {
             timestamp: 1719994277,
             suggested_fee_recipient: Address::random(),
-            prev_randao: B256::random(),
             gas_limit: 10000000,
             base_fee: 155157341,
         };
@@ -287,7 +286,7 @@ mod tests {
             number: header.number + 1,
             beneficiary: config.chain_spec().config.fee_vault_address.unwrap(),
             timestamp: attributes.timestamp,
-            prevrandao: Some(attributes.prev_randao),
+            prevrandao: None,
             difficulty: U256::ZERO,
             basefee: 155157341,
             gas_limit: header.gas_limit,

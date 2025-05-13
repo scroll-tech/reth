@@ -364,7 +364,7 @@ where
             db.payload_building_base_fee()
                 .map_err(|err| PayloadBuilderError::Other(Box::new(err)))?
                 .try_into()
-                .expect("base fee limited to 10_000_000")
+                .expect("base fee limited to 10_000_000_000")
         } else {
             0
         };
@@ -376,7 +376,6 @@ where
                 ScrollNextBlockEnvAttributes {
                     timestamp: self.attributes().timestamp(),
                     suggested_fee_recipient: self.attributes().suggested_fee_recipient(),
-                    prev_randao: self.attributes().prev_randao(),
                     gas_limit: SCROLL_GAS_LIMIT_10M,
                     base_fee,
                 },

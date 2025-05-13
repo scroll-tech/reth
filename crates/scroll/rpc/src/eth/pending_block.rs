@@ -3,7 +3,6 @@
 use crate::ScrollEthApi;
 
 use alloy_consensus::{BlockHeader, Header};
-use alloy_primitives::B256;
 use reth_chainspec::EthChainSpec;
 use reth_evm::ConfigureEvm;
 use reth_primitives_traits::{NodePrimitives, SealedHeader};
@@ -67,7 +66,6 @@ where
         Ok(ScrollNextBlockEnvAttributes {
             timestamp: parent.timestamp().saturating_add(3),
             suggested_fee_recipient: parent.beneficiary(),
-            prev_randao: B256::random(),
             gas_limit: parent.gas_limit(),
             base_fee: parent.base_fee_per_gas().unwrap_or_default(),
         })
