@@ -1077,11 +1077,6 @@ impl<N: NetworkPrimitives> Future for NetworkManager<N> {
 
         let this = self.get_mut();
 
-        // poll new block imports (expected to be a noop for POS)
-        // while let Poll::Ready(outcome) = this.block_import.poll(cx) {
-        //     this.on_block_import_result(outcome);
-        // }
-
         // These loops drive the entire state of network and does a lot of work. Under heavy load
         // (many messages/events), data may arrive faster than it can be processed (incoming
         // messages/requests -> events), and it is possible that more data has already arrived by

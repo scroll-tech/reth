@@ -51,8 +51,8 @@ pub type PeerId = alloy_primitives::B512;
 /// Helper trait that unifies network API needed to launch node.
 pub trait FullNetwork:
     BlockDownloaderProvider<
-        Client: BlockClient<Block = <<Self as NetworkEventListenerProvider>::Primitives as NetworkPrimitives>::Block>>
-    + NetworkSyncUpdater
+        Client: BlockClient<Block = <Self::Primitives as NetworkPrimitives>::Block>,
+    > + NetworkSyncUpdater
     + NetworkInfo
     + NetworkEventListenerProvider
     + Peers
@@ -66,15 +66,14 @@ pub trait FullNetwork:
 
 impl<T> FullNetwork for T where
     T: BlockDownloaderProvider<
-            Client: BlockClient<Block = <<Self as NetworkEventListenerProvider>::Primitives as NetworkPrimitives>::Block>>
-        + NetworkSyncUpdater
+            Client: BlockClient<Block = <Self::Primitives as NetworkPrimitives>::Block>,
+        > + NetworkSyncUpdater
         + NetworkInfo
         + NetworkEventListenerProvider
         + Peers
         + PeersHandleProvider
-        + EthWireBlockListenerProvider<
-            Block = <Self::Primitives as NetworkPrimitives>::Block,
-        > + Clone
+        + EthWireBlockListenerProvider<Block = <Self::Primitives as NetworkPrimitives>::Block>
+        + Clone
         + Unpin
         + 'static
 {
