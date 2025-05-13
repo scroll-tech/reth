@@ -31,7 +31,7 @@ reth-transaction-pool.workspace = true
 reth-trie-db.workspace = true
 
 # revm
-revm = { workspace = true, features = ["c-kzg"] }
+revm = { workspace = true, features = ["kzg-rs"] }
 
 # alloy
 alloy-consensus.workspace = true

@@ -47,7 +47,7 @@ reth-optimism-forks.workspace = true
 reth-optimism-primitives = { workspace = true, features = ["serde", "serde-bincode-compat"] }
 
 # revm with required optimism features
-revm = { workspace = true, features = ["secp256k1", "blst", "c-kzg"] }
+revm = { workspace = true, features = ["secp256k1", "blst", "kzg-rs"] }
 
 # ethereum
 alloy-eips.workspace = true
