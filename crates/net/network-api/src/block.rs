@@ -14,12 +14,15 @@ pub struct NewBlockWithPeer<N: NetworkPrimitives> {
 /// Provides a listener for new blocks on the eth wire protocol.
 pub trait EthWireBlockListenerProvider {
     /// The network primitives.
-    type Primitives: NetworkPrimitives;
+    type NetworkPrimitives: NetworkPrimitives;
 
     /// Create a new eth wire block listener.
     fn eth_wire_block_listener(
         &self,
     ) -> impl Future<
-        Output = Result<EventStream<NewBlockWithPeer<Self::Primitives>>, oneshot::error::RecvError>,
+        Output = Result<
+            EventStream<NewBlockWithPeer<Self::NetworkPrimitives>>,
+            oneshot::error::RecvError,
+        >,
     > + Send;
 }

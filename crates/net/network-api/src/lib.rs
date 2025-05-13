@@ -24,6 +24,7 @@ pub mod noop;
 pub mod block;
 
 pub mod test_utils;
+use block::EthWireBlockListenerProvider;
 use test_utils::PeersHandleProvider;
 
 pub use alloy_rpc_types_admin::EthProtocolInfo;
@@ -50,12 +51,13 @@ pub type PeerId = alloy_primitives::B512;
 /// Helper trait that unifies network API needed to launch node.
 pub trait FullNetwork:
     BlockDownloaderProvider<
-        Client: BlockClient<Block = <Self::Primitives as NetworkPrimitives>::Block>,
-    > + NetworkSyncUpdater
+        Client: BlockClient<Block = <<Self as NetworkEventListenerProvider>::Primitives as NetworkPrimitives>::Block>>
+    + NetworkSyncUpdater
     + NetworkInfo
     + NetworkEventListenerProvider
     + Peers
     + PeersHandleProvider
+    + EthWireBlockListenerProvider<NetworkPrimitives = <Self as NetworkEventListenerProvider>::Primitives>
     + Clone
     + Unpin
     + 'static
@@ -64,13 +66,15 @@ pub trait FullNetwork:
 
 impl<T> FullNetwork for T where
     T: BlockDownloaderProvider<
-            Client: BlockClient<Block = <Self::Primitives as NetworkPrimitives>::Block>,
-        > + NetworkSyncUpdater
+            Client: BlockClient<Block = <<Self as NetworkEventListenerProvider>::Primitives as NetworkPrimitives>::Block>>
+        + NetworkSyncUpdater
         + NetworkInfo
         + NetworkEventListenerProvider
         + Peers
         + PeersHandleProvider
-        + Clone
+        + EthWireBlockListenerProvider<
+            NetworkPrimitives = <Self as NetworkEventListenerProvider>::Primitives,
+        > + Clone
         + Unpin
         + 'static
 {

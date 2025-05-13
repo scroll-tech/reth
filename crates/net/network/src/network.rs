@@ -226,11 +226,12 @@ impl<N: NetworkPrimitives> NetworkEventListenerProvider for NetworkHandle<N> {
 }
 
 impl<N: NetworkPrimitives> EthWireBlockListenerProvider for NetworkHandle<N> {
-    type Primitives = N;
+    type NetworkPrimitives = N;
 
     async fn eth_wire_block_listener(
         &self,
-    ) -> Result<EventStream<NewBlockWithPeer<N>>, oneshot::error::RecvError> {
+    ) -> Result<EventStream<NewBlockWithPeer<Self::NetworkPrimitives>>, oneshot::error::RecvError>
+    {
         let (tx, rx) = oneshot::channel();
         self.send_message(NetworkHandleMessage::EthWireBlockListener(tx));
         Ok(rx.await?)
