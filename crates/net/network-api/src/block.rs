@@ -1,4 +1,5 @@
 use super::*;
+use reth_primitives_traits::Block;
 use reth_tokio_util::EventStream;
 use tokio::sync::oneshot;
 
@@ -14,7 +15,7 @@ pub struct NewBlockWithPeer<B> {
 /// Provides a listener for new blocks on the eth wire protocol.
 pub trait EthWireBlockListenerProvider {
     /// The network primitives.
-    type Block;
+    type Block: Block;
 
     /// Create a new eth wire block listener.
     fn eth_wire_block_listener(

@@ -8660,6 +8660,7 @@ dependencies = [
  "reth-network-p2p",
  "reth-network-peers",
  "reth-network-types",
+ "reth-primitives-traits",
  "reth-tokio-util",
  "serde",
  "thiserror 2.0.12",
