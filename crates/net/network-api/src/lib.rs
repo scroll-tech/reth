@@ -57,7 +57,7 @@ pub trait FullNetwork:
     + NetworkEventListenerProvider
     + Peers
     + PeersHandleProvider
-    + EthWireBlockListenerProvider<NetworkPrimitives = <Self as NetworkEventListenerProvider>::Primitives>
+    + EthWireBlockListenerProvider<Block = <Self::Primitives as NetworkPrimitives>::Block>
     + Clone
     + Unpin
     + 'static
@@ -73,7 +73,7 @@ impl<T> FullNetwork for T where
         + Peers
         + PeersHandleProvider
         + EthWireBlockListenerProvider<
-            NetworkPrimitives = <Self as NetworkEventListenerProvider>::Primitives,
+            Block = <Self::Primitives as NetworkPrimitives>::Block,
         > + Clone
         + Unpin
         + 'static

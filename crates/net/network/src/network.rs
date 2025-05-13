@@ -226,12 +226,11 @@ impl<N: NetworkPrimitives> NetworkEventListenerProvider for NetworkHandle<N> {
 }
 
 impl<N: NetworkPrimitives> EthWireBlockListenerProvider for NetworkHandle<N> {
-    type NetworkPrimitives = N;
+    type Block = <N as NetworkPrimitives>::Block;
 
     async fn eth_wire_block_listener(
         &self,
-    ) -> Result<EventStream<NewBlockWithPeer<Self::NetworkPrimitives>>, oneshot::error::RecvError>
-    {
+    ) -> Result<EventStream<NewBlockWithPeer<Self::Block>>, oneshot::error::RecvError> {
         let (tx, rx) = oneshot::channel();
         self.send_message(NetworkHandleMessage::EthWireBlockListener(tx));
         Ok(rx.await?)
@@ -561,5 +560,5 @@ pub(crate) enum NetworkHandleMessage<N: NetworkPrimitives = EthNetworkPrimitives
     /// Connect to the given peer.
     ConnectPeer(PeerId, PeerKind, PeerAddr),
     /// Retries a eth wire new block event listener.
-    EthWireBlockListener(oneshot::Sender<EventStream<NewBlockWithPeer<N>>>),
+    EthWireBlockListener(oneshot::Sender<EventStream<NewBlockWithPeer<N::Block>>>),
 }
