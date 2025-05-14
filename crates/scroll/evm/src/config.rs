@@ -1,6 +1,7 @@
 use crate::{build::ScrollBlockAssembler, ScrollEvmConfig, ScrollNextBlockEnvAttributes};
 use alloy_consensus::{BlockHeader, Header};
 use alloy_evm::{FromRecoveredTx, FromTxWithEncoded};
+use alloy_primitives::B256;
 use reth_chainspec::EthChainSpec;
 use reth_evm::{ConfigureEvm, EvmEnv, ExecutionCtxFor};
 use reth_primitives_traits::{
@@ -107,7 +108,7 @@ where
             beneficiary: coinbase,
             timestamp: attributes.timestamp,
             difficulty: U256::ZERO,
-            prevrandao: None,
+            prevrandao: Some(B256::ZERO),
             gas_limit: attributes.gas_limit,
             basefee: attributes.base_fee,
             blob_excess_gas_and_price: None,
@@ -286,7 +287,7 @@ mod tests {
             number: header.number + 1,
             beneficiary: config.chain_spec().config.fee_vault_address.unwrap(),
             timestamp: attributes.timestamp,
-            prevrandao: None,
+            prevrandao: Some(B256::ZERO),
             difficulty: U256::ZERO,
             basefee: 155157341,
             gas_limit: header.gas_limit,
