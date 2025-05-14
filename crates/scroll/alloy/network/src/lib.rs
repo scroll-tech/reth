@@ -233,8 +233,6 @@ impl NetworkWallet<Scroll> for EthereumWallet {
 }
 
 impl RecommendedFillers for Scroll {
-    // TODO: We don't have a BlobGasFiller due to trait constraints, is this needed in the absence
-    // of 4844 support?
     type RecommendedFillers = JoinFill<GasFiller, JoinFill<NonceFiller, ChainIdFiller>>;
 
     fn recommended_fillers() -> Self::RecommendedFillers {
