@@ -87,11 +87,14 @@ impl PayloadValidator for ScrollEngineValidator {
         // First parse the block
         let mut block = try_into_block(payload, self.chainspec.clone())?;
 
-        // Seal the block and return if hashes match
-        let block_hash = block.hash_slow();
-        if block_hash == expected_hash {
+        // Seal the block with the no-turn difficulty and return if hashes match.
+        // We guess the difficulty, which should always be 1 or 2 on Scroll.
+        // CLIQUE_NO_TURN_DIFFICULTY is used starting at Euclid, so we test this value first.
+        block.header.difficulty = CLIQUE_NO_TURN_DIFFICULTY;
+        let block_hash_no_turn = block.hash_slow();
+        if block_hash_no_turn == expected_hash {
             return block
-                .seal_unchecked(block_hash)
+                .seal_unchecked(block_hash_no_turn)
                 .try_recover()
                 .map_err(|err| NewPayloadError::Other(err.into()));
         }
@@ -102,16 +105,6 @@ impl PayloadValidator for ScrollEngineValidator {
         if block_hash_in_turn == expected_hash {
             return block
                 .seal_unchecked(block_hash_in_turn)
-                .try_recover()
-                .map_err(|err| NewPayloadError::Other(err.into()));
-        }
-
-        // Seal the block with the no-turn difficulty and return if hashes match
-        block.header.difficulty = CLIQUE_NO_TURN_DIFFICULTY;
-        let block_hash_no_turn = block.hash_slow();
-        if block_hash_no_turn == expected_hash {
-            return block
-                .seal_unchecked(block_hash_no_turn)
                 .try_recover()
                 .map_err(|err| NewPayloadError::Other(err.into()));
         }
