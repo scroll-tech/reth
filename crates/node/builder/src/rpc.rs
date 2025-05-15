@@ -360,35 +360,6 @@ impl<Node: FullNodeComponents, EthApi: EthApiTypes> RpcHandleProvider<Node, EthA
     }
 }
 
-/// Trait to provide access to the beacon engine handle.
-pub trait BeaconEngineHandleProvider<Node: FullNodeComponents, EthApi: EthApiTypes> {
-    /// Returns the beacon engine handle.
-    fn beacon_engine_handle(
-        &self,
-    ) -> &BeaconConsensusEngineHandle<<Node::Types as NodeTypes>::Payload>;
-}
-
-impl<Node: FullNodeComponents, EthApi: EthApiTypes> BeaconEngineHandleProvider<Node, EthApi>
-    for RpcHandle<Node, EthApi>
-{
-    fn beacon_engine_handle(
-        &self,
-    ) -> &BeaconConsensusEngineHandle<<Node::Types as NodeTypes>::Payload> {
-        &self.beacon_engine_handle
-    }
-}
-
-/// Trait that combines the [`RpcHandleProvider`] and [`BeaconEngineHandleProvider`] traits.
-pub trait BaseAddOnsProvider<Node: FullNodeComponents, EthApi: EthApiTypes>:
-    RpcHandleProvider<Node, EthApi> + BeaconEngineHandleProvider<Node, EthApi>
-{
-}
-
-impl<Node: FullNodeComponents, EthApi: EthApiTypes, T> BaseAddOnsProvider<Node, EthApi> for T where
-    T: RpcHandleProvider<Node, EthApi> + BeaconEngineHandleProvider<Node, EthApi>
-{
-}
-
 /// Node add-ons containing RPC server configuration, with customizable eth API handler.
 ///
 /// This struct can be used to provide the RPC server functionality. It is responsible for launching

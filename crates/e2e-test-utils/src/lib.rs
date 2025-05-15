@@ -8,7 +8,7 @@ use reth_network_api::test_utils::PeersHandleProvider;
 use reth_node_api::NodeAddOns;
 use reth_node_builder::{
     components::NodeComponentsBuilder,
-    rpc::{BeaconEngineHandleProvider, EngineValidatorAddOn, RethRpcAddOns, RpcHandleProvider},
+    rpc::{EngineValidatorAddOn, RethRpcAddOns, RpcHandleProvider},
     EngineNodeLauncher, FullNodeTypesAdapter, Node, NodeAdapter, NodeBuilder, NodeComponents,
     NodeConfig, NodeHandle, NodePrimitives, NodeTypes, NodeTypesWithDBAdapter,
     PayloadAttributesBuilder, PayloadTypes,
@@ -56,14 +56,10 @@ where
     N::AddOns: RethRpcAddOns<Adapter<N>> + EngineValidatorAddOn<Adapter<N>>,
     LocalPayloadAttributesBuilder<N::ChainSpec>:
         PayloadAttributesBuilder<<<N as NodeTypes>::Payload as PayloadTypes>::PayloadAttributes>,
-    <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle:
-        BeaconEngineHandleProvider<
-                Adapter<N>,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            > + RpcHandleProvider<
-                Adapter<N>,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            >,
+    <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle: RpcHandleProvider<
+        Adapter<N>,
+        <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
+    >,
 {
     let tasks = TaskManager::current();
     let exec = tasks.executor();
@@ -126,14 +122,10 @@ where
     N: NodeBuilderHelper,
     LocalPayloadAttributesBuilder<N::ChainSpec>:
         PayloadAttributesBuilder<<N::Payload as PayloadTypes>::PayloadAttributes>,
-    <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle:
-        BeaconEngineHandleProvider<
-                Adapter<N>,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            > + RpcHandleProvider<
-                Adapter<N>,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            >,
+    <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle: RpcHandleProvider<
+        Adapter<N>,
+        <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
+    >,
 {
     let tasks = TaskManager::current();
     let exec = tasks.executor();
@@ -252,13 +244,10 @@ where
     LocalPayloadAttributesBuilder<Self::ChainSpec>:
         PayloadAttributesBuilder<<Self::Payload as PayloadTypes>::PayloadAttributes>,
     <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as NodeAddOns<Adapter<Self>>>::Handle:
-        BeaconEngineHandleProvider<
-                Adapter<Self>,
-                <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
-            > + RpcHandleProvider<
-                Adapter<Self>,
-                <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
-            >,
+        RpcHandleProvider<
+            Adapter<Self>,
+            <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
+        >,
 {
 }
 
@@ -295,12 +284,9 @@ where
     LocalPayloadAttributesBuilder<Self::ChainSpec>:
         PayloadAttributesBuilder<<Self::Payload as PayloadTypes>::PayloadAttributes>,
     <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as NodeAddOns<Adapter<Self>>>::Handle:
-        BeaconEngineHandleProvider<
-                Adapter<Self>,
-                <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
-            > + RpcHandleProvider<
-                Adapter<Self>,
-                <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
-            >,
+        RpcHandleProvider<
+            Adapter<Self>,
+            <<Self as Node<TmpNodeAdapter<Self>>>::AddOns as RethRpcAddOns<Adapter<Self>>>::EthApi,
+        >,
 {
 }

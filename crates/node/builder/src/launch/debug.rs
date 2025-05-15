@@ -1,6 +1,6 @@
 use super::LaunchNode;
 use crate::{
-    rpc::{BaseAddOnsProvider, BeaconEngineHandleProvider, RethRpcAddOns, RpcHandleProvider},
+    rpc::{RethRpcAddOns, RpcHandleProvider},
     EngineNodeLauncher, Node, NodeHandle,
 };
 use alloy_provider::network::AnyNetwork;
@@ -40,7 +40,7 @@ where
     AddOns: RethRpcAddOns<N>,
     L: LaunchNode<Target, Node = NodeHandle<N, AddOns>>,
     <AddOns as reth_node_api::NodeAddOns<N>>::Handle:
-        BaseAddOnsProvider<N, <AddOns as RethRpcAddOns<N>>::EthApi>,
+        RpcHandleProvider<N, <AddOns as RethRpcAddOns<N>>::EthApi>,
 {
     type Node = NodeHandle<N, AddOns>;
 
@@ -66,7 +66,7 @@ where
                 .await?;
 
             let rpc_consensus_client = DebugConsensusClient::new(
-                handle.node.add_ons_handle.beacon_engine_handle().clone(),
+                handle.node.rpc_handle().beacon_engine_handle.clone(),
                 Arc::new(block_provider),
             );
 
@@ -98,7 +98,7 @@ where
                 N::Types::rpc_to_primitive_block,
             );
             let rpc_consensus_client = DebugConsensusClient::new(
-                handle.node.add_ons_handle.beacon_engine_handle().clone(),
+                handle.node.rpc_handle().beacon_engine_handle.clone(),
                 Arc::new(block_provider),
             );
             handle.node.task_executor.spawn_critical("etherscan consensus client", async move {
