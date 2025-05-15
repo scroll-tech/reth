@@ -17,7 +17,7 @@ pub struct PayloadBuilderArgs {
     pub extra_data: String,
 
     /// Target gas limit for built blocks.
-    #[arg(long = "builder.gaslimit", default_value_t = ETHEREUM_BLOCK_GAS_LIMIT_36M, value_name = "GAS_LIMIT")]
+    #[arg(long = "builder.gaslimit", value_name = "GAS_LIMIT")]
     pub gas_limit: u64,
 
     /// The interval at which the job should build a new payload after the last.
