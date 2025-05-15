@@ -356,43 +356,27 @@ where
                 <N::ComponentsBuilder as NodeComponentsBuilder<RethFullAdapter<DB, N>>>::Components,
             >,
         >,
-        <<N as Node<
-            FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-        >>::AddOns as reth_node_api::NodeAddOns<
+        <<N as Node<RethFullAdapter<DB, N>>>::AddOns as reth_node_api::NodeAddOns<
             NodeAdapter<
-                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-                <<N as Node<
-                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-                >>::ComponentsBuilder as NodeComponentsBuilder<
-                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                RethFullAdapter<DB, N>,
+                <<N as Node<RethFullAdapter<DB, N>>>::ComponentsBuilder as NodeComponentsBuilder<
+                    RethFullAdapter<DB, N>,
                 >>::Components,
             >,
         >>::Handle: RpcHandleProvider<
             NodeAdapter<
-                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-                <<N as Node<
-                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-                >>::ComponentsBuilder as NodeComponentsBuilder<
-                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                RethFullAdapter<DB, N>,
+                <<N as Node<RethFullAdapter<DB, N>>>::ComponentsBuilder as NodeComponentsBuilder<
+                    RethFullAdapter<DB, N>,
                 >>::Components,
             >,
-            <<N as Node<
-                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
-            >>::AddOns as RethRpcAddOns<
+            <<N as Node<RethFullAdapter<DB, N>>>::AddOns as RethRpcAddOns<
                 NodeAdapter<
-                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                    RethFullAdapter<DB, N>,
                     <<N as Node<
-                        FullNodeTypesAdapter<
-                            N,
-                            DB,
-                            BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>,
-                        >,
+                        RethFullAdapter<DB, N>,
                     >>::ComponentsBuilder as NodeComponentsBuilder<
-                        FullNodeTypesAdapter<
-                            N,
-                            DB,
-                            BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>,
-                        >,
+                        RethFullAdapter<DB, N>,
                     >>::Components,
                 >,
             >>::EthApi,
