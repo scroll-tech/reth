@@ -346,6 +346,49 @@ where
     }
 }
 
+/// Trait to provide access to the RPC handle.
+pub trait RpcHandleProvider<Node: FullNodeComponents, EthApi: EthApiTypes> {
+    /// Returns the rpc server handles.
+    fn rpc_handle(&self) -> &RpcHandle<Node, EthApi>;
+}
+
+impl<Node: FullNodeComponents, EthApi: EthApiTypes> RpcHandleProvider<Node, EthApi>
+    for RpcHandle<Node, EthApi>
+{
+    fn rpc_handle(&self) -> &Self {
+        self
+    }
+}
+
+/// Trait to provide access to the beacon engine handle.
+pub trait BeaconEngineHandleProvider<Node: FullNodeComponents, EthApi: EthApiTypes> {
+    /// Returns the beacon engine handle.
+    fn beacon_engine_handle(
+        &self,
+    ) -> &BeaconConsensusEngineHandle<<Node::Types as NodeTypes>::Payload>;
+}
+
+impl<Node: FullNodeComponents, EthApi: EthApiTypes> BeaconEngineHandleProvider<Node, EthApi>
+    for RpcHandle<Node, EthApi>
+{
+    fn beacon_engine_handle(
+        &self,
+    ) -> &BeaconConsensusEngineHandle<<Node::Types as NodeTypes>::Payload> {
+        &self.beacon_engine_handle
+    }
+}
+
+/// Trait that combines the [`RpcHandleProvider`] and [`BeaconEngineHandleProvider`] traits.
+pub trait BaseAddOnsProvider<Node: FullNodeComponents, EthApi: EthApiTypes>:
+    RpcHandleProvider<Node, EthApi> + BeaconEngineHandleProvider<Node, EthApi>
+{
+}
+
+impl<Node: FullNodeComponents, EthApi: EthApiTypes, T> BaseAddOnsProvider<Node, EthApi> for T where
+    T: RpcHandleProvider<Node, EthApi> + BeaconEngineHandleProvider<Node, EthApi>
+{
+}
+
 /// Node add-ons containing RPC server configuration, with customizable eth API handler.
 ///
 /// This struct can be used to provide the RPC server functionality. It is responsible for launching
@@ -586,8 +629,9 @@ where
 
 /// Helper trait implemented for add-ons producing [`RpcHandle`]. Used by common node launcher
 /// implementations.
-pub trait RethRpcAddOns<N: FullNodeComponents>:
-    NodeAddOns<N, Handle = RpcHandle<N, Self::EthApi>>
+pub trait RethRpcAddOns<N: FullNodeComponents>: NodeAddOns<N>
+where
+    Self::Handle: RpcHandleProvider<N, Self::EthApi>,
 {
     /// eth API implementation.
     type EthApi: EthApiTypes;

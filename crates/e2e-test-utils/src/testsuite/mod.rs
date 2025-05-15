@@ -1,14 +1,18 @@
 //! Utilities for running e2e tests against a node or a network of nodes.
 
+use crate::testsuite::actions::{Action, ActionBox};
+
 use crate::{
-    testsuite::actions::{Action, ActionBox},
-    NodeBuilderHelper, PayloadAttributesBuilder,
+    BlockchainProvider, DatabaseEnv, FullNodeTypesAdapter, Node, NodeAdapter, NodeAddOns,
+    NodeBuilderHelper, NodeComponentsBuilder, NodeTypesWithDBAdapter, PayloadAttributesBuilder,
+    RethRpcAddOns, RpcHandleProvider, TempDatabase,
 };
 use alloy_primitives::B256;
 use eyre::Result;
 use jsonrpsee::http_client::{transport::HttpBackend, HttpClient};
 use reth_engine_local::LocalPayloadAttributesBuilder;
 use reth_node_api::{NodeTypes, PayloadTypes};
+use reth_node_builder::rpc::BeaconEngineHandleProvider;
 use reth_payload_builder::PayloadId;
 use reth_rpc_layer::AuthClientService;
 use setup::Setup;
@@ -16,6 +20,7 @@ use std::{collections::HashMap, marker::PhantomData};
 pub mod actions;
 pub mod setup;
 use alloy_rpc_types_engine::{ForkchoiceState, PayloadAttributes};
+use std::sync::Arc;
 
 #[cfg(test)]
 mod examples;
@@ -137,6 +142,188 @@ impl<I: 'static> TestBuilder<I> {
         N: NodeBuilderHelper,
         LocalPayloadAttributesBuilder<N::ChainSpec>: PayloadAttributesBuilder<
             <<N as NodeTypes>::Payload as PayloadTypes>::PayloadAttributes,
+        >,
+        <<N as Node<
+            FullNodeTypesAdapter<
+                N,
+                Arc<TempDatabase<DatabaseEnv>>,
+                BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+            >,
+        >>::AddOns as NodeAddOns<
+            NodeAdapter<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+                <<N as Node<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::Components,
+            >,
+        >>::Handle: RpcHandleProvider<
+            NodeAdapter<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+                <<N as Node<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::Components,
+            >,
+            <<N as Node<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+            >>::AddOns as RethRpcAddOns<
+                NodeAdapter<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                    <<N as Node<
+                        FullNodeTypesAdapter<
+                            N,
+                            Arc<TempDatabase<DatabaseEnv>>,
+                            BlockchainProvider<
+                                NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                            >,
+                        >,
+                    >>::ComponentsBuilder as NodeComponentsBuilder<
+                        FullNodeTypesAdapter<
+                            N,
+                            Arc<TempDatabase<DatabaseEnv>>,
+                            BlockchainProvider<
+                                NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                            >,
+                        >,
+                    >>::Components,
+                >,
+            >>::EthApi,
+        >,
+        <<N as Node<
+            FullNodeTypesAdapter<
+                N,
+                Arc<TempDatabase<DatabaseEnv>>,
+                BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+            >,
+        >>::AddOns as NodeAddOns<
+            NodeAdapter<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+                <<N as Node<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::Components,
+            >,
+        >>::Handle: BeaconEngineHandleProvider<
+            NodeAdapter<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+                <<N as Node<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                >>::Components,
+            >,
+            <<N as Node<
+                FullNodeTypesAdapter<
+                    N,
+                    Arc<TempDatabase<DatabaseEnv>>,
+                    BlockchainProvider<NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>>,
+                >,
+            >>::AddOns as RethRpcAddOns<
+                NodeAdapter<
+                    FullNodeTypesAdapter<
+                        N,
+                        Arc<TempDatabase<DatabaseEnv>>,
+                        BlockchainProvider<
+                            NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                        >,
+                    >,
+                    <<N as Node<
+                        FullNodeTypesAdapter<
+                            N,
+                            Arc<TempDatabase<DatabaseEnv>>,
+                            BlockchainProvider<
+                                NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                            >,
+                        >,
+                    >>::ComponentsBuilder as NodeComponentsBuilder<
+                        FullNodeTypesAdapter<
+                            N,
+                            Arc<TempDatabase<DatabaseEnv>>,
+                            BlockchainProvider<
+                                NodeTypesWithDBAdapter<N, Arc<TempDatabase<DatabaseEnv>>>,
+                            >,
+                        >,
+                    >>::Components,
+                >,
+            >>::EthApi,
         >,
     {
         let mut setup = self.setup.take();

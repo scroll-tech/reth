@@ -6,7 +6,7 @@ use crate::{
     common::WithConfigs,
     components::NodeComponentsBuilder,
     node::FullNode,
-    rpc::{RethRpcAddOns, RethRpcServerHandles, RpcContext},
+    rpc::{RethRpcAddOns, RethRpcServerHandles, RpcContext, RpcHandleProvider},
     BlockReaderFor, DebugNode, DebugNodeLauncher, EngineNodeLauncher, LaunchNode, Node,
 };
 use alloy_eips::eip4844::env_settings::EnvKzgSettings;
@@ -356,6 +356,47 @@ where
                 <N::ComponentsBuilder as NodeComponentsBuilder<RethFullAdapter<DB, N>>>::Components,
             >,
         >,
+        <<N as Node<
+            FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+        >>::AddOns as reth_node_api::NodeAddOns<
+            NodeAdapter<
+                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                <<N as Node<
+                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                >>::Components,
+            >,
+        >>::Handle: RpcHandleProvider<
+            NodeAdapter<
+                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                <<N as Node<
+                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                >>::ComponentsBuilder as NodeComponentsBuilder<
+                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                >>::Components,
+            >,
+            <<N as Node<
+                FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+            >>::AddOns as RethRpcAddOns<
+                NodeAdapter<
+                    FullNodeTypesAdapter<N, DB, BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>>,
+                    <<N as Node<
+                        FullNodeTypesAdapter<
+                            N,
+                            DB,
+                            BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>,
+                        >,
+                    >>::ComponentsBuilder as NodeComponentsBuilder<
+                        FullNodeTypesAdapter<
+                            N,
+                            DB,
+                            BlockchainProvider<NodeTypesWithDBAdapter<N, DB>>,
+                        >,
+                    >>::Components,
+                >,
+            >>::EthApi,
+        >,
         N::Primitives: FullNodePrimitives,
         EngineNodeLauncher: LaunchNode<
             NodeBuilderWithComponents<RethFullAdapter<DB, N>, N::ComponentsBuilder, N::AddOns>,
@@ -407,6 +448,12 @@ where
     T: FullNodeTypes,
     CB: NodeComponentsBuilder<T>,
     AO: RethRpcAddOns<NodeAdapter<T, CB::Components>>,
+    <AO as reth_node_api::NodeAddOns<
+        NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>,
+    >>::Handle: RpcHandleProvider<
+        NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>,
+        <AO as RethRpcAddOns<NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>>>::EthApi,
+    >,
 {
     /// Returns a reference to the node builder's config.
     pub const fn config(&self) -> &NodeConfig<<T::Types as NodeTypes>::ChainSpec> {
