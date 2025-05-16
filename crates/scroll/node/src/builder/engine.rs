@@ -1,16 +1,19 @@
 use alloy_primitives::U256;
 use alloy_rpc_types_engine::{ExecutionData, PayloadError};
-use reth_node_api::{NewPayloadError, PayloadValidator};
+use reth_node_api::{
+    MessageValidationKind, NewPayloadError, PayloadValidator, VersionSpecificValidationError,
+};
 use reth_node_builder::{
     rpc::EngineValidatorBuilder, AddOnsContext, EngineApiMessageVersion,
-    EngineObjectValidationError, EngineTypes, EngineValidator, FullNodeComponents,
-    PayloadOrAttributes,
+    EngineObjectValidationError, EngineTypes, EngineValidator, ExecutionPayload,
+    FullNodeComponents, PayloadOrAttributes,
 };
 use reth_node_types::NodeTypes;
 use reth_primitives_traits::{Block as _, RecoveredBlock};
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::{try_into_block, ScrollEngineTypes};
 use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
+use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 use std::sync::Arc;
 
@@ -60,18 +63,53 @@ where
     fn validate_version_specific_fields(
         &self,
         _version: EngineApiMessageVersion,
-        _payload_or_attrs: PayloadOrAttributes<'_, Self::ExecutionData, ScrollPayloadAttributes>,
+        payload_or_attrs: PayloadOrAttributes<'_, Self::ExecutionData, ScrollPayloadAttributes>,
     ) -> Result<(), EngineObjectValidationError> {
+        validate_scroll_payload_or_attributes(
+            &payload_or_attrs,
+            payload_or_attrs.message_validation_kind(),
+        )?;
         Ok(())
     }
 
     fn ensure_well_formed_attributes(
         &self,
         _version: EngineApiMessageVersion,
-        _attributes: &ScrollPayloadAttributes,
+        attributes: &ScrollPayloadAttributes,
     ) -> Result<(), EngineObjectValidationError> {
+        validate_scroll_payload_or_attributes(
+            &PayloadOrAttributes::PayloadAttributes::<'_, ExecutionData, _>(attributes),
+            MessageValidationKind::PayloadAttributes,
+        )?;
+
+        // ensure block data hint is present pre euclid.
+        let is_euclid_active =
+            self.chainspec.is_euclid_active_at_timestamp(attributes.payload_attributes.timestamp);
+        if !is_euclid_active && attributes.block_data_hint.is_none() {
+            return Err(EngineObjectValidationError::InvalidParams(
+                "Missing block data hint Pre-Euclid".to_string().into(),
+            ));
+        }
+
         Ok(())
     }
+}
+
+/// Validates the payload or attributes for Scroll.
+fn validate_scroll_payload_or_attributes<Payload: ExecutionPayload>(
+    payload_or_attributes: &PayloadOrAttributes<'_, Payload, ScrollPayloadAttributes>,
+    message_validation_kind: MessageValidationKind,
+) -> Result<(), EngineObjectValidationError> {
+    if payload_or_attributes.parent_beacon_block_root().is_some() {
+        return Err(message_validation_kind
+            .to_error(VersionSpecificValidationError::ParentBeaconBlockRootNotSupportedBeforeV3));
+    }
+    if payload_or_attributes.withdrawals().is_some() {
+        return Err(message_validation_kind
+            .to_error(VersionSpecificValidationError::HasWithdrawalsPreShanghai));
+    }
+
+    Ok(())
 }
 
 impl PayloadValidator for ScrollEngineValidator {
