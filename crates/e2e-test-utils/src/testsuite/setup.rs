@@ -1,9 +1,8 @@
 //! Test setup utilities for configuring the initial state.
 
 use crate::{
-    setup_engine, testsuite::Environment, Adapter, Node, NodeAdapter, NodeAddOns,
-    NodeBuilderHelper, NodeComponentsBuilder, PayloadAttributesBuilder, RethRpcAddOns,
-    RpcHandleProvider, TmpNodeAdapter,
+    setup_engine, testsuite::Environment, Adapter, NodeBuilderHelper, PayloadAttributesBuilder,
+    RpcHandleProvider, TmpNodeAddOnsHandle, TmpNodeEthApi,
 };
 use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::B256;
@@ -125,16 +124,7 @@ impl<I> Setup<I> {
         LocalPayloadAttributesBuilder<N::ChainSpec>: PayloadAttributesBuilder<
             <<N as NodeTypes>::Payload as PayloadTypes>::PayloadAttributes,
         >,
-        <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle:
-            RpcHandleProvider<
-                NodeAdapter<
-                    TmpNodeAdapter<N>,
-                    <<N as Node<TmpNodeAdapter<N>>>::ComponentsBuilder as NodeComponentsBuilder<
-                        TmpNodeAdapter<N>,
-                    >>::Components,
-                >,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            >,
+        TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
     {
         let chain_spec =
             self.chain_spec.clone().ok_or_else(|| eyre!("Chain specification is required"))?;

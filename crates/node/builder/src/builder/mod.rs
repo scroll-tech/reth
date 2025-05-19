@@ -50,6 +50,14 @@ pub use states::*;
 pub type RethFullAdapter<DB, Types> =
     FullNodeTypesAdapter<Types, DB, BlockchainProvider<NodeTypesWithDBAdapter<Types, DB>>>;
 
+/// A full node adapter for a reth node with the builtin provider type
+type FullNodeAdapter<N, DB> = NodeAdapter<
+    RethFullAdapter<DB, N>,
+    <<N as Node<RethFullAdapter<DB, N>>>::ComponentsBuilder as NodeComponentsBuilder<
+        RethFullAdapter<DB, N>,
+    >>::Components,
+>;
+
 #[expect(clippy::doc_markdown)]
 #[cfg_attr(doc, aquamarine::aquamarine)]
 /// Declaratively construct a node.
@@ -350,36 +358,10 @@ where
     >
     where
         N: Node<RethFullAdapter<DB, N>, ChainSpec = ChainSpec> + NodeTypesForProvider,
-        N::AddOns: RethRpcAddOns<
-            NodeAdapter<
-                RethFullAdapter<DB, N>,
-                <N::ComponentsBuilder as NodeComponentsBuilder<RethFullAdapter<DB, N>>>::Components,
-            >,
-        >,
-        <<N as Node<RethFullAdapter<DB, N>>>::AddOns as reth_node_api::NodeAddOns<
-            NodeAdapter<
-                RethFullAdapter<DB, N>,
-                <<N as Node<RethFullAdapter<DB, N>>>::ComponentsBuilder as NodeComponentsBuilder<
-                    RethFullAdapter<DB, N>,
-                >>::Components,
-            >,
-        >>::Handle: RpcHandleProvider<
-            NodeAdapter<
-                RethFullAdapter<DB, N>,
-                <<N as Node<RethFullAdapter<DB, N>>>::ComponentsBuilder as NodeComponentsBuilder<
-                    RethFullAdapter<DB, N>,
-                >>::Components,
-            >,
-            <<N as Node<RethFullAdapter<DB, N>>>::AddOns as RethRpcAddOns<
-                NodeAdapter<
-                    RethFullAdapter<DB, N>,
-                    <<N as Node<
-                        RethFullAdapter<DB, N>,
-                    >>::ComponentsBuilder as NodeComponentsBuilder<
-                        RethFullAdapter<DB, N>,
-                    >>::Components,
-                >,
-            >>::EthApi,
+        N::AddOns: RethRpcAddOns<FullNodeAdapter<N, DB>>,
+        <N::AddOns as NodeAddOns<FullNodeAdapter<N, DB>>>::Handle: RpcHandleProvider<
+            FullNodeAdapter<N, DB>,
+            <N::AddOns as RethRpcAddOns<FullNodeAdapter<N, DB>>>::EthApi,
         >,
         N::Primitives: FullNodePrimitives,
         EngineNodeLauncher: LaunchNode<
@@ -432,7 +414,7 @@ where
     T: FullNodeTypes,
     CB: NodeComponentsBuilder<T>,
     AO: RethRpcAddOns<NodeAdapter<T, CB::Components>>,
-    <AO as reth_node_api::NodeAddOns<
+    <AO as NodeAddOns<
         NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>,
     >>::Handle: RpcHandleProvider<
         NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>,

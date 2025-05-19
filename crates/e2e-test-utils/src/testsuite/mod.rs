@@ -1,10 +1,9 @@
 //! Utilities for running e2e tests against a node or a network of nodes.
 
-use crate::testsuite::actions::{Action, ActionBox};
-
 use crate::{
-    Adapter, Node, NodeAdapter, NodeAddOns, NodeBuilderHelper, NodeComponentsBuilder,
-    PayloadAttributesBuilder, RethRpcAddOns, RpcHandleProvider, TmpNodeAdapter,
+    testsuite::actions::{Action, ActionBox},
+    Adapter, NodeBuilderHelper, PayloadAttributesBuilder, RpcHandleProvider, TmpNodeAddOnsHandle,
+    TmpNodeEthApi,
 };
 use alloy_primitives::B256;
 use eyre::Result;
@@ -140,16 +139,7 @@ impl<I: 'static> TestBuilder<I> {
         LocalPayloadAttributesBuilder<N::ChainSpec>: PayloadAttributesBuilder<
             <<N as NodeTypes>::Payload as PayloadTypes>::PayloadAttributes,
         >,
-        <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle:
-            RpcHandleProvider<
-                NodeAdapter<
-                    TmpNodeAdapter<N>,
-                    <<N as Node<TmpNodeAdapter<N>>>::ComponentsBuilder as NodeComponentsBuilder<
-                        TmpNodeAdapter<N>,
-                    >>::Components,
-                >,
-                <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi,
-            >,
+        TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
     {
         let mut setup = self.setup.take();
 
