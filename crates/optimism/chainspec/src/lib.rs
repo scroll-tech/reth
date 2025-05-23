@@ -61,8 +61,8 @@ pub use base_sepolia::BASE_SEPOLIA;
 use derive_more::{Constructor, Deref, From, Into};
 use reth_chainspec::{
     BaseFeeParams, BaseFeeParamsKind, ChainSpec, ChainSpecBuilder, DepositContract,
-    DisplayHardforks, EthCapacity, EthChainSpec, EthereumHardforks, ForkFilter, ForkId, Hardforks,
-    Head,
+    DisplayHardforks, EthChainSpec, EthereumCapacities, EthereumHardforks, ForkFilter, ForkId,
+    Hardforks, Head,
 };
 use reth_ethereum_forks::{ChainHardforks, EthereumHardfork, ForkCondition};
 use reth_network_peers::NodeRecord;
@@ -287,7 +287,7 @@ impl EthChainSpec for OpChainSpec {
     }
 }
 
-impl EthCapacity for OpChainSpec {}
+impl EthereumCapacities for OpChainSpec {}
 
 impl Hardforks for OpChainSpec {
     fn fork<H: Hardfork>(&self, fork: H) -> ForkCondition {

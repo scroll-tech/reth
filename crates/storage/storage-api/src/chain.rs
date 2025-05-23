@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use alloy_consensus::Header;
 use alloy_primitives::BlockNumber;
 use core::marker::PhantomData;
-use reth_chainspec::{ChainSpecProvider, EthCapacity, EthereumHardforks};
+use reth_chainspec::{ChainSpecProvider, EthereumCapacities, EthereumHardforks};
 use reth_db_api::{
     cursor::{DbCursorRO, DbCursorRW},
     models::StoredBlockOmmers,
@@ -146,7 +146,8 @@ where
 
 impl<Provider, T, H> BlockBodyReader<Provider> for EthStorage<T, H>
 where
-    Provider: DBProvider + ChainSpecProvider<ChainSpec: EthCapacity> + OmmersProvider<Header = H>,
+    Provider:
+        DBProvider + ChainSpecProvider<ChainSpec: EthereumCapacities> + OmmersProvider<Header = H>,
     T: SignedTransaction,
     H: FullBlockHeader,
 {

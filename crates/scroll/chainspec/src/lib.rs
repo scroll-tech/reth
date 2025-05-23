@@ -15,7 +15,7 @@ use alloy_genesis::Genesis;
 use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, From, Into};
 use reth_chainspec::{
-    BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthCapacity, EthChainSpec,
+    BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec, EthereumCapacities,
     EthereumHardforks, ForkFilter, ForkId, Hardforks, Head,
 };
 use reth_ethereum_forks::{
@@ -260,7 +260,7 @@ impl EthChainSpec for ScrollChainSpec {
     }
 }
 
-impl EthCapacity for ScrollChainSpec {
+impl EthereumCapacities for ScrollChainSpec {
     fn withdrawals_active(&self, _: u64) -> bool {
         // Scroll doesn't activate withdrawals.
         false
