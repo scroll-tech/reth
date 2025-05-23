@@ -288,7 +288,7 @@ mod tests {
             beneficiary: config.chain_spec().config.fee_vault_address.unwrap(),
             timestamp: attributes.timestamp,
             prevrandao: Some(B256::ZERO),
-            difficulty: U256::ZERO,
+            difficulty: U256::ONE,
             basefee: 155157341,
             gas_limit: header.gas_limit,
             blob_excess_gas_and_price: None,
