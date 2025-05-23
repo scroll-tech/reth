@@ -132,11 +132,11 @@ impl EthChainSpec for ChainSpec {
 }
 
 /// Trait representing the current capacities of the fork.
-pub trait EthereumCapacities: EthereumHardforks {
+pub trait EthereumCapabilities: EthereumHardforks {
     /// Returns true if the withdrawals are active.
     fn withdrawals_active(&self, ts: u64) -> bool {
         self.is_shanghai_active_at_timestamp(ts)
     }
 }
 
-impl EthereumCapacities for ChainSpec {}
+impl EthereumCapabilities for ChainSpec {}
