@@ -107,7 +107,7 @@ where
             number: parent.number() + 1,
             beneficiary: coinbase,
             timestamp: attributes.timestamp,
-            difficulty: U256::ZERO,
+            difficulty: U256::ONE,
             prevrandao: Some(B256::ZERO),
             gas_limit: attributes.gas_limit,
             basefee: attributes.base_fee,
