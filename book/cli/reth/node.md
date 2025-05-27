@@ -5,8 +5,9 @@ Start the node
 ```bash
 $ reth node --help
 ```
+
 ```txt
-Usage: reth node [OPTIONS] --builder.gaslimit <GAS_LIMIT>
+Usage: reth node [OPTIONS]
 
 Options:
       --config <FILE>
