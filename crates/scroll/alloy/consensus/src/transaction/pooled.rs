@@ -3,7 +3,11 @@
 
 use crate::{ScrollTxEnvelope, ScrollTxType};
 use alloy_consensus::{
-    transaction::{RlpEcdsaDecodableTx, TxEip1559, TxEip2930, TxLegacy},
+    crypto::{
+        secp256k1::{recover_signer, recover_signer_unchecked},
+        RecoveryError,
+    },
+    transaction::{RlpEcdsaDecodableTx, SignerRecoverable, TxEip1559, TxEip2930, TxLegacy},
     SignableTransaction, Signed, Transaction, TxEip7702, TxEnvelope, Typed2718,
 };
 use alloy_eips::{
@@ -11,7 +15,7 @@ use alloy_eips::{
     eip2930::AccessList,
     eip7702::SignedAuthorization,
 };
-use alloy_primitives::{bytes, Bytes, ChainId, Signature, TxHash, TxKind, B256, U256};
+use alloy_primitives::{bytes, Address, Bytes, ChainId, Signature, TxHash, TxKind, B256, U256};
 use alloy_rlp::{Decodable, Encodable, Header};
 use core::hash::{Hash, Hasher};
 
@@ -438,6 +442,18 @@ impl From<ScrollPooledTransaction> for TxEnvelope {
 impl From<ScrollPooledTransaction> for ScrollTxEnvelope {
     fn from(tx: ScrollPooledTransaction) -> Self {
         tx.into_scroll_envelope()
+    }
+}
+
+impl SignerRecoverable for ScrollPooledTransaction {
+    fn recover_signer(&self) -> Result<Address, RecoveryError> {
+        let signature_hash = self.signature_hash();
+        recover_signer(self.signature(), signature_hash)
+    }
+
+    fn recover_signer_unchecked(&self) -> Result<Address, RecoveryError> {
+        let signature_hash = self.signature_hash();
+        recover_signer_unchecked(self.signature(), signature_hash)
     }
 }
 

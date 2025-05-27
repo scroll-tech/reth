@@ -42,7 +42,7 @@ impl TransactionTestContext {
         wallet: PrivateKeySigner,
         nonce: u64,
     ) -> Bytes {
-        let tx = tx(chain_id, 21000, None, None, nonce);
+        let tx = tx(chain_id, 21000, None, None, nonce, Some(20e9 as u128));
         let signed = Self::sign_tx(wallet, tx).await;
         signed.encoded_2718().into()
     }
