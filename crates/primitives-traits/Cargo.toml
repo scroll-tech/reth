@@ -32,7 +32,7 @@ revm-state.workspace = true
 scroll-alloy-consensus = { workspace = true, optional = true }
 
 # op
-op-alloy-consensus = { workspace = true, optional = true }
+op-alloy-consensus = { workspace = true, optional = true, features = ["k256"] }
 
 # crypto
 secp256k1 = { workspace = true, features = ["recovery"], optional = true }
