@@ -15,7 +15,6 @@ use alloy_rlp::{Decodable, Encodable};
 use core::hash::Hash;
 
 pub use alloy_consensus::crypto::RecoveryError;
-use scroll_alloy_consensus::ScrollPooledTransaction;
 
 /// Helper trait that unifies all behaviour required by block to support full node operations.
 pub trait FullSignedTx: SignedTransaction + MaybeCompact + MaybeSerdeBincodeCompat {}
@@ -225,7 +224,7 @@ mod op {
 }
 
 #[cfg(feature = "scroll-alloy-traits")]
-impl SignedTransaction for ScrollPooledTransaction {
+impl SignedTransaction for scroll_alloy_consensus::ScrollPooledTransaction {
     fn tx_hash(&self) -> &TxHash {
         match self {
             Self::Legacy(tx) => tx.hash(),
