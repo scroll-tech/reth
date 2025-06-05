@@ -27,9 +27,6 @@ alloy-rlp.workspace = true
 auto_impl.workspace = true
 smallvec = { workspace = true, features = ["const_new"] }
 
-# metrics
-metrics = { workspace = true, optional = true }
-
 [dev-dependencies]
 reth-primitives-traits = { workspace = true, features = ["arbitrary"] }
 reth-storage-api.workspace = true
@@ -47,7 +44,7 @@ rand.workspace = true
 rand_08.workspace = true
 
 [features]
-default = ["std", "metrics"]
+default = ["std"]
 std = [
     "alloy-primitives/std",
     "alloy-rlp/std",
