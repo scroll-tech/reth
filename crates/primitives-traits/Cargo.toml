@@ -12,9 +12,6 @@ description = "Common types in reth."
 workspace = true
 
 [dependencies]
-# reth
-reth-codecs = { workspace = true, optional = true }
-
 # ethereum
 alloy-consensus = { workspace = true, features = ["k256"] }
 alloy-eips.workspace = true
@@ -57,7 +54,6 @@ proptest-arbitrary-interop = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 
 [dev-dependencies]
-reth-codecs.workspace = true
 reth-chainspec = { workspace = true, features = ["arbitrary"] }
 
 alloy-primitives = { workspace = true, features = ["arbitrary", "serde"] }
@@ -103,7 +99,6 @@ std = [
 secp256k1 = ["alloy-consensus/secp256k1"]
 test-utils = [
     "arbitrary",
-    "reth-codecs?/test-utils",
     "reth-chainspec/test-utils",
 ]
 arbitrary = [
@@ -115,7 +110,6 @@ arbitrary = [
     "dep:proptest-arbitrary-interop",
     "alloy-eips/arbitrary",
     "revm-primitives/arbitrary",
-    "reth-codecs?/arbitrary",
     "secp256k1?/global-context",
     "secp256k1?/rand",
     "op-alloy-consensus?/arbitrary",
@@ -139,7 +133,6 @@ serde = [
     "alloy-primitives/serde",
     "bytes/serde",
     "rand/serde",
-    "reth-codecs?/serde",
     "revm-primitives/serde",
     "revm-primitives/serde",
     "op-alloy-consensus?/serde",
@@ -150,15 +143,8 @@ serde = [
     "rand_08/serde",
     "scroll-alloy-consensus?/serde",
 ]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:modular-bitfield",
-    "dep:byteorder",
-    "scroll-alloy-consensus?/reth-codec",
-]
 op = [
     "dep:op-alloy-consensus",
-    "reth-codecs?/op",
 ]
 scroll-alloy-traits = ["scroll-alloy-consensus"]
 rayon = [

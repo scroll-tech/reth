@@ -12,7 +12,6 @@ description = "Commonly used types for stages usage in reth."
 workspace = true
 
 [dependencies]
-reth-codecs = { workspace = true, optional = true }
 reth-trie-common.workspace = true
 alloy-primitives.workspace = true
 
@@ -23,7 +22,6 @@ bytes = { workspace = true, optional = true }
 modular-bitfield = { workspace = true, optional = true }
 
 [dev-dependencies]
-reth-codecs.workspace = true
 alloy-primitives = { workspace = true, features = ["arbitrary", "rand"] }
 arbitrary = { workspace = true, features = ["derive"] }
 modular-bitfield.workspace = true
@@ -41,22 +39,14 @@ std = [
     "reth-trie-common/std",
     "serde?/std",
 ]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:bytes",
-    "dep:modular-bitfield",
-    "reth-trie-common/reth-codec",
-]
 test-utils = [
     "arbitrary",
-    "reth-codecs?/test-utils",
     "reth-trie-common/test-utils",
 ]
 arbitrary = [
     "std",
     "dep:arbitrary",
     "alloy-primitives/arbitrary",
-    "reth-codecs?/arbitrary",
     "reth-trie-common/arbitrary",
 ]
 serde = [
@@ -64,6 +54,5 @@ serde = [
     "alloy-primitives/serde",
     "bytes?/serde",
     "rand/serde",
-    "reth-codecs?/serde",
     "reth-trie-common/serde",
 ]

@@ -24,9 +24,6 @@ derive_more = { workspace = true, features = ["display"] }
 # arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 
-reth-codecs = { workspace = true, optional = true }
-reth-codecs-derive = { workspace = true, optional = true }
-
 # required by reth-codecs
 modular-bitfield = { workspace = true, optional = true }
 
@@ -40,20 +37,17 @@ bincode.workspace = true
 serde_json.workspace = true
 arbitrary = { workspace = true, features = ["derive"] }
 alloy-primitives = { workspace = true, features = ["rand", "arbitrary"] }
-reth-codecs = { workspace = true, features = ["test-utils"] }
 proptest-arbitrary-interop.workspace = true
 proptest.workspace = true
 test-fuzz.workspace = true
 
 [features]
 default = [
-    "reth-codec",
     "std",
 ]
 std = [
     "serde/std",
     "alloy-primitives/std",
-    "reth-codecs?/std",
     "alloy-consensus/std",
     "alloy-eips/std",
     "alloy-rlp/std",
@@ -72,12 +66,6 @@ kzg = [
     "alloy-consensus/kzg",
     "std",
 ]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:reth-codecs-derive",
-    "modular-bitfield",
-    "std",
-]
 arbitrary = [
     "std",
     "dep:arbitrary",
@@ -85,7 +73,6 @@ arbitrary = [
     "alloy-consensus/arbitrary",
     "alloy-eips/arbitrary",
     "alloy-serde/arbitrary",
-    "reth-codecs?/arbitrary",
     "alloy-primitives/rand",
 ]
 serde = [
@@ -95,7 +82,6 @@ serde = [
     "alloy-consensus/serde",
     "alloy-eips/serde",
     "rand/serde",
-    "reth-codecs?/serde",
 ]
 serde-bincode-compat = [
     "alloy-consensus/serde-bincode-compat",

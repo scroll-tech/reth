@@ -28,18 +28,13 @@ auto_impl.workspace = true
 smallvec = { workspace = true, features = ["const_new"] }
 
 # metrics
-reth-metrics = { workspace = true, optional = true }
 metrics = { workspace = true, optional = true }
 
 [dev-dependencies]
 reth-primitives-traits = { workspace = true, features = ["arbitrary"] }
-reth-provider = { workspace = true, features = ["test-utils"] }
 reth-storage-api.workspace = true
-reth-testing-utils.workspace = true
 reth-trie = { workspace = true, features = ["test-utils"] }
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
-reth-trie-db = { workspace = true, features = ["test-utils"] }
-reth-tracing.workspace = true
 
 arbitrary.workspace = true
 assert_matches.workspace = true
@@ -63,13 +58,10 @@ std = [
     "reth-trie-common/std",
     "tracing/std",
 ]
-metrics = ["dep:reth-metrics", "dep:metrics", "std"]
 test-utils = [
     "std",
     "reth-primitives-traits/test-utils",
-    "reth-provider/test-utils",
     "reth-trie-common/test-utils",
-    "reth-trie-db/test-utils",
     "reth-trie/test-utils",
 ]
 arbitrary = [

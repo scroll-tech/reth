@@ -12,9 +12,7 @@ workspace = true
 
 [dependencies]
 # reth
-reth-codecs = { workspace = true, optional = true }
 reth-primitives-traits = { workspace = true, features = ["scroll-alloy-traits"] }
-reth-zstd-compressors = { workspace = true, optional = true }
 
 # alloy
 alloy-consensus.workspace = true
@@ -48,7 +46,6 @@ secp256k1 = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest-arbitrary-interop.workspace = true
-reth-codecs = { workspace = true, features = ["test-utils"] }
 rstest.workspace = true
 proptest.workspace = true
 secp256k1 = { workspace = true, features = ["rand"] }
@@ -66,8 +63,6 @@ std = [
     "alloy-rlp/std",
     "bytes?/std",
     "reth-primitives-traits/std",
-    "reth-zstd-compressors?/std",
-    "reth-codecs?/std",
     "derive_more/std",
     "once_cell/std",
     "proptest?/std",
@@ -79,17 +74,6 @@ std = [
     "alloy-evm/std",
     "scroll-alloy-evm/std",
 ]
-reth-codec = [
-    "dep:reth-codecs",
-    "std",
-    "dep:proptest",
-    "dep:arbitrary",
-    "reth-primitives-traits/reth-codec",
-    "scroll-alloy-consensus/reth-codec",
-    "dep:bytes",
-    "dep:modular-bitfield",
-    "dep:reth-zstd-compressors",
-]
 serde = [
     "dep:serde",
     "scroll-alloy-consensus/serde",
@@ -99,7 +83,6 @@ serde = [
     "alloy-primitives/serde",
     "bytes?/serde",
     "rand_08?/serde",
-    "reth-codecs?/serde",
     "reth-primitives-traits/serde",
     "revm-scroll/serde",
     "revm-context/serde",
@@ -120,7 +103,6 @@ arbitrary = [
     "alloy-consensus/arbitrary",
     "alloy-eips/arbitrary",
     "alloy-primitives/arbitrary",
-    "reth-codecs?/arbitrary",
     "reth-primitives-traits/arbitrary",
     "scroll-alloy-consensus/arbitrary",
 ]

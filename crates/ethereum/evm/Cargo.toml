@@ -31,7 +31,6 @@ parking_lot = { workspace = true, optional = true }
 derive_more = { workspace = true, optional = true }
 
 [dev-dependencies]
-reth-testing-utils.workspace = true
 reth-evm = { workspace = true, features = ["test-utils"] }
 reth-execution-types.workspace = true
 secp256k1.workspace = true

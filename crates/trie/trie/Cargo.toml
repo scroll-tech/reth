@@ -37,7 +37,6 @@ auto_impl.workspace = true
 itertools.workspace = true
 
 # `metrics` feature
-reth-metrics = { workspace = true, optional = true }
 metrics = { workspace = true, optional = true }
 
 # `test-utils` feature
@@ -47,7 +46,6 @@ triehash = { workspace = true, optional = true }
 # reth
 reth-ethereum-primitives = { workspace = true, features = ["arbitrary", "std"] }
 reth-primitives-traits = { workspace = true, features = ["test-utils"] }
-reth-tracing.workspace = true
 reth-trie-common = { workspace = true, features = ["test-utils", "arbitrary"] }
 
 # revm
@@ -64,7 +62,6 @@ proptest-arbitrary-interop.workspace = true
 proptest.workspace = true
 
 [features]
-metrics = ["reth-metrics", "dep:metrics"]
 serde = [
     "alloy-primitives/serde",
     "alloy-consensus/serde",

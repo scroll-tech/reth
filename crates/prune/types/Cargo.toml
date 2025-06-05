@@ -12,7 +12,6 @@ description = "Commonly used types for prune usage in reth."
 workspace = true
 
 [dependencies]
-reth-codecs = { workspace = true, optional = true }
 
 alloy-primitives.workspace = true
 derive_more.workspace = true
@@ -23,7 +22,6 @@ serde = { workspace = true, features = ["derive"], optional = true }
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 
 [dev-dependencies]
-reth-codecs.workspace = true
 
 alloy-primitives = { workspace = true, features = ["serde"] }
 serde.workspace = true
@@ -47,18 +45,11 @@ std = [
 ]
 test-utils = [
     "dep:arbitrary",
-    "reth-codecs?/test-utils",
 ]
 arbitrary = [
     "alloy-primitives/arbitrary",
-    "reth-codecs?/arbitrary",
-]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:modular-bitfield",
 ]
 serde = [
     "dep:serde",
     "alloy-primitives/serde",
-    "reth-codecs?/serde",
 ]

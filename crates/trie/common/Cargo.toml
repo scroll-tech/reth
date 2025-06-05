@@ -18,7 +18,6 @@ alloy-rlp = { workspace = true, features = ["arrayvec"] }
 alloy-trie = { workspace = true, features = ["ethereum"] }
 alloy-consensus.workspace = true
 reth-primitives-traits.workspace = true
-reth-codecs = { workspace = true, optional = true }
 
 alloy-rpc-types-eth = { workspace = true, optional = true }
 alloy-serde = { workspace = true, optional = true }
@@ -46,7 +45,6 @@ rayon = { workspace = true, optional = true }
 
 [dev-dependencies]
 reth-primitives-traits = { workspace = true, features = ["serde"] }
-reth-codecs.workspace = true
 alloy-genesis.workspace = true
 
 alloy-primitives = { workspace = true, features = ["getrandom"] }
@@ -97,13 +95,8 @@ serde = [
     "alloy-trie/serde",
     "alloy-rpc-types-eth?/serde",
     "reth-primitives-traits/serde",
-    "reth-codecs?/serde",
     "revm-database/serde",
     "revm-state/serde",
-]
-reth-codec = [
-    "dep:reth-codecs",
-    "dep:bytes",
 ]
 serde-bincode-compat = [
     "serde",
@@ -116,11 +109,9 @@ test-utils = [
     "dep:hash-db",
     "arbitrary",
     "reth-primitives-traits/test-utils",
-    "reth-codecs/test-utils",
 ]
 arbitrary = [
     "std",
-    "dep:reth-codecs",
     "alloy-trie/arbitrary",
     "dep:arbitrary",
     "alloy-serde?/arbitrary",
@@ -128,7 +119,6 @@ arbitrary = [
     "alloy-consensus/arbitrary",
     "alloy-primitives/arbitrary",
     "nybbles/arbitrary",
-    "reth-codecs/arbitrary",
     "alloy-rpc-types-eth?/arbitrary",
 ]
 rayon = ["dep:rayon"]

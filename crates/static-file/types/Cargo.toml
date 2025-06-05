@@ -20,7 +20,6 @@ serde = { workspace = true, features = ["derive"] }
 strum = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-reth-nippy-jar.workspace = true
 
 [features]
 default = ["std"]
