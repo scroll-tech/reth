@@ -27,7 +27,7 @@ reth-execution-types.workspace = true
 reth-primitives-traits.workspace = true
 
 # scroll
-reth-scroll-primitives = { workspace = true, features = ["serde", "reth-codec"] }
+reth-scroll-primitives = { workspace = true, features = ["serde"] }
 scroll-alloy-hardforks.workspace = true
 
 # misc
