@@ -20,6 +20,10 @@ pub struct PayloadBuilderArgs {
     #[arg(long = "builder.gaslimit", value_name = "GAS_LIMIT")]
     pub gas_limit: Option<u64>,
 
+    /// Target block time for blocks.
+    #[arg(long = "builder.blocktime", value_parser = parse_duration_from_secs_or_ms, value_name = "BLOCK_TIME")]
+    pub block_time: Option<Duration>,
+
     /// The interval at which the job should build a new payload after the last.
     ///
     /// Interval is specified in seconds or in milliseconds if the value ends with `ms`:
@@ -45,6 +49,7 @@ impl Default for PayloadBuilderArgs {
             gas_limit: None,
             deadline: SLOT_DURATION,
             max_payload_tasks: 3,
+            block_time: None,
         }
     }
 }
@@ -64,6 +69,10 @@ impl PayloadBuilderConfig for PayloadBuilderArgs {
 
     fn gas_limit(&self) -> Option<u64> {
         self.gas_limit
+    }
+
+    fn block_time(&self) -> Option<Duration> {
+        self.block_time
     }
 
     fn max_payload_tasks(&self) -> usize {

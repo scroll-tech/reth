@@ -1,7 +1,7 @@
 //! Scroll's payload builder implementation.
 
 use super::{PayloadBuildingBaseFeeProvider, ScrollPayloadBuilderError};
-use crate::config::ScrollBuilderConfig;
+use crate::config::{Breaker, ScrollBuilderConfig};
 
 use alloy_consensus::{Transaction, Typed2718};
 use alloy_primitives::{B256, U256};
@@ -58,7 +58,7 @@ impl<T: PoolTransaction> ScrollPayloadTransactions<T> for () {
 
 /// Scroll's payload builder.
 #[derive(Debug, Clone)]
-pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
+pub struct ScrollPayloadBuilder<Pool, Client, Evm, B, Txs = ()> {
     /// The type responsible for creating the evm.
     pub evm_config: Evm,
     /// Transaction pool.
@@ -68,39 +68,40 @@ pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
     /// The type responsible for yielding the best transactions to include in a payload.
     pub best_transactions: Txs,
     /// Payload builder configuration.
-    pub builder_config: ScrollBuilderConfig,
+    pub builder_config: ScrollBuilderConfig<B>,
 }
 
-impl<Pool, Evm, Client> ScrollPayloadBuilder<Pool, Client, Evm> {
+impl<Pool, Evm, Client, B> ScrollPayloadBuilder<Pool, Client, Evm, B> {
     /// Creates a new [`ScrollPayloadBuilder`].
     pub const fn new(
         pool: Pool,
         evm_config: Evm,
         client: Client,
-        builder_config: ScrollBuilderConfig,
+        builder_config: ScrollBuilderConfig<B>,
     ) -> Self {
         Self { evm_config, pool, client, best_transactions: (), builder_config }
     }
 }
 
-impl<Pool, Client, Evm, Txs> ScrollPayloadBuilder<Pool, Client, Evm, Txs> {
+impl<Pool, Client, Evm, B, Txs> ScrollPayloadBuilder<Pool, Client, Evm, B, Txs> {
     /// Configures the type responsible for yielding the transactions that should be included in the
     /// payload.
     pub fn with_transactions<T>(
         self,
         best_transactions: T,
-    ) -> ScrollPayloadBuilder<Pool, Client, Evm, T> {
+    ) -> ScrollPayloadBuilder<Pool, Client, Evm, B, T> {
         let Self { evm_config, pool, client, builder_config, .. } = self;
         ScrollPayloadBuilder { evm_config, pool, client, best_transactions, builder_config }
     }
 }
 
-impl<Pool, Client, Evm, T> ScrollPayloadBuilder<Pool, Client, Evm, T>
+impl<Pool, Client, Evm, B, T> ScrollPayloadBuilder<Pool, Client, Evm, B, T>
 where
     Pool: TransactionPool<Transaction: PoolTransaction<Consensus = ScrollTransactionSigned>>,
     Client: StateProviderFactory + ChainSpecProvider<ChainSpec: EthChainSpec + ScrollHardforks>,
     Evm:
         ConfigureEvm<Primitives = ScrollPrimitives, NextBlockEnvCtx = ScrollNextBlockEnvAttributes>,
+    B: Breaker,
 {
     /// Constructs a Scroll payload from the transactions sent via the
     /// Payload attributes by the sequencer. If the `no_tx_pool` argument is passed in
@@ -134,22 +135,17 @@ where
         let state = StateProviderDatabase::new(&state_provider);
 
         if ctx.attributes().no_tx_pool {
-            builder.build(state, &state_provider, ctx, self.builder_config.clone())
+            builder.build(state, &state_provider, ctx, &self.builder_config)
         } else {
             // sequencer mode we can reuse cachedreads from previous runs
-            builder.build(
-                cached_reads.as_db_mut(state),
-                &state_provider,
-                ctx,
-                self.builder_config.clone(),
-            )
+            builder.build(cached_reads.as_db_mut(state), &state_provider, ctx, &self.builder_config)
         }
         .map(|out| out.with_cached_reads(cached_reads))
     }
 }
 
 /// Implementation of the [`PayloadBuilder`] trait for [`ScrollPayloadBuilder`].
-impl<Pool, Client, Evm, Txs> PayloadBuilder for ScrollPayloadBuilder<Pool, Client, Evm, Txs>
+impl<Pool, Client, Evm, B, Txs> PayloadBuilder for ScrollPayloadBuilder<Pool, Client, Evm, B, Txs>
 where
     Client:
         StateProviderFactory + ChainSpecProvider<ChainSpec: EthChainSpec + ScrollHardforks> + Clone,
@@ -157,6 +153,7 @@ where
     Evm:
         ConfigureEvm<Primitives = ScrollPrimitives, NextBlockEnvCtx = ScrollNextBlockEnvAttributes>,
     Txs: ScrollPayloadTransactions<Pool::Transaction>,
+    B: Breaker,
 {
     type Attributes = ScrollPayloadBuilderAttributes;
     type BuiltPayload = ScrollBuiltPayload;
@@ -217,12 +214,12 @@ impl<'a, Txs> std::fmt::Debug for ScrollBuilder<'a, Txs> {
 
 impl<Txs> ScrollBuilder<'_, Txs> {
     /// Builds the payload on top of the state.
-    pub fn build<EvmConfig, ChainSpec>(
+    pub fn build<EvmConfig, ChainSpec, B>(
         self,
         db: impl Database<Error = ProviderError>,
         state_provider: impl StateProvider,
         ctx: ScrollPayloadBuilderCtx<EvmConfig, ChainSpec>,
-        builder_config: ScrollBuilderConfig,
+        builder_config: &ScrollBuilderConfig<B>,
     ) -> Result<BuildOutcomeKind<ScrollBuiltPayload>, PayloadBuilderError>
     where
         EvmConfig: ConfigureEvm<
@@ -231,6 +228,7 @@ impl<Txs> ScrollBuilder<'_, Txs> {
         >,
         ChainSpec: EthChainSpec + ScrollHardforks,
         Txs: PayloadTransactions<Transaction: PoolTransaction<Consensus = ScrollTransactionSigned>>,
+        B: Breaker,
     {
         let Self { best } = self;
         tracing::debug!(target: "payload_builder", id=%ctx.payload_id(), parent_header = ?ctx.parent().hash(), parent_number = ctx.parent().number, "building new payload");
@@ -251,7 +249,10 @@ impl<Txs> ScrollBuilder<'_, Txs> {
         // 3. if mem pool transactions are requested we execute them
         if !ctx.attributes().no_tx_pool {
             let best_txs = best(ctx.best_transaction_attributes(builder.evm_mut().block()));
-            if ctx.execute_best_transactions(&mut info, &mut builder, best_txs)?.is_some() {
+            if ctx
+                .execute_best_transactions(&mut info, &mut builder, best_txs, builder_config)?
+                .is_some()
+            {
                 return Ok(BuildOutcomeKind::Cancelled)
             }
 
@@ -368,10 +369,10 @@ where
     }
 
     /// Prepares a [`BlockBuilder`] for the next block.
-    pub fn block_builder<'a, DB: Database>(
+    pub fn block_builder<'a, DB: Database, B>(
         &'a self,
         db: &'a mut State<DB>,
-        builder_config: ScrollBuilderConfig,
+        builder_config: &ScrollBuilderConfig<B>,
     ) -> Result<impl BlockBuilder<Primitives = Evm::Primitives> + 'a, PayloadBuilderError> {
         // get the base fee for the attributes.
         let base_fee: u64 = if self.chain_spec.is_curie_active_at_block(self.parent().number + 1) {
@@ -452,13 +453,14 @@ where
     /// Executes the given best transactions and updates the execution info.
     ///
     /// Returns `Ok(Some(())` if the job was cancelled.
-    pub fn execute_best_transactions(
+    pub fn execute_best_transactions<B: Breaker>(
         &self,
         info: &mut ExecutionInfo,
         builder: &mut impl BlockBuilder<Primitives = Evm::Primitives>,
         mut best_txs: impl PayloadTransactions<
             Transaction: PoolTransaction<Consensus = TxTy<Evm::Primitives>>,
         >,
+        builder_config: &ScrollBuilderConfig<B>,
     ) -> Result<Option<()>, PayloadBuilderError> {
         let block_gas_limit = builder.evm_mut().block().gas_limit;
         let base_fee = builder.evm_mut().block().basefee;
@@ -481,7 +483,13 @@ where
 
             // check if the job was cancelled, if so we can exit early
             if self.cancel.is_cancelled() {
-                return Ok(Some(()))
+                return Ok(Some(()));
+            }
+
+            // check if the execution needs to be halted.
+            if builder_config.breaker.should_break() {
+                tracing::trace!(target: "scroll::payload_builder", ?info, "breaking execution loop");
+                return Ok(None);
             }
 
             let gas_used = match builder.execute_transaction(tx.clone()) {
