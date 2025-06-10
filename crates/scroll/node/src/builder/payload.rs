@@ -51,8 +51,8 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
             tracing::warn!(target: "reth::cli", "Using {SCROLL_GAS_LIMIT} gas limit for ScrollPayloadBuilder. Configure with --builder.gaslimit");
             SCROLL_GAS_LIMIT
         });
-        let block_time = ctx.payload_builder_config().block_time().unwrap_or_else (|| {
-            tracing::warn!(target: "reth::cli", "Using {SCROLL_BLOCK_TIME:?} block time for ScrollPayloadBuilder. Configure with --builder.blocktime");
+        let block_time = ctx.payload_builder_config().execution_limit().unwrap_or_else (|| {
+            tracing::warn!(target: "reth::cli", "Using {SCROLL_BLOCK_TIME:?} execution limit for ScrollPayloadBuilder. Configure with --builder.executionlimit");
             SCROLL_BLOCK_TIME
         });
         let timer = Timer { start: Instant::now(), duration: block_time };
