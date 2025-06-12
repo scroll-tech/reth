@@ -10,7 +10,10 @@ use reth_scroll_evm::ScrollNextBlockEnvAttributes;
 use reth_scroll_payload::{config::Breaker, ScrollBuilderConfig, ScrollPayloadTransactions};
 use reth_scroll_primitives::{ScrollPrimitives, ScrollTransactionSigned};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 /// Payload builder for Scroll.
 #[derive(Debug, Clone, Default, Copy)]
@@ -30,9 +33,7 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
         evm_config: Evm,
         ctx: &BuilderContext<Node>,
         pool: Pool,
-    ) -> eyre::Result<
-        reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, Evm, Timer, Txs>,
-    >
+    ) -> eyre::Result<reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, Evm, Txs>>
     where
         Node: FullNodeTypes<
             Types: NodeTypes<
@@ -55,15 +56,17 @@ impl<Txs> ScrollPayloadBuilder<Txs> {
             tracing::warn!(target: "reth::cli", "Using {SCROLL_BLOCK_TIME:?} execution limit for ScrollPayloadBuilder. Configure with --builder.executionlimit");
             SCROLL_BLOCK_TIME
         });
-        let timer = Timer { start: Instant::now(), duration: block_time };
 
         let payload_builder = reth_scroll_payload::ScrollPayloadBuilder::new(
             pool,
             evm_config,
             ctx.provider().clone(),
-            ScrollBuilderConfig::new(gas_limit, timer),
+            ScrollBuilderConfig::new(gas_limit, block_time),
         )
-        .with_transactions(self.best_transactions);
+        .with_transactions(self.best_transactions)
+        .with_breaker(Arc::new(|config| {
+            Arc::new(Timer { start: Instant::now(), duration: config.desired_execution_time_limit })
+        }));
 
         Ok(payload_builder)
     }
@@ -87,8 +90,7 @@ where
         + 'static,
     Txs: ScrollPayloadTransactions<Pool::Transaction>,
 {
-    type PayloadBuilder =
-        reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, Evm, Timer, Txs>;
+    type PayloadBuilder = reth_scroll_payload::ScrollPayloadBuilder<Pool, Node::Provider, Evm, Txs>;
 
     async fn build_payload_builder(
         self,
@@ -105,14 +107,6 @@ where
 pub struct Timer {
     pub start: Instant,
     pub duration: Duration,
-}
-
-impl Clone for Timer {
-    fn clone(&self) -> Self {
-        // take the current instant every time the timer is cloned, meaning the config
-        // is cloned and block building start.
-        Self { start: Instant::now(), duration: self.duration }
-    }
 }
 
 impl Breaker for Timer {
