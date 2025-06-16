@@ -64,3 +64,4 @@ std = [
     "serde_json/std",
     "scroll-alloy-hardforks/std",
 ]
+test-utils = []

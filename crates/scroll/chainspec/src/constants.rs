@@ -23,6 +23,8 @@ pub const SCROLL_MAINNET_L1_CONFIG: L1Config = L1Config {
     l1_message_queue_address: SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
     scroll_chain_address: SCROLL_MAINNET_L1_PROXY_ADDRESS,
     num_l1_messages_per_block: SCROLL_MAINNET_MAX_L1_MESSAGES,
+    #[cfg(feature = "test-utils")]
+    bypass_block_data_hint_checks: false,
 };
 
 /// The Scroll Mainnet genesis hash
@@ -48,6 +50,8 @@ pub const SCROLL_SEPOLIA_L1_CONFIG: L1Config = L1Config {
     l1_message_queue_address: SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS,
     scroll_chain_address: SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
     num_l1_messages_per_block: SCROLL_SEPOLIA_MAX_L1_MESSAGES,
+    #[cfg(feature = "test-utils")]
+    bypass_block_data_hint_checks: false,
 };
 
 /// The L1 message queue address for Scroll dev.
@@ -67,6 +71,8 @@ pub const SCROLL_DEV_L1_CONFIG: L1Config = L1Config {
     l1_message_queue_address: SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS,
     scroll_chain_address: SCROLL_DEV_L1_PROXY_ADDRESS,
     num_l1_messages_per_block: SCROLL_DEV_MAX_L1_MESSAGES,
+    #[cfg(feature = "test-utils")]
+    bypass_block_data_hint_checks: false,
 };
 
 /// The Scroll Sepolia genesis hash

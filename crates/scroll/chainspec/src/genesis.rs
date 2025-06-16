@@ -90,6 +90,10 @@ pub struct L1Config {
     pub scroll_chain_address: Address,
     /// The maximum number of L1 messages to be consumed per L2 rollup block.
     pub num_l1_messages_per_block: u64,
+    #[cfg(feature = "test-utils")]
+    /// Whether to bypass block data hint checks in the engine-validator. This can only ever be set
+    /// with the `test-utils` feature enabled.
+    pub bypass_block_data_hint_checks: bool,
 }
 
 /// The configuration for the Scroll sequencer chain.
@@ -217,6 +221,8 @@ mod tests {
                     l1_message_queue_address: address!("0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"),
                     scroll_chain_address: address!("a13BAF47339d63B743e7Da8741db5456DAc1E556"),
                     num_l1_messages_per_block: 10,
+                    #[cfg(feature = "test-utils")]
+                    bypass_block_data_hint_checks: false,
                 },
             },
         };

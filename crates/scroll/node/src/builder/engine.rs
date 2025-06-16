@@ -84,10 +84,22 @@ where
             MessageValidationKind::PayloadAttributes,
         )?;
 
+        // In test cases we allow bypassing the block data hint check.
+        let bypass_check = {
+            #[cfg(feature = "test-utils")]
+            {
+                self.chainspec.config.l1_config.bypass_block_data_hint_checks
+            }
+            #[cfg(not(feature = "test-utils"))]
+            {
+                false
+            }
+        };
+
         // ensure block data hint is present pre euclid.
         let is_euclid_active =
             self.chainspec.is_euclid_active_at_timestamp(attributes.payload_attributes.timestamp);
-        if !is_euclid_active && attributes.block_data_hint.is_none() {
+        if !is_euclid_active && attributes.block_data_hint.is_none() && !bypass_check {
             return Err(EngineObjectValidationError::InvalidParams(
                 "Missing block data hint Pre-Euclid".to_string().into(),
             ));
