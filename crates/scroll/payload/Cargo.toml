@@ -83,4 +83,5 @@ test-utils = [
     "reth-chainspec/test-utils",
     "reth-evm/test-utils",
     "reth-revm/test-utils",
+    "reth-scroll-chainspec/test-utils",
 ]

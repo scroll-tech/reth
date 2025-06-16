@@ -64,4 +64,8 @@ std = [
     "serde_json/std",
     "scroll-alloy-hardforks/std",
 ]
-test-utils = []
+test-utils = [
+    "reth-chainspec/test-utils",
+    "reth-primitives-traits/test-utils",
+    "reth-trie-common/test-utils",
+]
