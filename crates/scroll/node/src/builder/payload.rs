@@ -13,7 +13,7 @@ use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use std::time::Duration;
 
 /// Payload builder for Scroll.
-#[derive(Debug, Clone, Default, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct ScrollPayloadBuilderBuilder<Txs = ()> {
     /// Returns the current best transactions from the mempool.
     pub best_transactions: Txs,
@@ -21,7 +21,17 @@ pub struct ScrollPayloadBuilderBuilder<Txs = ()> {
     pub payload_building_time_limit: Duration,
 }
 
+impl Default for ScrollPayloadBuilderBuilder {
+    fn default() -> Self {
+        Self {
+            best_transactions: (),
+            payload_building_time_limit: SCROLL_PAYLOAD_BUILDING_DURATION,
+        }
+    }
+}
+
 const SCROLL_GAS_LIMIT: u64 = 20_000_000;
+const SCROLL_PAYLOAD_BUILDING_DURATION: Duration = Duration::from_secs(1);
 
 impl<Txs> ScrollPayloadBuilderBuilder<Txs> {
     /// A helper method to initialize [`reth_scroll_payload::ScrollPayloadBuilder`] with the

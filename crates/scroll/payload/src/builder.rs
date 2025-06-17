@@ -6,7 +6,7 @@ use crate::config::{PayloadBuildingBreaker, ScrollBuilderConfig};
 use alloy_consensus::{Transaction, Typed2718};
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
-use core::fmt::{Debug, Formatter};
+use core::fmt::Debug;
 use reth_basic_payload_builder::{
     is_better_payload, BuildArguments, BuildOutcome, BuildOutcomeKind, MissingPayloadBehaviour,
     PayloadBuilder, PayloadConfig,
@@ -57,7 +57,7 @@ impl<T: PoolTransaction> ScrollPayloadTransactions<T> for () {
 }
 
 /// Scroll's payload builder.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
     /// The type responsible for creating the evm.
     pub evm_config: Evm,
@@ -69,20 +69,6 @@ pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
     pub best_transactions: Txs,
     /// Payload builder configuration.
     pub builder_config: ScrollBuilderConfig,
-}
-
-impl<Pool: Debug, Client: Debug, Evm: Debug, Txs: Debug> Debug
-    for ScrollPayloadBuilder<Pool, Client, Evm, Txs>
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("ScrollPayloadBuilder")
-            .field("evm_config", &self.evm_config)
-            .field("pool", &self.pool)
-            .field("best_transactions", &self.best_transactions)
-            .field("builder_config", &self.builder_config)
-            .field("breaker", &"Breaker")
-            .finish()
-    }
 }
 
 impl<Pool, Evm, Client> ScrollPayloadBuilder<Pool, Client, Evm> {
@@ -269,7 +255,7 @@ impl<Txs> ScrollBuilder<'_, Txs> {
             // check if the new payload is even more valuable
             if !ctx.is_better_payload(info.total_fees) {
                 // can skip building the block
-                return Ok(BuildOutcomeKind::Aborted { fees: info.total_fees });
+                return Ok(BuildOutcomeKind::Aborted { fees: info.total_fees })
             }
         }
 
@@ -427,7 +413,7 @@ where
             if sequencer_tx.value().is_eip4844() {
                 return Err(PayloadBuilderError::other(
                     ScrollPayloadBuilderError::BlobTransactionRejected,
-                ));
+                ))
             }
 
             // Convert the transaction to a [RecoveredTx]. This is
@@ -445,7 +431,7 @@ where
                     ..
                 })) => {
                     tracing::trace!(target: "payload_builder", %error, ?sequencer_tx, "Error in sequencer transaction, skipping.");
-                    continue;
+                    continue
                 }
                 Err(err) => {
                     // this is an error that we should treat as fatal for this attempt
@@ -482,18 +468,18 @@ where
                 // invalid which also removes all dependent transaction from
                 // the iterator before we can continue
                 best_txs.mark_invalid(tx.signer(), tx.nonce());
-                continue;
+                continue
             }
 
             // A sequencer's block should never contain blob or deposit transactions from the pool.
             if tx.is_eip4844() || tx.is_l1_message() {
                 best_txs.mark_invalid(tx.signer(), tx.nonce());
-                continue;
+                continue
             }
 
             // check if the job was cancelled, if so we can exit early
             if self.cancel.is_cancelled() {
-                return Ok(Some(()));
+                return Ok(Some(()))
             }
 
             // check if the execution needs to be halted.
@@ -517,7 +503,7 @@ where
                         tracing::trace!(target: "payload_builder", %error, ?tx, "skipping invalid transaction and its descendants");
                         best_txs.mark_invalid(tx.signer(), tx.nonce());
                     }
-                    continue;
+                    continue
                 }
                 Err(err) => {
                     // this is an error that we should treat as fatal for this attempt

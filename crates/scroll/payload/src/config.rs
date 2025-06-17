@@ -5,7 +5,7 @@ use reth_chainspec::MIN_TRANSACTION_GAS;
 use std::{fmt::Debug, time::Instant};
 
 /// Settings for the Scroll builder.
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ScrollBuilderConfig {
     /// Gas limit.
     pub gas_limit: u64,
