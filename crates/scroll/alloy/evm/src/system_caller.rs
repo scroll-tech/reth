@@ -49,8 +49,6 @@ where
 /// If Feynman is not activated, or the block is the genesis block, then this is a no-op, and no
 /// state changes are made.
 ///
-/// Note: this does not commit the state changes to the database, it only transact the call.
-///
 /// Returns `None` if Feynman is not active or the block is the genesis block, otherwise returns the
 /// result of the call.
 ///
@@ -61,6 +59,7 @@ fn transact_blockhashes_contract_call<Halt>(
     parent_block_hash: B256,
     evm: &mut impl Evm<HaltReason = Halt>,
 ) -> Result<Option<ResultAndState<Halt>>, BlockExecutionError> {
+    // if Feynman is not active at timestamp then no system transaction occurs.
     if !spec.is_feynman_active_at_timestamp(evm.block().timestamp) {
         return Ok(None);
     }
@@ -149,9 +148,6 @@ mod tests {
         let mut evm = evm_config.evm_for_block(state, &block.header);
         system_caller.apply_blockhashes_contract_call(block.parent_hash, &mut evm).unwrap();
 
-        // load the account first.
-        evm.db_mut().basic(HISTORY_STORAGE_ADDRESS).unwrap();
-
         // assert the hash is written to storage.
         let parent_hash = evm.db().storage(HISTORY_STORAGE_ADDRESS, U256::ZERO).unwrap();
         assert_ne!(Into::<B256>::into(parent_hash), block.parent_hash);
@@ -197,9 +193,6 @@ mod tests {
         // initiate the evm and apply the block hashes contract call.
         let mut evm = evm_config.evm_for_block(state, &block.header);
         system_caller.apply_blockhashes_contract_call(block.parent_hash, &mut evm).unwrap();
-
-        // load the account first.
-        evm.db_mut().basic(HISTORY_STORAGE_ADDRESS).unwrap();
 
         // assert the hash is written to storage.
         let parent_hash = evm.db().storage(HISTORY_STORAGE_ADDRESS, U256::ZERO).unwrap();
