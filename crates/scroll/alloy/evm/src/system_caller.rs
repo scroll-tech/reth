@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use alloy_eips::eip2935::HISTORY_STORAGE_ADDRESS;
 use alloy_evm::{
     block::{BlockExecutionError, BlockValidationError},
