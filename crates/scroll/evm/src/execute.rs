@@ -117,7 +117,7 @@ mod tests {
 
         let evm = evm_config.evm_for_block(state, block.header());
         let receipt_builder = ScrollRethReceiptBuilder::default();
-        ScrollBlockExecutor::new(evm, chain_spec, receipt_builder)
+        ScrollBlockExecutor::new(evm, Default::default(), chain_spec, receipt_builder)
     }
 
     fn block(
