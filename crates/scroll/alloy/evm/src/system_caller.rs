@@ -150,9 +150,9 @@ mod tests {
         let mut evm = evm_config.evm_for_block(state, &block.header);
         system_caller.apply_blockhashes_contract_call(block.parent_hash, &mut evm).unwrap();
 
-        // assert the hash is written to storage.
+        // assert the storage slot remains unchanged.
         let parent_hash = evm.db().storage(HISTORY_STORAGE_ADDRESS, U256::ZERO).unwrap();
-        assert_ne!(Into::<B256>::into(parent_hash), block.parent_hash);
+        assert_eq!(parent_hash, U256::ZERO);
     }
 
     #[test]
