@@ -5,6 +5,7 @@ mod receipt_builder;
 
 use crate::{
     block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
+    system_caller::ScrollSystemCaller,
     IntoCompressed, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
     ScrollTxCompressionFactorCache, WithCompression,
 };
@@ -35,7 +36,7 @@ use scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 /// Context for Scroll Block Execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct ScrollBlockExecutionCtx {
     /// Parent block hash.
     pub parent_hash: B256,
@@ -48,13 +49,16 @@ pub struct ScrollBlockExecutor<Evm, R: ScrollReceiptBuilder, Spec> {
     spec: Spec,
     /// Receipt builder.
     receipt_builder: R,
-
     /// The EVM used by executor.
     evm: Evm,
+    /// Context for block execution.
+    ctx: ScrollBlockExecutionCtx,
     /// Receipts of executed transactions.
     receipts: Vec<R::Receipt>,
     /// Total gas used by executed transactions.
     gas_used: u64,
+    /// Utility to call system smart contracts.
+    system_caller: ScrollSystemCaller<Spec>,
 }
 
 impl<E, R: ScrollReceiptBuilder, Spec> ScrollBlockExecutor<E, R, Spec> {
@@ -71,8 +75,53 @@ where
     Spec: ScrollHardforks + Clone,
 {
     /// Creates a new [`ScrollBlockExecutor`].
-    pub const fn new(evm: E, spec: Spec, receipt_builder: R) -> Self {
-        Self { evm, spec, receipt_builder, receipts: Vec::new(), gas_used: 0 }
+    pub fn new(evm: E, ctx: ScrollBlockExecutionCtx, spec: Spec, receipt_builder: R) -> Self {
+        Self {
+            evm,
+            ctx,
+            system_caller: ScrollSystemCaller::new(spec.clone()),
+            spec,
+            receipt_builder,
+            receipts: Vec::new(),
+            gas_used: 0,
+        }
+    }
+}
+
+impl<'db, DB, E, R, Spec> ScrollBlockExecutor<E, R, Spec>
+where
+    DB: Database + 'db,
+    E: EvmExt<
+        DB = &'db mut State<DB>,
+        Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
+    >,
+    R: ScrollReceiptBuilder<
+        Transaction: Transaction + Encodable2718 + RecoveredTx<R::Transaction>,
+        Receipt: TxReceipt,
+    >,
+    Spec: ScrollHardforks,
+    for<'a> &'a WithCompression<<R as ScrollReceiptBuilder>::Transaction>:
+        IntoTxEnv<<E as alloy_evm::Evm>::Tx>,
+{
+    /// Executes all transactions in a block, applying pre and post execution changes.
+    pub fn execute_block_with_compression_cache(
+        mut self,
+        transactions: impl IntoIterator<
+            Item = impl ExecutableTx<Self> + IntoCompressed<<Self as BlockExecutor>::Transaction>,
+        >,
+        mut compression_cache: ScrollTxCompressionFactorCache,
+    ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
+    where
+        Self: Sized,
+    {
+        self.apply_pre_execution_changes()?;
+
+        for tx in transactions {
+            let tx = tx.into_compressed(Some(&mut compression_cache));
+            self.execute_transaction(&tx)?;
+        }
+
+        self.apply_post_execution_changes()
     }
 }
 
@@ -133,12 +182,15 @@ where
             self.spec.is_spurious_dragon_active_at_block(self.evm.block().number);
         self.evm.db_mut().set_state_clear_flag(state_clear_flag);
 
-        // load the l1 gas oracle contract in cache
+        // load the l1 gas oracle contract in cache.
         let _ = self
             .evm
             .db_mut()
             .load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)
             .map_err(BlockExecutionError::other)?;
+
+        // apply eip-2935.
+        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
 
         if self
             .spec
@@ -353,12 +405,12 @@ where
     fn create_executor<'a, DB, I>(
         &'a self,
         evm: <ScrollEvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
-        _ctx: Self::ExecutionCtx<'a>,
+        ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
         DB: Database + 'a,
         I: Inspector<ScrollContext<&'a mut State<DB>>> + 'a,
     {
-        ScrollBlockExecutor::new(evm, &self.spec, &self.receipt_builder)
+        ScrollBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
 }

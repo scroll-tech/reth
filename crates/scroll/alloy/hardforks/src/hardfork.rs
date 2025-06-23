@@ -20,8 +20,8 @@ hardfork!(
         Euclid,
         /// EuclidV2 <https://docs.scroll.io/en/technology/overview/scroll-upgrades/euclid-upgrade/>
         EuclidV2,
-        /// Feynman: <https://docs.scroll.io/en/technology/overview/scroll-upgrades/feynman-upgrade/>
-        Feynman,
+        /// Feynman <https://docs.scroll.io/en/technology/overview/scroll-upgrades/feynman-upgrade/>
+        Feynman
     }
 );
 
@@ -36,8 +36,8 @@ impl ScrollHardfork {
             (Self::DarwinV2, ForkCondition::Timestamp(1725264000)),
             (Self::Euclid, ForkCondition::Timestamp(1744815600)),
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
-            // TODO: update timestamp
-            (Self::Feynman, ForkCondition::Timestamp(u64::MAX - 1)),
+            // TODO: update
+            (Self::Feynman, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 
@@ -50,9 +50,9 @@ impl ScrollHardfork {
             (Self::Darwin, ForkCondition::Timestamp(1723622400)),
             (Self::DarwinV2, ForkCondition::Timestamp(1724832000)),
             (Self::Euclid, ForkCondition::Timestamp(1741680000)),
-            (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
-            // TODO: update timestamp
-            (Self::Feynman, ForkCondition::Timestamp(u64::MAX - 1)),
+            (Self::EuclidV2, ForkCondition::Timestamp(1741852800)),
+            // TODO: update
+            (Self::Feynman, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 }
@@ -64,7 +64,8 @@ mod tests {
 
     #[test]
     fn check_scroll_hardfork_from_str() {
-        let hardfork_str = ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2", "EUcliD", "eUClidv2"];
+        let hardfork_str =
+            ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2", "EUcliD", "eUClidv2", "FEYnmaN"];
         let expected_hardforks = [
             ScrollHardfork::Bernoulli,
             ScrollHardfork::Curie,
@@ -72,6 +73,7 @@ mod tests {
             ScrollHardfork::DarwinV2,
             ScrollHardfork::Euclid,
             ScrollHardfork::EuclidV2,
+            ScrollHardfork::Feynman,
         ];
 
         let hardforks: Vec<ScrollHardfork> =
