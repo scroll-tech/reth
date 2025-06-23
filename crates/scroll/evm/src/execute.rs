@@ -92,6 +92,7 @@ mod tests {
     const CURIE_BLOCK_NUMBER: u64 = 7096837;
     const EUCLID_V2_BLOCK_NUMBER: u64 = 14907015;
     const EUCLID_V2_BLOCK_TIMESTAMP: u64 = 1745305200;
+    const FEYNMAN_BLOCK_TIMESTAMP: u64 = u64::MAX;
 
     const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
     const OVER_HEAD_SLOT: U256 = U256::from_limbs([2, 0, 0, 0]);
@@ -382,10 +383,38 @@ mod tests {
     }
 
     #[test]
+    fn test_execute_transaction_l1_message_feynman_fork() -> eyre::Result<()> {
+        // Execute L1 message on feynman block
+        let expected_l1_fee = U256::ZERO;
+        execute_transaction(
+            ScrollTxType::L1Message,
+            u64::MAX,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
     fn test_execute_transactions_legacy_curie_fork() -> eyre::Result<()> {
         // Execute legacy transaction on curie block
         let expected_l1_fee = U256::from(10);
         execute_transaction(ScrollTxType::Legacy, CURIE_BLOCK_NUMBER, 0, expected_l1_fee, None)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_legacy_feynman_fork() -> eyre::Result<()> {
+        // Execute legacy transaction on feynman block
+        let expected_l1_fee = U256::from(10);
+        execute_transaction(
+            ScrollTxType::Legacy,
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
         Ok(())
     }
 

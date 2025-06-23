@@ -5,7 +5,8 @@ mod receipt_builder;
 
 use crate::{
     block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
-    ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
+    IntoCompressed, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
+    ScrollTxCompressionFactorCache, WithCompression,
 };
 use alloc::{boxed::Box, format, vec::Vec};
 
@@ -16,7 +17,7 @@ use alloy_evm::{
         BlockExecutionError, BlockExecutionResult, BlockExecutor, BlockExecutorFactory,
         BlockExecutorFor, BlockValidationError, CommitChanges, ExecutableTx, OnStateHook,
     },
-    Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
+    Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded, IntoTxEnv, RecoveredTx,
 };
 use alloy_primitives::{B256, U256};
 use revm::{
@@ -72,6 +73,43 @@ where
     /// Creates a new [`ScrollBlockExecutor`].
     pub const fn new(evm: E, spec: Spec, receipt_builder: R) -> Self {
         Self { evm, spec, receipt_builder, receipts: Vec::new(), gas_used: 0 }
+    }
+}
+
+impl<'db, DB, E, R, Spec> ScrollBlockExecutor<E, R, Spec>
+where
+    DB: Database + 'db,
+    E: EvmExt<
+        DB = &'db mut State<DB>,
+        Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
+    >,
+    R: ScrollReceiptBuilder<
+        Transaction: Transaction + Encodable2718 + RecoveredTx<R::Transaction>,
+        Receipt: TxReceipt,
+    >,
+    Spec: ScrollHardforks,
+    for<'a> &'a WithCompression<<R as ScrollReceiptBuilder>::Transaction>:
+        IntoTxEnv<<E as alloy_evm::Evm>::Tx>,
+{
+    /// Executes all transactions in a block, applying pre and post execution changes.
+    pub fn execute_block_with_compression_cache(
+        mut self,
+        transactions: impl IntoIterator<
+            Item = impl ExecutableTx<Self> + IntoCompressed<<Self as BlockExecutor>::Transaction>,
+        >,
+        mut compression_cache: ScrollTxCompressionFactorCache,
+    ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
+    where
+        Self: Sized,
+    {
+        self.apply_pre_execution_changes()?;
+
+        for tx in transactions {
+            let tx = tx.into_compressed(Some(&mut compression_cache));
+            self.execute_transaction(&tx)?;
+        }
+
+        self.apply_post_execution_changes()
     }
 }
 
@@ -252,7 +290,12 @@ where
     fn l1_fee(&self) -> Option<U256> {
         let l1_block_info = &self.ctx().chain;
         let transaction_rlp_bytes = self.ctx().tx.rlp_bytes.as_ref()?;
-        Some(l1_block_info.calculate_tx_l1_cost(transaction_rlp_bytes, self.ctx().cfg.spec))
+        let compression_factor = self.ctx().tx.compression_factor;
+        Some(l1_block_info.calculate_tx_l1_cost(
+            transaction_rlp_bytes,
+            self.ctx().cfg.spec,
+            compression_factor,
+        ))
     }
 }
 

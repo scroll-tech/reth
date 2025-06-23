@@ -19,13 +19,15 @@ hardfork!(
         /// Euclid <https://docs.scroll.io/en/technology/overview/scroll-upgrades/euclid-upgrade/>
         Euclid,
         /// EuclidV2 <https://docs.scroll.io/en/technology/overview/scroll-upgrades/euclid-upgrade/>
-        EuclidV2
+        EuclidV2,
+        /// Feynman: <https://docs.scroll.io/en/technology/overview/scroll-upgrades/feynman-upgrade/>
+        Feynman,
     }
 );
 
 impl ScrollHardfork {
     /// Scroll mainnet list of hardforks.
-    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 7] {
+    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 8] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(5220340)),
@@ -34,11 +36,13 @@ impl ScrollHardfork {
             (Self::DarwinV2, ForkCondition::Timestamp(1725264000)),
             (Self::Euclid, ForkCondition::Timestamp(1744815600)),
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
+            // TODO: update timestamp
+            (Self::Feynman, ForkCondition::Timestamp(u64::MAX - 1)),
         ]
     }
 
     /// Scroll sepolia list of hardforks.
-    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 7] {
+    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 8] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(3747132)),
@@ -46,7 +50,9 @@ impl ScrollHardfork {
             (Self::Darwin, ForkCondition::Timestamp(1723622400)),
             (Self::DarwinV2, ForkCondition::Timestamp(1724832000)),
             (Self::Euclid, ForkCondition::Timestamp(1741680000)),
-            (Self::EuclidV2, ForkCondition::Timestamp(1741852800)),
+            (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
+            // TODO: update timestamp
+            (Self::Feynman, ForkCondition::Timestamp(u64::MAX - 1)),
         ]
     }
 }

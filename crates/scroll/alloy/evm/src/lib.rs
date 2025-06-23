@@ -10,7 +10,10 @@ pub use block::{
 };
 mod block;
 
-pub use tx::ScrollTransactionIntoTxEnv;
+pub use tx::{
+    compute_compression_factor, FromTxWithCompression, IntoCompressed, ScrollTransactionIntoTxEnv,
+    ScrollTxCompressionFactorCache, WithCompression,
+};
 mod tx;
 
 extern crate alloc;
@@ -143,6 +146,8 @@ where
                 authorization_list: Default::default(),
             },
             rlp_bytes: Some(Default::default()),
+            // TODO: What makes sense in the context of a system call?
+            compression_factor: Some(U256::ONE),
         };
 
         let mut gas_limit = tx.base.gas_limit;

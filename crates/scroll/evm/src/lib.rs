@@ -25,8 +25,11 @@ use reth_primitives_traits::NodePrimitives;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
-use scroll_alloy_evm::{ScrollBlockExecutorFactory, ScrollEvmFactory};
-use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
+pub use scroll_alloy_evm::{
+    compute_compression_factor, ScrollBlockExecutorFactory, ScrollEvmFactory,
+    ScrollTxCompressionFactorCache,
+};
+pub use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 /// Scroll EVM configuration.
 #[derive(Debug)]

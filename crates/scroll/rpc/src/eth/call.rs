@@ -152,6 +152,6 @@ where
                 .collect(),
         };
 
-        Ok(ScrollTransactionIntoTxEnv::new(base, Some(Default::default())))
+        Ok(ScrollTransactionIntoTxEnv::new(base, Some(Default::default()), Some(U256::ONE)))
     }
 }
