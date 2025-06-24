@@ -144,7 +144,7 @@ pub(crate) fn payload_id_scroll(
 
     if let Some(block_data) = &attributes.block_data_hint {
         hasher.update(&block_data.extra_data);
-        hasher.update(&block_data.state_root.0);
+        hasher.update(block_data.state_root.0);
         if let Some(coinbase) = block_data.coinbase {
             hasher.update(coinbase);
         }
