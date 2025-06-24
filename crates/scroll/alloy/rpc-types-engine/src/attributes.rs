@@ -1,7 +1,7 @@
 //! Scroll-specific payload attributes.
 
 use alloc::vec::Vec;
-use alloy_primitives::{Bytes, U256};
+use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_rpc_types_engine::PayloadAttributes;
 
 /// The payload attributes for block building tailored for Scroll.
@@ -27,6 +27,12 @@ pub struct ScrollPayloadAttributes {
 pub struct BlockDataHint {
     /// The extra data for the block.
     pub extra_data: Bytes,
+    /// The state root for the block.
+    pub state_root: B256,
+    /// The optional coinbase for the block.
+    pub coinbase: Option<Address>,
+    /// The optional nonce for the block.
+    pub nonce: Option<u64>,
     /// The difficulty for the block.
     pub difficulty: U256,
 }
@@ -34,7 +40,13 @@ pub struct BlockDataHint {
 #[cfg(feature = "arbitrary")]
 impl<'a> arbitrary::Arbitrary<'a> for BlockDataHint {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        Ok(Self { extra_data: Bytes::arbitrary(u)?, difficulty: U256::arbitrary(u)? })
+        Ok(Self {
+            extra_data: Bytes::arbitrary(u)?,
+            state_root: B256::arbitrary(u)?,
+            coinbase: Some(Address::arbitrary(u)?),
+            nonce: Some(u64::arbitrary(u)?),
+            difficulty: U256::arbitrary(u)?,
+        })
     }
 }
 
@@ -76,6 +88,9 @@ mod test {
             no_tx_pool: true,
             block_data_hint: Some(BlockDataHint {
                 extra_data: b"world".into(),
+                state_root: B256::random(),
+                coinbase: Some(Address::random()),
+                nonce: Some(0x12345),
                 difficulty: U256::from(10),
             }),
         };

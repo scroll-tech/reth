@@ -144,6 +144,13 @@ pub(crate) fn payload_id_scroll(
 
     if let Some(block_data) = &attributes.block_data_hint {
         hasher.update(&block_data.extra_data);
+        hasher.update(&block_data.state_root.0);
+        if let Some(coinbase) = block_data.coinbase {
+            hasher.update(coinbase);
+        }
+        if let Some(nonce) = block_data.nonce {
+            hasher.update(nonce.to_be_bytes());
+        }
         hasher.update(block_data.difficulty.to_be_bytes::<32>());
     }
 
@@ -169,7 +176,7 @@ mod tests {
     #[test]
     fn test_payload_id() {
         let expected =
-            PayloadId::new(FixedBytes::<8>::from_str("0x0322b5f17cf26e85").unwrap().into());
+            PayloadId::new(FixedBytes::<8>::from_str("0x03e72aa4f73fbe90").unwrap().into());
         let attrs = ScrollPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: 1728933301,
@@ -180,7 +187,13 @@ mod tests {
             },
             transactions: Some([bytes!("7ef8f8a0dc19cfa777d90980e4875d0a548a881baaa3f83f14d1bc0d3038bc329350e54194deaddeaddeaddeaddeaddeaddeaddeaddead00019442000000000000000000000000000000000000158080830f424080b8a4440a5e20000f424000000000000000000000000300000000670d6d890000000000000125000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000014bf9181db6e381d4384bbf69c48b0ee0eed23c6ca26143c6d2544f9d39997a590000000000000000000000007f83d659683caf2767fd3c720981d51f5bc365bc")].into()),
             no_tx_pool: false,
-            block_data_hint: Some(BlockDataHint{ extra_data: bytes!("476574682f76312e302e302f6c696e75782f676f312e342e32"), difficulty: U256::from(10) } ),
+            block_data_hint: Some(BlockDataHint{
+                extra_data: bytes!("476574682f76312e302e302f6c696e75782f676f312e342e32"),
+                state_root: b256!("0x000000000000000000000000000000000000000000000000000000000000dead"),
+                coinbase: Some(address!("0x000000000000000000000000000000000000dead")),
+                nonce: Some(u64::MAX),
+                difficulty: U256::from(10)
+            }),
         };
 
         assert_eq!(
