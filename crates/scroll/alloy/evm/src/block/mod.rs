@@ -116,9 +116,6 @@ where
             .load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)
             .map_err(BlockExecutionError::other)?;
 
-        // apply eip-2935.
-        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
-
         // apply gas oracle predeploy upgrade at Curie transition block.
         if self
             .spec
@@ -136,7 +133,7 @@ where
         if self
             .spec
             .scroll_fork_activation(ScrollHardfork::Feynman)
-            .transitions_at_timestamp(self.evm.block().timestamp, self.evm.block().timestamp) // TODO
+            .active_at_timestamp(self.evm.block().timestamp)
         {
             if let Err(err) = apply_feynman_hard_fork(self.evm.db_mut()) {
                 return Err(BlockExecutionError::msg(format!(
@@ -144,6 +141,9 @@ where
                 )));
             };
         }
+
+        // apply eip-2935.
+        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
 
         Ok(())
     }
