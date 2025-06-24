@@ -27,7 +27,7 @@ use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
 pub use scroll_alloy_evm::{
     compute_compression_factor, ScrollBlockExecutorFactory, ScrollEvmFactory,
-    ScrollTxCompressionFactorCache,
+    ScrollTxCompressionFactors,
 };
 pub use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
@@ -100,6 +100,11 @@ pub fn spec_id_at_timestamp_and_number(
     chain_spec: impl ScrollHardforks,
 ) -> ScrollSpecId {
     if chain_spec
+        .scroll_fork_activation(ScrollHardfork::Feynman)
+        .active_at_timestamp_or_number(timestamp, number)
+    {
+        ScrollSpecId::FEYNMAN
+    } else if chain_spec
         .scroll_fork_activation(ScrollHardfork::EuclidV2)
         .active_at_timestamp_or_number(timestamp, number)
     {

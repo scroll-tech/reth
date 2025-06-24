@@ -11117,6 +11117,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Ffeynman-compression#76faa00fdeebf2b99ba8bee82a89dbe778585edc"
 dependencies = [
  "auto_impl",
  "enumn",
@@ -11576,6 +11577,7 @@ dependencies = [
  "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
  "serde",
+ "zstd",
 ]
 
 [[package]]

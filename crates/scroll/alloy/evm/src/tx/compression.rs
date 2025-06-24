@@ -1,25 +1,63 @@
-use std::collections::HashMap;
+use std::io::Write;
 
-use alloy_consensus::transaction::Recovered;
-use alloy_eips::Typed2718;
-use alloy_evm::{IntoTxEnv, RecoveredTx};
-// use alloy_consensus::transaction::Recovered;
-// use alloy_evm::IntoTxEnv;
 use super::FromRecoveredTx;
 use crate::ScrollTransactionIntoTxEnv;
-use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
+use alloy_consensus::transaction::Recovered;
+use alloy_eips::{Encodable2718, Typed2718};
+use alloy_evm::{IntoTxEnv, RecoveredTx};
+use alloy_primitives::{Address, Bytes, TxKind, U256};
 use revm::context::TxEnv;
+use revm_scroll::l1block::TX_L1_FEE_PRECISION;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
+use zstd::{
+    stream::Encoder,
+    zstd_safe::{CParameter, ParamSwitch},
+};
 
-/// A cache for transaction compression factors, mapping transaction hashes to their compression
-/// factors.
-pub type ScrollTxCompressionFactorCache = HashMap<B256, U256>;
+/// The maximum size of the compression window in bytes (2^CL_WINDOW_LIMIT).
+const CL_WINDOW_LIMIT: u32 = 22;
 
-const TX_L1_FEE_PRECISION: U256 = U256::from_limbs([1_000_000_000u64, 0, 0, 0]);
+fn compressor(target_block_size: u32) -> Encoder<'static, Vec<u8>> {
+    let mut encoder = Encoder::new(Vec::new(), 0).expect("Failed to create zstd encoder");
+    encoder
+        .set_parameter(CParameter::LiteralCompressionMode(ParamSwitch::Disable))
+        .expect("Failed to set literal compression mode");
+    encoder
+        .set_parameter(CParameter::WindowLog(CL_WINDOW_LIMIT))
+        .expect("Failed to set window log");
+    encoder
+        .set_parameter(CParameter::TargetCBlockSize(target_block_size))
+        .expect("Failed to set target block size");
+    encoder.include_checksum(false).expect("Failed to disable checksum");
+    encoder.include_magicbytes(false).expect("Failed to disable magic bytes");
+    encoder.include_dictid(false).expect("Failed to disable dictid");
+    encoder.include_contentsize(true).expect("Failed to include content size");
+    encoder
+}
 
 /// Computes the compression factor for a given RLP-encoded transaction.
-pub fn compute_compression_factor<T: AsRef<[u8]>>(_rlp_bytes: &T) -> U256 {
-    U256::from(10).saturating_mul(TX_L1_FEE_PRECISION)
+pub fn compute_compression_factor<T: AsRef<[u8]>>(rlp_bytes: &T) -> U256 {
+    // Instantiate the compressor
+    let mut compressor = compressor(CL_WINDOW_LIMIT);
+    let rlp_bytes_len = rlp_bytes.as_ref().len();
+
+    // Set the pledged source size to the length of the RLP bytes and write the bytes to the
+    // compressor.
+    // TODO: Is it possible this is fallible?
+    compressor
+        .set_pledged_src_size(Some(rlp_bytes_len as u64))
+        .expect("failed to set pledged source size");
+    // TODO: Is it possible this is fallible?
+    compressor.write_all(rlp_bytes.as_ref()).expect("failed to write RLP bytes to compressor");
+
+    // Finish the compression and get the result.
+    let result = compressor.finish().expect("failed to finish compression");
+
+    // compute the compression ratio
+    let compression_ratio =
+        ((rlp_bytes_len as f64 * TX_L1_FEE_PRECISION as f64) / result.len() as f64).floor() as u64;
+
+    U256::from(compression_ratio)
 }
 
 /// A generic wrrapper for a type that includes a compression factor and encoded bytes.
@@ -139,10 +177,14 @@ impl FromTxWithCompression<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEn
 pub trait IntoCompressed<T> {
     /// Converts the type into a [`WithCompression`] instance, optionally using a
     /// [`ScrollTxCompressor`] to calculate the compression factor.
-    fn into_compressed(
-        self,
-        compression_provider: Option<&mut ScrollTxCompressionFactorCache>,
-    ) -> WithCompression<T>;
+    fn into_compressed(&self, compression_factor: U256) -> WithCompression<Recovered<&T>>;
+}
+
+impl<T: Encodable2718> IntoCompressed<T> for Recovered<&T> {
+    fn into_compressed(&self, compression_factor: U256) -> WithCompression<Recovered<&T>> {
+        let encoded_bytes = self.inner().encoded_2718();
+        WithCompression { value: *self, compression_factor, encoded_bytes: encoded_bytes.into() }
+    }
 }
 
 impl<Tx, T: RecoveredTx<Tx>> RecoveredTx<Tx> for WithCompression<T> {

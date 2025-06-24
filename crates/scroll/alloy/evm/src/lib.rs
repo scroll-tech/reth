@@ -7,13 +7,13 @@
 mod block;
 pub use block::{
     curie, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
-    ScrollBlockExecutorFactory, ScrollReceiptBuilder,
+    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionFactors,
 };
 
 mod tx;
 pub use tx::{
     compute_compression_factor, FromTxWithCompression, IntoCompressed, ScrollTransactionIntoTxEnv,
-    ScrollTxCompressionFactorCache, WithCompression,
+    WithCompression,
 };
 
 mod system_caller;
@@ -38,6 +38,7 @@ use revm::{
 use revm_scroll::{
     builder::{DefaultScrollContext, MaybeWithEip7702, ScrollBuilder, ScrollContext},
     instructions::ScrollInstructions,
+    l1block::TX_L1_FEE_PRECISION_U256,
     precompile::ScrollPrecompileProvider,
     ScrollSpecId, ScrollTransaction,
 };
@@ -149,7 +150,7 @@ where
             },
             rlp_bytes: Some(Default::default()),
             // TODO: What makes sense in the context of a system call?
-            compression_factor: Some(U256::ONE),
+            compression_factor: Some(TX_L1_FEE_PRECISION_U256),
         };
 
         let mut gas_limit = tx.base.gas_limit;

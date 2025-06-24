@@ -50,7 +50,7 @@ mod tests {
     };
     use alloy_eips::{
         eip7702::{constants::PER_EMPTY_ACCOUNT_COST, Authorization, SignedAuthorization},
-        Typed2718,
+        Encodable2718, Typed2718,
     };
     use alloy_evm::{
         block::{BlockExecutionResult, BlockExecutor},
@@ -77,6 +77,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
+        compute_compression_factor,
         curie::{
             BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -212,6 +213,61 @@ mod tests {
                     ..Default::default()
                 }))
             }
+        }
+    }
+
+    fn execute_block(
+        transactions: Vec<ScrollTxEnvelope>,
+        block_number: u64,
+        block_timestamp: u64,
+        compression_ratios: Option<Vec<U256>>,
+    ) -> eyre::Result<BlockExecutionResult<ScrollReceipt>> {
+        let block = block(block_number, block_timestamp, transactions);
+
+        let mut state = state();
+        let mut strategy = executor(&block, &mut state);
+
+        // determine l1 gas oracle storage
+        let l1_gas_oracle_storage = if strategy.spec().is_curie_active_at_block(block_number) {
+            vec![
+                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+                (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                (BLOB_SCALAR_SLOT, U256::from(10000)),
+                (IS_CURIE_SLOT, U256::from(1)),
+            ]
+        } else {
+            vec![
+                (L1_BASE_FEE_SLOT, U256::from(1000)),
+                (OVER_HEAD_SLOT, U256::from(1000)),
+                (SCALAR_SLOT, U256::from(1000)),
+            ]
+        }
+        .into_iter()
+        .collect();
+
+        // load accounts in state
+        strategy.evm_mut().db_mut().insert_account_with_storage(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            Default::default(),
+            l1_gas_oracle_storage,
+        );
+        for add in block.senders() {
+            strategy
+                .evm_mut()
+                .db_mut()
+                .insert_account(*add, AccountInfo { balance: U256::MAX, ..Default::default() });
+        }
+
+        if let Some(compression_ratios) = compression_ratios {
+            Ok(strategy.execute_block_with_compression_cache(
+                block.transactions_recovered(),
+                compression_ratios,
+            )?)
+        } else {
+            Ok(strategy.execute_block(block.transactions_recovered())?)
         }
     }
 
@@ -393,7 +449,7 @@ mod tests {
         let expected_l1_fee = U256::ZERO;
         execute_transaction(
             ScrollTxType::L1Message,
-            u64::MAX,
+            CURIE_BLOCK_NUMBER + 1,
             FEYNMAN_BLOCK_TIMESTAMP,
             expected_l1_fee,
             None,
@@ -410,20 +466,6 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_transactions_legacy_feynman_fork() -> eyre::Result<()> {
-        // Execute legacy transaction on feynman block
-        let expected_l1_fee = U256::from(10);
-        execute_transaction(
-            ScrollTxType::Legacy,
-            CURIE_BLOCK_NUMBER + 1,
-            FEYNMAN_BLOCK_TIMESTAMP,
-            expected_l1_fee,
-            None,
-        )?;
-        Ok(())
-    }
-
-    #[test]
     fn test_execute_transactions_legacy_not_curie_fork() -> eyre::Result<()> {
         // Execute legacy before curie block
         let expected_l1_fee = U256::from(2);
@@ -431,6 +473,20 @@ mod tests {
             ScrollTxType::Legacy,
             NOT_CURIE_BLOCK_NUMBER,
             0,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_legacy_feynman_fork() -> eyre::Result<()> {
+        // Execute legacy transaction on feynman block
+        let expected_l1_fee = U256::from(9);
+        execute_transaction(
+            ScrollTxType::Legacy,
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
             expected_l1_fee,
             None,
         )?;
@@ -459,6 +515,20 @@ mod tests {
     }
 
     #[test]
+    fn test_execute_transactions_eip2930_feynman_fork() -> eyre::Result<()> {
+        // Execute eip2930 transaction on feynman block
+        let expected_l1_fee = U256::from(9);
+        execute_transaction(
+            ScrollTxType::Eip2930,
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
     fn test_execute_transactions_eip1559_curie_fork() -> eyre::Result<()> {
         // Execute eip1559 transaction on curie block
         let expected_l1_fee = U256::from(10);
@@ -475,6 +545,20 @@ mod tests {
             0,
             U256::ZERO,
             Some("Eip1559 is not supported"),
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transaction_eip1559_feynman_fork() -> eyre::Result<()> {
+        // Execute eip1559 transaction on feynman block
+        let expected_l1_fee = U256::from(9);
+        execute_transaction(
+            ScrollTxType::Eip1559,
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
         )?;
         Ok(())
     }
@@ -503,6 +587,51 @@ mod tests {
             U256::ZERO,
             Some("Eip7702 is not supported"),
         )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_eip7702_feynman_fork() -> eyre::Result<()> {
+        // Execute eip7702 transaction on feynman block
+        let expected_l1_fee = U256::from(19);
+        execute_transaction(
+            ScrollTxType::Eip7702,
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_consistency_with_provided_compression_ratio() -> eyre::Result<()> {
+        let transactions = vec![
+            transaction(ScrollTxType::Legacy, MIN_TRANSACTION_GAS),
+            transaction(ScrollTxType::Eip2930, MIN_TRANSACTION_GAS),
+            transaction(ScrollTxType::Eip1559, MIN_TRANSACTION_GAS),
+            transaction(ScrollTxType::Eip7702, MIN_TRANSACTION_GAS),
+        ];
+        let compression_factors = transactions
+            .iter()
+            .map(|tx| {
+                let encoded = tx.encoded_2718();
+                compute_compression_factor(&encoded)
+            })
+            .collect::<Vec<_>>();
+        let with_compression_factors = execute_block(
+            transactions.clone(),
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            Some(compression_factors),
+        )?;
+        let without_compression_factors = execute_block(
+            transactions.clone(),
+            CURIE_BLOCK_NUMBER + 1,
+            FEYNMAN_BLOCK_TIMESTAMP,
+            None,
+        )?;
+        assert_eq!(without_compression_factors, with_compression_factors);
         Ok(())
     }
 }
