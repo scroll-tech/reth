@@ -1,7 +1,7 @@
 //! Execution primitives for EVM.
 
 use crate::ScrollEvmConfig;
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 use alloy_consensus::BlockHeader;
 use alloy_primitives::{Address, B256};
@@ -44,7 +44,10 @@ mod tests {
     use crate::{ScrollEvmConfig, ScrollRethReceiptBuilder};
     use std::{convert::Infallible, sync::Arc};
 
-    use alloy_consensus::{transaction::SignerRecoverable, Block, BlockBody, Header};
+    use alloy_consensus::{
+        transaction::{Recovered, SignerRecoverable},
+        Block, BlockBody, Header, SignableTransaction, Signed, TxLegacy,
+    };
     use alloy_eips::{
         eip7702::{constants::PER_EMPTY_ACCOUNT_COST, Authorization, SignedAuthorization},
         Typed2718,
@@ -54,9 +57,10 @@ mod tests {
         precompiles::PrecompilesMap,
         Evm,
     };
+    use alloy_primitives::Sealed;
     use reth_chainspec::MIN_TRANSACTION_GAS;
     use reth_evm::ConfigureEvm;
-    use reth_primitives_traits::{NodePrimitives, RecoveredBlock};
+    use reth_primitives_traits::{NodePrimitives, RecoveredBlock, SignedTransaction};
     use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec, ScrollChainSpecBuilder};
     use reth_scroll_primitives::{
         ScrollBlock, ScrollPrimitives, ScrollReceipt, ScrollTransactionSigned,
@@ -71,14 +75,14 @@ mod tests {
         primitives::{Address, TxKind, B256, U256},
         state::AccountInfo,
     };
-    use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxType, ScrollTypedTransaction};
+    use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
         curie::{
             BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
             L1_GAS_PRICE_ORACLE_ADDRESS,
         },
-        ScrollBlockExecutor, ScrollEvm,
+        ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm,
     };
     use scroll_alloy_hardforks::ScrollHardforks;
 
@@ -113,7 +117,12 @@ mod tests {
 
         let evm = evm_config.evm_for_block(state, block.header());
         let receipt_builder = ScrollRethReceiptBuilder::default();
-        ScrollBlockExecutor::new(evm, chain_spec, receipt_builder)
+        ScrollBlockExecutor::new(
+            evm,
+            ScrollBlockExecutionCtx { parent_hash: block.parent_hash },
+            chain_spec,
+            receipt_builder,
+        )
     }
 
     fn block(
@@ -136,26 +145,39 @@ mod tests {
         )
     }
 
-    fn transaction(typ: ScrollTxType, gas_limit: u64) -> ScrollTransactionSigned {
-        let transaction = match typ {
-            ScrollTxType::Legacy => ScrollTypedTransaction::Legacy(alloy_consensus::TxLegacy {
-                to: TxKind::Call(Address::ZERO),
-                chain_id: Some(SCROLL_CHAIN_ID),
-                gas_limit,
-                ..Default::default()
-            }),
-            ScrollTxType::Eip2930 => ScrollTypedTransaction::Eip2930(alloy_consensus::TxEip2930 {
-                to: TxKind::Call(Address::ZERO),
-                chain_id: SCROLL_CHAIN_ID,
-                gas_limit,
-                ..Default::default()
-            }),
-            ScrollTxType::Eip1559 => ScrollTypedTransaction::Eip1559(alloy_consensus::TxEip1559 {
-                to: TxKind::Call(Address::ZERO),
-                chain_id: SCROLL_CHAIN_ID,
-                gas_limit,
-                ..Default::default()
-            }),
+    fn transaction(typ: ScrollTxType, gas_limit: u64) -> ScrollTxEnvelope {
+        let pk = B256::random();
+        match typ {
+            ScrollTxType::Legacy => {
+                let tx = TxLegacy {
+                    to: TxKind::Call(Address::ZERO),
+                    chain_id: Some(SCROLL_CHAIN_ID),
+                    gas_limit,
+                    ..Default::default()
+                };
+                let signature = reth_primitives::sign_message(pk, tx.signature_hash()).unwrap();
+                ScrollTxEnvelope::Legacy(Signed::new_unhashed(tx, signature))
+            }
+            ScrollTxType::Eip2930 => {
+                let tx = alloy_consensus::TxEip2930 {
+                    to: TxKind::Call(Address::ZERO),
+                    chain_id: SCROLL_CHAIN_ID,
+                    gas_limit,
+                    ..Default::default()
+                };
+                let signature = reth_primitives::sign_message(pk, tx.signature_hash()).unwrap();
+                ScrollTxEnvelope::Eip2930(Signed::new_unhashed(tx, signature))
+            }
+            ScrollTxType::Eip1559 => {
+                let tx = alloy_consensus::TxEip1559 {
+                    to: TxKind::Call(Address::ZERO),
+                    chain_id: SCROLL_CHAIN_ID,
+                    gas_limit,
+                    ..Default::default()
+                };
+                let signature = reth_primitives::sign_message(pk, tx.signature_hash()).unwrap();
+                ScrollTxEnvelope::Eip1559(Signed::new_unhashed(tx, signature))
+            }
             ScrollTxType::Eip7702 => {
                 let authorization = Authorization {
                     chain_id: Default::default(),
@@ -165,7 +187,8 @@ mod tests {
                 let signature =
                     reth_primitives::sign_message(B256::random(), authorization.signature_hash())
                         .unwrap();
-                ScrollTypedTransaction::Eip7702(alloy_consensus::TxEip7702 {
+
+                let tx = alloy_consensus::TxEip7702 {
                     to: Address::ZERO,
                     chain_id: SCROLL_CHAIN_ID,
                     gas_limit: gas_limit + PER_EMPTY_ACCOUNT_COST,
@@ -176,21 +199,19 @@ mod tests {
                         signature.s(),
                     )],
                     ..Default::default()
-                })
+                };
+                let signature = reth_primitives::sign_message(pk, tx.signature_hash()).unwrap();
+                ScrollTxEnvelope::Eip7702(Signed::new_unhashed(tx, signature))
             }
             ScrollTxType::L1Message => {
-                ScrollTypedTransaction::L1Message(scroll_alloy_consensus::TxL1Message {
+                ScrollTxEnvelope::L1Message(Sealed::new(scroll_alloy_consensus::TxL1Message {
                     sender: Address::random(),
                     to: Address::ZERO,
                     gas_limit,
                     ..Default::default()
-                })
+                }))
             }
-        };
-
-        let pk = B256::random();
-        let signature = reth_primitives::sign_message(pk, transaction.signature_hash()).unwrap();
-        ScrollTransactionSigned::new_unhashed(transaction, signature)
+        }
     }
 
     fn execute_transaction(
@@ -243,8 +264,9 @@ mod tests {
         }
 
         // execute and verify output
-        let res =
-            strategy.execute_transaction(transaction.try_into_recovered()?.as_recovered_ref());
+        let sender = transaction.try_recover()?;
+        let tx = Recovered::new_unchecked(transaction, sender);
+        let res = strategy.execute_transaction(&tx);
 
         // check for error or execution outcome
         let output = strategy.apply_post_execution_changes()?;
@@ -345,9 +367,9 @@ mod tests {
         let mut strategy = executor(&block, &mut state);
 
         // execute and verify error
-        let res = strategy.execute_transaction(
-            transaction.try_into_recovered().expect("failed to recover tx").as_recovered_ref(),
-        );
+        let sender = transaction.try_recover()?;
+        let tx = Recovered::new_unchecked(transaction, sender);
+        let res = strategy.execute_transaction(&tx);
         assert_eq!(
             res.unwrap_err().to_string(),
             "transaction gas limit 10000001 is more than blocks available gas 10000000"
