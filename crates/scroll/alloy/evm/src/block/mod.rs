@@ -1,10 +1,12 @@
 pub mod curie;
+pub mod feynman;
 
 pub use receipt_builder::{ReceiptBuilderCtx, ScrollReceiptBuilder};
 mod receipt_builder;
 
 use crate::{
     block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
+    block::feynman::apply_feynman_hard_fork,
     system_caller::ScrollSystemCaller,
     ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
 };
@@ -117,6 +119,7 @@ where
         // apply eip-2935.
         self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
 
+        // apply gas oracle predeploy upgrade at Curie transition block.
         if self
             .spec
             .scroll_fork_activation(ScrollHardfork::Curie)
@@ -125,6 +128,19 @@ where
             if let Err(err) = apply_curie_hard_fork(self.evm.db_mut()) {
                 return Err(BlockExecutionError::msg(format!(
                     "error occurred at Curie fork: {err:?}"
+                )));
+            };
+        }
+
+        // apply gas oracle predeploy upgrade at Feynman transition block.
+        if self
+            .spec
+            .scroll_fork_activation(ScrollHardfork::Feynman)
+            .transitions_at_timestamp(self.evm.block().timestamp, self.evm.block().timestamp) // TODO
+        {
+            if let Err(err) = apply_feynman_hard_fork(self.evm.db_mut()) {
+                return Err(BlockExecutionError::msg(format!(
+                    "error occurred at Feynman fork: {err:?}"
                 )));
             };
         }
