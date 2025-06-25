@@ -11116,7 +11116,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Ffeynman-compression#112c291f76b1c4d6d730dc39486a610a5fce3963"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Ffeynman-rollup-fee-v2#91f82cad40ecacaea26fb941646f9a1f43421972"
 dependencies = [
  "auto_impl",
  "enumn",
