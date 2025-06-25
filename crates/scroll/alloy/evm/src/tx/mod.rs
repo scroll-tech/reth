@@ -13,7 +13,7 @@ use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTI
 
 mod compression;
 pub use compression::{
-    compute_compression_factor, FromTxWithCompression, IntoCompressed, WithCompression,
+    compute_compression_ratio, FromTxWithCompression, ToCompressed, WithCompression,
 };
 
 /// This structure wraps around a [`ScrollTransaction`] and allows us to implement the [`IntoTxEnv`]
@@ -26,8 +26,8 @@ pub struct ScrollTransactionIntoTxEnv<T: Transaction>(ScrollTransaction<T>);
 
 impl<T: Transaction> ScrollTransactionIntoTxEnv<T> {
     /// Returns a new [`ScrollTransactionIntoTxEnv`].
-    pub fn new(base: T, rlp_bytes: Option<Bytes>, compression_factor: Option<U256>) -> Self {
-        Self(ScrollTransaction::new(base, rlp_bytes, compression_factor))
+    pub fn new(base: T, rlp_bytes: Option<Bytes>, compression_ratio: Option<U256>) -> Self {
+        Self(ScrollTransaction::new(base, rlp_bytes, compression_ratio))
     }
 }
 
@@ -159,8 +159,8 @@ impl FromTxWithEncoded<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let encoded = (!tx.is_l1_message()).then_some(encoded);
-        let compression_factor = encoded.as_ref().map(|x| compute_compression_factor(x));
-        Self::new(base, encoded, compression_factor)
+        let compression_ratio = encoded.as_ref().map(compute_compression_ratio);
+        Self::new(base, encoded, compression_ratio)
     }
 }
 
@@ -267,7 +267,7 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let rlp_bytes = (!tx.is_l1_message()).then_some(envelope.into());
-        let compression_factor = rlp_bytes.as_ref().map(|x| compute_compression_factor(x));
-        Self::new(base, rlp_bytes, compression_factor)
+        let compression_ratio = rlp_bytes.as_ref().map(compute_compression_ratio);
+        Self::new(base, rlp_bytes, compression_ratio)
     }
 }

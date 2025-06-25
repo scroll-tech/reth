@@ -6,7 +6,7 @@ mod receipt_builder;
 use crate::{
     block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
     system_caller::ScrollSystemCaller,
-    FromTxWithCompression, IntoCompressed, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
+    FromTxWithCompression, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv, ToCompressed,
 };
 use alloc::{boxed::Box, format, vec::Vec};
 
@@ -34,9 +34,8 @@ use revm_scroll::builder::ScrollContext;
 use scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
-/// A cache for transaction compression factors, mapping transaction hashes to their compression
-/// factors.
-pub type ScrollTxCompressionFactors = Vec<U256>;
+/// A cache for transaction compression ratios.
+pub type ScrollTxCompressionRatios = Vec<U256>;
 
 /// Context for Scroll Block Execution.
 #[derive(Debug, Default, Clone)]
@@ -104,23 +103,23 @@ where
     Spec: ScrollHardforks,
 {
     /// Executes all transactions in a block, applying pre and post execution changes. The provided
-    /// transaction compression factors are expected to be in the same order as the
+    /// transaction compression ratios are expected to be in the same order as the
     /// transactions.
     pub fn execute_block_with_compression_cache(
         mut self,
         transactions: impl IntoIterator<
-            Item = impl ExecutableTx<Self> + IntoCompressed<<Self as BlockExecutor>::Transaction>,
+            Item = impl ExecutableTx<Self> + ToCompressed<<Self as BlockExecutor>::Transaction>,
         >,
-        compression_cache: ScrollTxCompressionFactors,
+        compression_ratios: ScrollTxCompressionRatios,
     ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
     where
         Self: Sized,
     {
         self.apply_pre_execution_changes()?;
 
-        for (tx, compression_factor) in transactions.into_iter().zip(compression_cache.into_iter())
+        for (tx, compression_ratio) in transactions.into_iter().zip(compression_ratios.into_iter())
         {
-            let tx = tx.into_compressed(compression_factor);
+            let tx = tx.to_compressed(compression_ratio);
             self.execute_transaction(&tx)?;
         }
 
@@ -308,11 +307,11 @@ where
     fn l1_fee(&self) -> Option<U256> {
         let l1_block_info = &self.ctx().chain;
         let transaction_rlp_bytes = self.ctx().tx.rlp_bytes.as_ref()?;
-        let compression_factor = self.ctx().tx.compression_factor;
+        let compression_ratio = self.ctx().tx.compression_ratio;
         Some(l1_block_info.calculate_tx_l1_cost(
             transaction_rlp_bytes,
             self.ctx().cfg.spec,
-            compression_factor,
+            compression_ratio,
         ))
     }
 }

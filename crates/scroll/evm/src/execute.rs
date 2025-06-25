@@ -77,7 +77,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
-        compute_compression_factor,
+        compute_compression_ratio,
         curie::{
             BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -616,7 +616,7 @@ mod tests {
             .iter()
             .map(|tx| {
                 let encoded = tx.encoded_2718();
-                compute_compression_factor(&encoded)
+                compute_compression_ratio(&encoded)
             })
             .collect::<Vec<_>>();
         let with_compression_factors = execute_block(
@@ -625,12 +625,8 @@ mod tests {
             FEYNMAN_BLOCK_TIMESTAMP,
             Some(compression_factors),
         )?;
-        let without_compression_factors = execute_block(
-            transactions.clone(),
-            CURIE_BLOCK_NUMBER + 1,
-            FEYNMAN_BLOCK_TIMESTAMP,
-            None,
-        )?;
+        let without_compression_factors =
+            execute_block(transactions, CURIE_BLOCK_NUMBER + 1, FEYNMAN_BLOCK_TIMESTAMP, None)?;
         assert_eq!(without_compression_factors, with_compression_factors);
         Ok(())
     }

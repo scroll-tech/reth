@@ -7,12 +7,12 @@
 mod block;
 pub use block::{
     curie, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
-    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionFactors,
+    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionRatios,
 };
 
 mod tx;
 pub use tx::{
-    compute_compression_factor, FromTxWithCompression, IntoCompressed, ScrollTransactionIntoTxEnv,
+    compute_compression_ratio, FromTxWithCompression, ScrollTransactionIntoTxEnv, ToCompressed,
     WithCompression,
 };
 
@@ -150,7 +150,7 @@ where
             },
             rlp_bytes: Some(Default::default()),
             // TODO: What makes sense in the context of a system call?
-            compression_factor: Some(TX_L1_FEE_PRECISION_U256),
+            compression_ratio: Some(TX_L1_FEE_PRECISION_U256),
         };
 
         let mut gas_limit = tx.base.gas_limit;
