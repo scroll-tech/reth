@@ -8,6 +8,7 @@ use revm::{
     state::AccountInfo,
     Database,
 };
+
 use super::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
 
 /// Bytecode of L1 gas price oracle at Feynman transition.
@@ -38,7 +39,9 @@ const FEYNMAN_L1_GAS_PRICE_ORACLE_STORAGE: [(U256, U256); 3] = [
 ///    - Updates the L1 oracle contract bytecode to reflect the DA cost reduction.
 ///    - Sets the initial compression penalty threshold and penalty factor values.
 ///    - Sets the `isFeynman` slot to 1 (true).
-pub(super) fn apply_feynman_hard_fork<DB: Database>(state: &mut State<DB>) -> Result<(), DB::Error> {
+pub(super) fn apply_feynman_hard_fork<DB: Database>(
+    state: &mut State<DB>,
+) -> Result<(), DB::Error> {
     let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
 
     // short circuit if already applied.

@@ -5,8 +5,10 @@ pub use receipt_builder::{ReceiptBuilderCtx, ScrollReceiptBuilder};
 mod receipt_builder;
 
 use crate::{
-    block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
-    block::feynman::apply_feynman_hard_fork,
+    block::{
+        curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
+        feynman::apply_feynman_hard_fork,
+    },
     system_caller::ScrollSystemCaller,
     ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
 };
