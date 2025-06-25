@@ -34,8 +34,7 @@ pub fn compressor_zstd(target_block_size: u32) -> CCtx<'static> {
     ctx
 }
 
-/// Compresses the input data using zstd compression with a target block size of
-/// [`CL_WINDOW_LIMIT`].
+/// Compresses the input data using zstd compression.
 pub fn compress_zstd<T: AsRef<[u8]>>(input: &T) -> Vec<u8> {
     let mut compressor = compressor_zstd(CL_WINDOW_LIMIT);
     let max_compressed_size = compress_bound(input.as_ref().len());
