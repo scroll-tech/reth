@@ -1,0 +1,34 @@
+[package]
+name = "openvm-compat"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+openvm = { git = "https://github.com/openvm-org/openvm.git", default-features = false }
+
+reth-chainspec = { workspace = true, default-features = false }
+reth-evm = { workspace = true, default-features = false }
+reth-evm-ethereum = { workspace = true, default-features = false }
+reth-ethereum-forks = { workspace = true, default-features = false }
+reth-execution-types = { workspace = true, default-features = false }
+reth-primitives = { workspace = true, default-features = false }
+reth-primitives-traits = { workspace = true, default-features = false }
+reth-storage-errors = { workspace = true, default-features = false }
+reth-trie = { workspace = true, default-features = false }
+reth-trie-sparse = { workspace = true, default-features = false }
+
+reth-scroll-chainspec = { workspace = true, default-features = false }
+reth-scroll-evm = { workspace = true, default-features = false }
+reth-scroll-forks = { workspace = true, default-features = false }
+reth-scroll-primitives = { workspace = true, default-features = false }
+
+scroll-alloy-consensus = { workspace = true, default-features = false }
+scroll-alloy-rpc-types = { workspace = true, default-features = false }
