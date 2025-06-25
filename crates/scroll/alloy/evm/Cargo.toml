@@ -53,7 +53,8 @@ std = [
     "scroll-alloy-consensus/std",
     "scroll-alloy-hardforks/std",
     "reth-evm/std",
-    "reth-scroll-chainspec/std"
+    "reth-scroll-chainspec/std",
+    "zstd-safe/std",
 ]
 serde = [
     "dep:serde",

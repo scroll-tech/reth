@@ -1,5 +1,6 @@
 use super::FromRecoveredTx;
 use crate::ScrollTransactionIntoTxEnv;
+use alloc::vec;
 use alloy_consensus::transaction::Recovered;
 use alloy_eips::{Encodable2718, Typed2718};
 use alloy_evm::{IntoTxEnv, RecoveredTx};
@@ -14,6 +15,8 @@ const CL_WINDOW_LIMIT: u32 = 22;
 
 /// The compression level used for zstd compression.
 const COMPRESSION_LEVEL: i32 = 3;
+
+// TODO: Can we instantiate the compressor once and reuse it?
 
 /// Creates a zstd compressor with the specified target block size.
 pub fn compressor_zstd(target_block_size: u32) -> CCtx<'static> {
