@@ -36,7 +36,10 @@ use revm::{
     Context, ExecuteEvm, InspectEvm, Inspector,
 };
 use revm_scroll::{
-    builder::{DefaultScrollContext, MaybeWithEip7702, ScrollBuilder, ScrollContext},
+    builder::{
+        DefaultScrollContext, EuclidEipActivations, FeynmanEipActivations, ScrollBuilder,
+        ScrollContext,
+    },
     instructions::ScrollInstructions,
     l1block::TX_L1_FEE_PRECISION_U256,
     precompile::ScrollPrecompileProvider,
@@ -236,6 +239,7 @@ impl EvmFactory for ScrollEvmFactory {
                 .with_block(input.block_env)
                 .with_cfg(input.cfg_env)
                 .maybe_with_eip_7702()
+                .maybe_with_eip_7623()
                 .build_scroll_with_inspector(NoOpInspector {})
                 .with_precompiles(PrecompilesMap::from_static(
                     ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
@@ -257,6 +261,7 @@ impl EvmFactory for ScrollEvmFactory {
                 .with_block(input.block_env)
                 .with_cfg(input.cfg_env)
                 .maybe_with_eip_7702()
+                .maybe_with_eip_7623()
                 .build_scroll_with_inspector(inspector)
                 .with_precompiles(PrecompilesMap::from_static(
                     ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
