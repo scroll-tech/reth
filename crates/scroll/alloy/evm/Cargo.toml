@@ -31,7 +31,7 @@ scroll-alloy-hardforks = { workspace = true, default-features = false }
 # misc
 auto_impl = { workspace = true, default-features = false }
 serde = { workspace = true, default-features = false, features = ["derive"], optional = true }
-zstd-safe = { version = "7.0.0", features = ["experimental"] }
+zstd-safe = { version = "7.0.0", features = ["experimental"], default-features = false }
 
 [dev-dependencies]
 alloy-hardforks.workspace = true
