@@ -44,7 +44,7 @@ pub(super) fn apply_feynman_hard_fork<DB: Database>(
 ) -> Result<(), DB::Error> {
     let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
 
-    // short circuit if already applied.
+    // No-op if already applied.
     // Note: This requires a storage read for every Feynman block, and it means this
     // read needs to be included in the execution witness. Unfortunately, there is no
     // other reliable way to apply the change only at the transition block, since
