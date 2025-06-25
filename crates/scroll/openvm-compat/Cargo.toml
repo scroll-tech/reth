@@ -12,7 +12,7 @@ exclude.workspace = true
 workspace = true
 
 [dependencies]
-openvm = { git = "https://github.com/openvm-org/openvm.git", default-features = false }
+openvm = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.2.0", default-features = false }
 
 reth-chainspec = { workspace = true, default-features = false }
 reth-evm = { workspace = true, default-features = false }
