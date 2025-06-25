@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_execute_transactions_legacy_feynman_fork() -> eyre::Result<()> {
         // Execute legacy transaction on feynman block
-        let expected_l1_fee = U256::from(9);
+        let expected_l1_fee = U256::from(10);
         execute_transaction(
             ScrollTxType::Legacy,
             CURIE_BLOCK_NUMBER + 1,

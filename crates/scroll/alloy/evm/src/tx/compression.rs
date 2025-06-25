@@ -6,7 +6,7 @@ use alloy_eips::{Encodable2718, Typed2718};
 use alloy_evm::{IntoTxEnv, RecoveredTx};
 use alloy_primitives::{Address, Bytes, TxKind, U256};
 use revm::context::TxEnv;
-use revm_scroll::l1block::TX_L1_FEE_PRECISION;
+use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
 use zstd_safe::{compress_bound, CCtx, CParameter, FrameFormat, ParamSwitch};
 
@@ -51,14 +51,13 @@ pub fn compress_zstd<T: AsRef<[u8]>>(input: &T) -> Vec<u8> {
 pub fn compute_zstd_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
     // Compress the bytes
     let compressed_bytes = compress_zstd(bytes);
-    let bytes_len = bytes.as_ref().len();
 
     // Compute the compression ratio
-    let compression_ratio = ((bytes_len as f64 * TX_L1_FEE_PRECISION as f64) /
-        compressed_bytes.len() as f64)
-        .floor() as u64;
+    let original_len = U256::from(bytes.as_ref().len()).saturating_mul(TX_L1_FEE_PRECISION_U256);
+    let compressed_len = U256::from(compressed_bytes.len());
+    let compression_ratio = original_len.wrapping_div(compressed_len);
 
-    U256::from(compression_ratio)
+    compression_ratio
 }
 /// A generic wrapper for a type that includes a compression ratio and encoded bytes.
 #[derive(Debug, Clone)]
