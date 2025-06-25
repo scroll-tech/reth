@@ -13,7 +13,8 @@ use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTI
 
 mod compression;
 pub use compression::{
-    compute_compression_ratio, FromTxWithCompression, ToCompressed, WithCompression,
+    compress_zstd, compressor_zstd, compute_zstd_compression_ratio, FromTxWithCompression,
+    ToCompressed, WithCompression,
 };
 
 /// This structure wraps around a [`ScrollTransaction`] and allows us to implement the [`IntoTxEnv`]
@@ -159,7 +160,7 @@ impl FromTxWithEncoded<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let encoded = (!tx.is_l1_message()).then_some(encoded);
-        let compression_ratio = encoded.as_ref().map(compute_compression_ratio);
+        let compression_ratio = encoded.as_ref().map(compute_zstd_compression_ratio);
         Self::new(base, encoded, compression_ratio)
     }
 }
@@ -267,7 +268,7 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let rlp_bytes = (!tx.is_l1_message()).then_some(envelope.into());
-        let compression_ratio = rlp_bytes.as_ref().map(compute_compression_ratio);
+        let compression_ratio = rlp_bytes.as_ref().map(compute_zstd_compression_ratio);
         Self::new(base, rlp_bytes, compression_ratio)
     }
 }

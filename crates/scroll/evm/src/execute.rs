@@ -77,7 +77,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
-        compute_compression_ratio,
+        compute_zstd_compression_ratio,
         curie::{
             BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn test_execute_transactions_eip2930_feynman_fork() -> eyre::Result<()> {
         // Execute eip2930 transaction on feynman block
-        let expected_l1_fee = U256::from(9);
+        let expected_l1_fee = U256::from(10);
         execute_transaction(
             ScrollTxType::Eip2930,
             CURIE_BLOCK_NUMBER + 1,
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     fn test_execute_transaction_eip1559_feynman_fork() -> eyre::Result<()> {
         // Execute eip1559 transaction on feynman block
-        let expected_l1_fee = U256::from(9);
+        let expected_l1_fee = U256::from(10);
         execute_transaction(
             ScrollTxType::Eip1559,
             CURIE_BLOCK_NUMBER + 1,
@@ -616,7 +616,7 @@ mod tests {
             .iter()
             .map(|tx| {
                 let encoded = tx.encoded_2718();
-                compute_compression_ratio(&encoded)
+                compute_zstd_compression_ratio(&encoded)
             })
             .collect::<Vec<_>>();
         let with_compression_factors = execute_block(

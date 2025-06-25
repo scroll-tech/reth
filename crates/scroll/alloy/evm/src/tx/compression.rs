@@ -7,79 +7,57 @@ use alloy_primitives::{Address, Bytes, TxKind, U256};
 use revm::context::TxEnv;
 use revm_scroll::l1block::TX_L1_FEE_PRECISION;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
-pub use zstd_compression::compute_compression_ratio;
+use zstd_safe::{compress_bound, CCtx, CParameter, FrameFormat, ParamSwitch};
 
-// TODO: Migrate to a `no-std` compatible compression library such as `zstd-safe`.
+/// The maximum size of the compression window in bytes (`2^CL_WINDOW_LIMIT`).
+const CL_WINDOW_LIMIT: u32 = 22;
 
-#[cfg(feature = "zstd_compression")]
-mod zstd_compression {
-    use super::*;
-    use std::io::Write;
-    use zstd::{
-        stream::Encoder,
-        zstd_safe::{CParameter, ParamSwitch},
-    };
+/// The compression level used for zstd compression.
+const COMPRESSION_LEVEL: i32 = 3;
 
-    /// The maximum size of the compression window in bytes (`2^CL_WINDOW_LIMIT`).
-    const CL_WINDOW_LIMIT: u32 = 22;
-
-    fn compressor(target_block_size: u32) -> Encoder<'static, Vec<u8>> {
-        let mut encoder = Encoder::new(Vec::new(), 0).expect("Failed to create zstd encoder");
-        encoder
-            .set_parameter(CParameter::LiteralCompressionMode(ParamSwitch::Disable))
-            .expect("Failed to set literal compression mode");
-        encoder
-            .set_parameter(CParameter::WindowLog(CL_WINDOW_LIMIT))
-            .expect("Failed to set window log");
-        encoder
-            .set_parameter(CParameter::TargetCBlockSize(target_block_size))
-            .expect("Failed to set target block size");
-        encoder.include_checksum(false).expect("Failed to disable checksum");
-        encoder.include_magicbytes(false).expect("Failed to disable magic bytes");
-        encoder.include_dictid(false).expect("Failed to disable dictid");
-        encoder.include_contentsize(true).expect("Failed to include content size");
-        encoder
-    }
-
-    /// Computes the compression ratio for the provided RLP bytes.
-    pub fn compute_compression_ratio<T: AsRef<[u8]>>(rlp_bytes: &T) -> U256 {
-        // Instantiate the compressor
-        let mut compressor = compressor(CL_WINDOW_LIMIT);
-        let rlp_bytes_len = rlp_bytes.as_ref().len();
-
-        // Set the pledged source size to the length of the RLP bytes and write the bytes to the
-        // compressor.
-        // TODO: Is it possible this is fallible?
-        compressor
-            .set_pledged_src_size(Some(rlp_bytes_len as u64))
-            .expect("failed to set pledged source size");
-        // TODO: Is it possible this is fallible?
-        compressor.write_all(rlp_bytes.as_ref()).expect("failed to write RLP bytes to compressor");
-
-        // Finish the compression and get the result.
-        let result = compressor.finish().expect("failed to finish compression");
-
-        // compute the compression ratio
-        let compression_ratio = ((rlp_bytes_len as f64 * TX_L1_FEE_PRECISION as f64) /
-            result.len() as f64)
-            .floor() as u64;
-
-        U256::from(compression_ratio)
-    }
+/// Creates a zstd compressor with the specified target block size.
+pub fn compressor_zstd(target_block_size: u32) -> CCtx<'static> {
+    let mut ctx = CCtx::default();
+    ctx.set_parameter(CParameter::LiteralCompressionMode(ParamSwitch::Disable))
+        .expect("Failed to set literal compression mode");
+    ctx.set_parameter(CParameter::WindowLog(CL_WINDOW_LIMIT)).expect("Failed to set window log");
+    ctx.set_parameter(CParameter::TargetCBlockSize(target_block_size))
+        .expect("Failed to set target block size");
+    ctx.set_parameter(CParameter::ChecksumFlag(false)).expect("Failed to set checksum flag");
+    ctx.set_parameter(CParameter::Format(FrameFormat::Magicless))
+        .expect("msg: Failed to set frame format");
+    ctx.set_parameter(CParameter::DictIdFlag(false)).expect("Failed to set dictid flag");
+    ctx.set_parameter(CParameter::ContentSizeFlag(true)).expect("Failed to set content size flag");
+    ctx
 }
 
-#[cfg(not(feature = "zstd_compression"))]
-mod zstd_compression {
-    use super::*;
-
-    /// Computes the compression ratio for the provided RLP bytes. This panics if the compression
-    /// feature is not enabled. This is to support `no_std` environments where zstd is not
-    /// available.
-    pub fn compute_compression_ratio<T: AsRef<[u8]>>(rlp_bytes: &T) -> U256 {
-        panic!("Compression feature is not enabled. Please enable the 'compression' feature to use this function.");
-    }
+/// Compresses the input data using zstd compression with a target block size of
+/// [`CL_WINDOW_LIMIT`].
+pub fn compress_zstd<T: AsRef<[u8]>>(input: &T) -> Vec<u8> {
+    let mut compressor = compressor_zstd(CL_WINDOW_LIMIT);
+    let max_compressed_size = compress_bound(input.as_ref().len());
+    let mut output_buf = vec![0u8; max_compressed_size];
+    let output_slice = &mut output_buf[..];
+    let compressed_bytes = compressor
+        .compress(output_slice, input.as_ref(), COMPRESSION_LEVEL)
+        .expect("Failed to compress data");
+    output_buf.truncate(compressed_bytes);
+    output_buf
 }
 
+/// Computes the compression ratio of the bytes after compressing them with zstd.
+pub fn compute_zstd_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
+    // Compress the bytes
+    let compressed_bytes = compress_zstd(bytes);
+    let bytes_len = bytes.as_ref().len();
+
+    // Compute the compression ratio
+    let compression_ratio = ((bytes_len as f64 * TX_L1_FEE_PRECISION as f64) /
+        compressed_bytes.len() as f64)
+        .floor() as u64;
+
+    U256::from(compression_ratio)
+}
 /// A generic wrapper for a type that includes a compression ratio and encoded bytes.
 #[derive(Debug, Clone)]
 pub struct WithCompression<T> {

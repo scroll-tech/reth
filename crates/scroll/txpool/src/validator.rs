@@ -7,7 +7,7 @@ use reth_primitives_traits::{
 };
 use reth_revm::database::StateProviderDatabase;
 use reth_scroll_evm::{
-    compute_compression_ratio, spec_id_at_timestamp_and_number, RethL1BlockInfo,
+    compute_zstd_compression_ratio, spec_id_at_timestamp_and_number, RethL1BlockInfo,
 };
 use reth_scroll_forks::ScrollHardforks;
 use reth_storage_api::{BlockReaderIdExt, StateProviderFactory};
@@ -167,7 +167,7 @@ where
             let tx = valid_tx.transaction().clone_into_consensus();
             tx.encode_2718(&mut encoded);
             // update the transaction hash
-            let compression_factor = compute_compression_ratio(&encoded);
+            let compression_factor = compute_zstd_compression_ratio(&encoded);
 
             let cost_addition = match l1_block_info.l1_tx_data_fee(
                 self.chain_spec(),
