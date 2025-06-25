@@ -121,7 +121,6 @@ members = [
     "crates/scroll/evm",
     "crates/scroll/hardforks",
     "crates/scroll/node",
-    "crates/scroll/openvm-compat",
     "crates/scroll/payload",
     "crates/scroll/primitives",
     "crates/scroll/txpool",
