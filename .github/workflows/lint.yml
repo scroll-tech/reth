@@ -279,7 +279,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-02-14
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
