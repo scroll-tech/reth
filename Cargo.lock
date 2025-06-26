@@ -10207,7 +10207,6 @@ dependencies = [
  "reth-consensus-common",
  "reth-ethereum-consensus",
  "reth-execution-types",
- "reth-primitives",
  "reth-primitives-traits",
  "reth-scroll-primitives",
  "scroll-alloy-hardforks",
@@ -11117,7 +11116,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm#54e4e90105d95f14c0d055f0e37bd689b6f22306"
+source = "git+https://github.com/scroll-tech/scroll-revm#0195a04190cef78901ed67c7bc3048114034f366"
 dependencies = [
  "auto_impl",
  "enumn",
