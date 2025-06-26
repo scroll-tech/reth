@@ -82,6 +82,10 @@ pub struct NetworkConfig<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     pub extra_protocols: RlpxSubProtocols,
     /// Whether to disable transaction gossip
     pub tx_gossip_disabled: bool,
+    /// Whether to disable transaction broadcast
+    pub tx_gossip_broadcast_disabled: bool,
+    /// Whether to disable transaction receive
+    pub tx_gossip_receive_disabled: bool,
     /// How to instantiate transactions manager.
     pub transactions_manager_config: TransactionsManagerConfig,
     /// The NAT resolver for external IP
@@ -211,6 +215,10 @@ pub struct NetworkConfigBuilder<N: NetworkPrimitives = EthNetworkPrimitives> {
     head: Option<Head>,
     /// Whether tx gossip is disabled
     tx_gossip_disabled: bool,
+    /// Whether to disable transaction broadcast
+    tx_gossip_broadcast_disabled: bool,
+    /// Whether to disable transaction receiving
+    tx_gossip_receive_disabled: bool,
     /// The block importer type
     block_import: Option<Box<dyn BlockImport<N::NewBlockPayload>>>,
     /// How to instantiate transactions manager.
@@ -258,6 +266,8 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             extra_protocols: Default::default(),
             head: None,
             tx_gossip_disabled: false,
+            tx_gossip_broadcast_disabled: false,
+            tx_gossip_receive_disabled: false,
             block_import: None,
             transactions_manager_config: Default::default(),
             nat: None,
@@ -608,6 +618,8 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             extra_protocols,
             head,
             tx_gossip_disabled,
+            tx_gossip_broadcast_disabled,
+            tx_gossip_receive_disabled,
             block_import,
             transactions_manager_config,
             nat,
@@ -678,6 +690,8 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             extra_protocols,
             fork_filter,
             tx_gossip_disabled,
+            tx_gossip_broadcast_disabled,
+            tx_gossip_receive_disabled,
             transactions_manager_config,
             nat,
             handshake,

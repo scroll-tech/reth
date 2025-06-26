@@ -63,6 +63,8 @@ impl<N: NetworkPrimitives> NetworkHandle<N> {
         network_mode: NetworkMode,
         chain_id: Arc<AtomicU64>,
         tx_gossip_disabled: bool,
+        tx_gossip_broadcast_disabled: bool,
+        tx_gossip_receive_disabled: bool,
         discv4: Option<Discv4>,
         discv5: Option<Discv5>,
         event_sender: EventSender<NetworkEvent<PeerRequest<N>>>,
@@ -80,6 +82,8 @@ impl<N: NetworkPrimitives> NetworkHandle<N> {
             initial_sync_done: Arc::new(AtomicBool::new(false)),
             chain_id,
             tx_gossip_disabled,
+            tx_gossip_broadcast_disabled,
+            tx_gossip_receive_disabled,
             discv4,
             discv5,
             event_sender,
@@ -189,6 +193,18 @@ impl<N: NetworkPrimitives> NetworkHandle<N> {
     #[allow(clippy::missing_const_for_fn)]
     pub fn tx_gossip_disabled(&self) -> bool {
         self.inner.tx_gossip_disabled
+    }
+
+    /// Whether tx gossip broadcast is disabled
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn tx_gossip_broadcast_disabled(&self) -> bool {
+        self.inner.tx_gossip_broadcast_disabled
+    }
+
+    /// Whether tx gossip receiving is disabled
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn tx_gossip_receive_disabled(&self) -> bool {
+        self.inner.tx_gossip_receive_disabled
     }
 
     /// Returns the secret key used for authenticating sessions.
@@ -474,6 +490,10 @@ struct NetworkInner<N: NetworkPrimitives = EthNetworkPrimitives> {
     chain_id: Arc<AtomicU64>,
     /// Whether to disable transaction gossip
     tx_gossip_disabled: bool,
+    /// Whether to disable transaction broadcast
+    tx_gossip_broadcast_disabled: bool,
+    /// Whether to disable transaction receive
+    tx_gossip_receive_disabled: bool,
     /// The instance of the discv4 service
     discv4: Option<Discv4>,
     /// The instance of the discv5 service
