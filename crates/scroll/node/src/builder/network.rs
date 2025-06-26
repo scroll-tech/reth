@@ -16,7 +16,43 @@ use std::fmt::Debug;
 
 /// The network builder for Scroll.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct ScrollNetworkBuilder;
+pub struct ScrollNetworkBuilder {
+    /// Disable transaction pool broadcast
+    pub disable_txpool_broadcast: bool,
+    /// Disable transaction pool receive
+    pub disable_txpool_receive: bool,
+};
+
+impl ScrollNetworkBuilder {
+    /// Returns the [`NetworkConfig`] that contains the settings to launch the p2p network.
+    ///
+    /// This applies the configured [`ScrollNetworkBuilder`] settings.
+    pub fn network_config<Node>(
+        &self,
+        ctx: &BuilderContext<Node>,
+    ) -> eyre::Result<NetworkConfig<<Node as FullNodeTypes>::Provider, ScrollNetworkPrimitives>>
+    where
+        Node:
+            FullNodeTypes<Types: NodeTypes<ChainSpec = ScrollChainSpec, Primitives = ScrollPrimitives>>,
+    {
+        let Self { disable_txpool_broadcast, disable_txpool_receive } = self.clone();
+        // set the network mode to work.
+        let config = ctx.network_config()?;
+
+        let network_config = NetworkConfig {
+            network_mode: NetworkMode::Work,
+            header_transform: Box::new(transform),
+            // When `sequencer_endpoint` is configured, the node will forward all transactions to a
+            // Sequencer node for execution and inclusion on L1, and disable its own txpool
+            // gossip broadcast/receive to prevent other parties in the network from learning about them.
+            tx_gossip_broadcast_disabled: disable_txpool_broadcast,
+            tx_gossip_receive_disabled: disable_txpool_receive,
+            ..config
+        };
+
+        Ok(network_config)
+    }
+}
 
 impl<Node, Pool> NetworkBuilder<Node, Pool> for ScrollNetworkBuilder
 where
@@ -41,13 +77,7 @@ where
         let chain_spec = ctx.chain_spec();
         let transform = ScrollHeaderTransform { chain_spec };
 
-        // set the network mode to work.
-        let config = ctx.network_config()?;
-        let config = NetworkConfig {
-            network_mode: NetworkMode::Work,
-            header_transform: Box::new(transform),
-            ..config
-        };
+        let config = self::network_config(ctx);
 
         let network = NetworkManager::builder(config).await?;
         let handle = ctx.start_network(network, pool);

@@ -550,7 +550,7 @@ impl<Pool: TransactionPool, N: NetworkPrimitives, PBundle: TransactionPolicies>
         if self.network.is_initially_syncing() {
             return
         }
-        if self.network.tx_gossip_disabled() {
+        if self.network.tx_gossip_disabled() || self.network.tx_gossip_receive_disabled() {
             return
         }
 
@@ -822,7 +822,7 @@ where
         if self.network.is_initially_syncing() {
             return
         }
-        if self.network.tx_gossip_disabled() {
+        if self.network.tx_gossip_disabled() || self.network.tx_gossip_broadcast_disabled() {
             return
         }
 
@@ -981,7 +981,7 @@ where
         propagation_mode: PropagationMode,
     ) -> PropagatedTransactions {
         let mut propagated = PropagatedTransactions::default();
-        if self.network.tx_gossip_disabled() {
+        if self.network.tx_gossip_disabled() || self.network.tx_gossip_broadcast_disabled() {
             return propagated
         }
 
@@ -1089,7 +1089,7 @@ where
         response: oneshot::Sender<RequestResult<PooledTransactions<N::PooledTransaction>>>,
     ) {
         if let Some(peer) = self.peers.get_mut(&peer_id) {
-            if self.network.tx_gossip_disabled() {
+            if self.network.tx_gossip_disabled() || self.network.tx_gossip_broadcast_disabled() {
                 let _ = response.send(Ok(PooledTransactions::default()));
                 return
             }
@@ -1184,7 +1184,7 @@ where
         // Send a `NewPooledTransactionHashes` to the peer with up to
         // `SOFT_LIMIT_COUNT_HASHES_IN_NEW_POOLED_TRANSACTIONS_BROADCAST_MESSAGE`
         // transactions in the pool.
-        if self.network.is_initially_syncing() || self.network.tx_gossip_disabled() {
+        if self.network.is_initially_syncing() || self.network.tx_gossip_disabled() || self.network.tx_gossip_broadcast_disabled() {
             trace!(target: "net::tx", ?peer_id, "Skipping transaction broadcast: node syncing or gossip disabled");
             return
         }
@@ -1288,7 +1288,7 @@ where
         if self.network.is_initially_syncing() {
             return
         }
-        if self.network.tx_gossip_disabled() {
+        if self.network.tx_gossip_disabled() || self.network.tx_gossip_receive_disabled() {
             return
         }
 
