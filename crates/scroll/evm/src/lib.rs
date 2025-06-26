@@ -54,7 +54,9 @@ impl<ChainSpec: ScrollHardforks> ScrollEvmConfig<ChainSpec> {
     }
 }
 
-impl<ChainSpec, N: NodePrimitives, R: Clone> Clone for ScrollEvmConfig<ChainSpec, N, R> {
+impl<ChainSpec, N: NodePrimitives, R: Clone, P: Clone> Clone
+    for ScrollEvmConfig<ChainSpec, N, R, P>
+{
     fn clone(&self) -> Self {
         Self {
             executor_factory: self.executor_factory.clone(),
