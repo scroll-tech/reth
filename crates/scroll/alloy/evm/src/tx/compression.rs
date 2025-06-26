@@ -94,6 +94,7 @@ pub struct WithCompressionRatio<T> {
     // The compression ratio:
     // compression_ratio = max(1, size(v) * 1e9 / size(compress(v)))
     compression_ratio: U256,
+    // The raw encoded bytes of `value`, without compression.
     encoded_bytes: Bytes,
 }
 
