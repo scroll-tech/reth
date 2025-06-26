@@ -612,22 +612,22 @@ mod tests {
             transaction(ScrollTxType::Eip1559, MIN_TRANSACTION_GAS),
             transaction(ScrollTxType::Eip7702, MIN_TRANSACTION_GAS),
         ];
-        let compression_factors = transactions
+        let compression_ratios = transactions
             .iter()
             .map(|tx| {
                 let encoded = tx.encoded_2718();
                 compute_compression_ratio(&encoded)
             })
             .collect::<Vec<_>>();
-        let with_compression_factors = execute_block(
+        let with_compression_ratios = execute_block(
             transactions.clone(),
             CURIE_BLOCK_NUMBER + 1,
             FEYNMAN_BLOCK_TIMESTAMP,
-            Some(compression_factors),
+            Some(compression_ratios),
         )?;
-        let without_compression_factors =
+        let without_compression_ratios =
             execute_block(transactions, CURIE_BLOCK_NUMBER + 1, FEYNMAN_BLOCK_TIMESTAMP, None)?;
-        assert_eq!(without_compression_factors, with_compression_factors);
+        assert_eq!(without_compression_ratios, with_compression_ratios);
         Ok(())
     }
 }
