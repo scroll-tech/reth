@@ -154,6 +154,8 @@ where
                 authorization_list: Default::default(),
             },
             rlp_bytes: Some(Default::default()),
+            // System transactions (similar to L1MessageTx) do not pay a rollup fee,
+            // so this field is not used; we just set it to the default value.
             compression_ratio: Some(TX_L1_FEE_PRECISION_U256),
         };
 
