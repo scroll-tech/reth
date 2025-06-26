@@ -154,7 +154,6 @@ where
                 authorization_list: Default::default(),
             },
             rlp_bytes: Some(Default::default()),
-            // TODO: What makes sense in the context of a system call?
             compression_ratio: Some(TX_L1_FEE_PRECISION_U256),
         };
 

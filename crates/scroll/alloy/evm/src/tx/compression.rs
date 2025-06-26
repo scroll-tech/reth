@@ -46,10 +46,10 @@ mod zstd_compression {
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
         // Instantiate the compressor
         let mut compressor = compressor(CL_WINDOW_LIMIT);
-        let original_bytes_len = bytes.as_ref().len();
 
         // Set the pledged source size to the length of the bytes and write the bytes to the
         // compressor.
+        let original_bytes_len = bytes.as_ref().len();
         compressor
             .set_pledged_src_size(Some(original_bytes_len as u64))
             .expect("failed to set pledged source size");
