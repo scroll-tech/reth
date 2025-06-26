@@ -27,7 +27,7 @@ use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
 pub use scroll_alloy_evm::{
     compute_compression_ratio, ScrollBlockExecutorFactory, ScrollEvmFactory,
-    ScrollTxCompressionRatios,
+    ScrollDefaultPrecompilesFactory, ScrollTxCompressionRatios,
 };
 pub use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
@@ -37,9 +37,10 @@ pub struct ScrollEvmConfig<
     ChainSpec = ScrollChainSpec,
     N: NodePrimitives = ScrollPrimitives,
     R = ScrollRethReceiptBuilder,
+    P = ScrollDefaultPrecompilesFactory,
 > {
     /// Executor factory.
-    executor_factory: ScrollBlockExecutorFactory<R, Arc<ChainSpec>>,
+    executor_factory: ScrollBlockExecutorFactory<R, Arc<ChainSpec>, P>,
     /// Block assembler.
     block_assembler: ScrollBlockAssembler<ChainSpec>,
     /// Node primitives marker.
@@ -63,7 +64,9 @@ impl<ChainSpec, N: NodePrimitives, R: Clone> Clone for ScrollEvmConfig<ChainSpec
     }
 }
 
-impl<ChainSpec: ScrollHardforks, N: NodePrimitives, R> ScrollEvmConfig<ChainSpec, N, R> {
+impl<ChainSpec: ScrollHardforks, N: NodePrimitives, R, P: Default>
+    ScrollEvmConfig<ChainSpec, N, R, P>
+{
     /// Creates a new [`ScrollEvmConfig`] with the given chain spec.
     pub fn new(chain_spec: Arc<ChainSpec>, receipt_builder: R) -> Self {
         Self {
