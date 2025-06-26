@@ -40,6 +40,9 @@ mod zstd_compression {
     }
 
     /// Computes the compression ratio for the provided bytes.
+    ///
+    /// This is computed as:
+    /// `(original_size * TX_L1_FEE_PRECISION_U256) / compressed_size`
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
         // Instantiate the compressor
         let mut compressor = compressor(CL_WINDOW_LIMIT);
@@ -47,11 +50,9 @@ mod zstd_compression {
 
         // Set the pledged source size to the length of the bytes and write the bytes to the
         // compressor.
-        // TODO: Is it possible this is fallible?
         compressor
             .set_pledged_src_size(Some(original_bytes_len as u64))
             .expect("failed to set pledged source size");
-        // TODO: Is it possible this is fallible?
         compressor.write_all(bytes.as_ref()).expect("failed to write bytes to compressor");
 
         // Finish the compression and get the result.
@@ -68,7 +69,7 @@ mod zstd_compression {
 mod zstd_compression {
     use super::*;
 
-    /// Computes the compression ratio for the provided RLP bytes. This panics if the compression
+    /// Computes the compression ratio for the provided bytes. This panics if the compression
     /// feature is not enabled. This is to support `no_std` environments where zstd is not
     /// available.
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(_bytes: &T) -> U256 {

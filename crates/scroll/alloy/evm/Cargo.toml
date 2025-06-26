@@ -54,6 +54,7 @@ std = [
     "scroll-alloy-hardforks/std",
     "reth-evm/std",
     "reth-scroll-chainspec/std",
+    "reth-scroll-evm/std",
     "zstd_compression",
 ]
 serde = [

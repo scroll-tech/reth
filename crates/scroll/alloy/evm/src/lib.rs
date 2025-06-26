@@ -41,10 +41,12 @@ use revm_scroll::{
         ScrollContext,
     },
     instructions::ScrollInstructions,
-    l1block::TX_L1_FEE_PRECISION_U256,
     precompile::ScrollPrecompileProvider,
     ScrollSpecId, ScrollTransaction,
 };
+
+/// Re-export `TX_L1_FEE_PRECISION_U256` from `revm-scroll` for convenience.
+pub use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
 
 /// Scroll EVM implementation.
 #[allow(missing_debug_implementations)]

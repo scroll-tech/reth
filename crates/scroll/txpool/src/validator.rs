@@ -166,7 +166,6 @@ where
             let mut encoded = Vec::with_capacity(valid_tx.transaction().encoded_length());
             let tx = valid_tx.transaction().clone_into_consensus();
             tx.encode_2718(&mut encoded);
-            // update the transaction hash
             let compression_factor = compute_compression_ratio(&encoded);
 
             let cost_addition = match l1_block_info.l1_tx_data_fee(

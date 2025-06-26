@@ -41,7 +41,6 @@ impl RethL1BlockInfo for L1BlockInfo {
         }
 
         let spec_id = spec_id_at_timestamp_and_number(timestamp, block_number, chain_spec);
-        println!("spec_id: {spec_id:?}");
         Ok(self.calculate_tx_l1_cost(input, spec_id, compression_factor))
     }
 }
