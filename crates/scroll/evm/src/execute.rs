@@ -312,8 +312,8 @@ mod tests {
                     (COMMIT_SCALAR_SLOT, U256::from(1000)),
                     (BLOB_SCALAR_SLOT, U256::from(10000)),
                     (IS_CURIE_SLOT, U256::from(1)),
-                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
-                    (PENALTY_FACTOR_SLOT, U256::from(2_000_000_000u64)),
+                    (PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
+                    (PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
                     (IS_FEYNMAN_SLOT, U256::from(1)),
                 ]
             } else if strategy.spec().is_curie_active_at_block(block_number) {
@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_execute_transactions_legacy_feynman_fork() -> eyre::Result<()> {
         // Execute legacy transaction on feynman block
-        let expected_l1_fee = U256::from(10);
+        let expected_l1_fee = U256::from(100);
         execute_transaction(
             ScrollTxType::Legacy,
             CURIE_BLOCK_NUMBER + 1,
@@ -546,7 +546,7 @@ mod tests {
     #[test]
     fn test_execute_transactions_eip2930_feynman_fork() -> eyre::Result<()> {
         // Execute eip2930 transaction on feynman block
-        let expected_l1_fee = U256::from(10);
+        let expected_l1_fee = U256::from(103);
         execute_transaction(
             ScrollTxType::Eip2930,
             CURIE_BLOCK_NUMBER + 1,
@@ -581,7 +581,7 @@ mod tests {
     #[test]
     fn test_execute_transaction_eip1559_feynman_fork() -> eyre::Result<()> {
         // Execute eip1559 transaction on feynman block
-        let expected_l1_fee = U256::from(10);
+        let expected_l1_fee = U256::from(104);
         execute_transaction(
             ScrollTxType::Eip1559,
             CURIE_BLOCK_NUMBER + 1,
@@ -622,7 +622,7 @@ mod tests {
     #[test]
     fn test_execute_transactions_eip7702_feynman_fork() -> eyre::Result<()> {
         // Execute eip7702 transaction on feynman block
-        let expected_l1_fee = U256::from(19);
+        let expected_l1_fee = U256::from(198);
         execute_transaction(
             ScrollTxType::Eip7702,
             CURIE_BLOCK_NUMBER + 1,
