@@ -10,7 +10,8 @@ use crate::{
         feynman::apply_feynman_hard_fork,
     },
     system_caller::ScrollSystemCaller,
-    FromTxWithCompression, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv, ToCompressed,
+    FromTxWithCompressionRatio, ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
+    ToTxWithCompressionRatio,
 };
 use alloc::{boxed::Box, format, vec::Vec};
 
@@ -101,7 +102,7 @@ where
         DB = &'db mut State<DB>,
         Tx: FromRecoveredTx<R::Transaction>
                 + FromTxWithEncoded<R::Transaction>
-                + FromTxWithCompression<R::Transaction>,
+                + FromTxWithCompressionRatio<R::Transaction>,
     >,
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
     Spec: ScrollHardforks,
@@ -112,7 +113,8 @@ where
     pub fn execute_block_with_compression_cache(
         mut self,
         transactions: impl IntoIterator<
-            Item = impl ExecutableTx<Self> + ToCompressed<<Self as BlockExecutor>::Transaction>,
+            Item = impl ExecutableTx<Self>
+                       + ToTxWithCompressionRatio<<Self as BlockExecutor>::Transaction>,
         >,
         compression_ratios: ScrollTxCompressionRatios,
     ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
@@ -123,7 +125,7 @@ where
 
         for (tx, compression_ratio) in transactions.into_iter().zip(compression_ratios.into_iter())
         {
-            let tx = tx.to_compressed(compression_ratio);
+            let tx = tx.with_compression_ratio(compression_ratio);
             self.execute_transaction(&tx)?;
         }
 

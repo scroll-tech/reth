@@ -45,13 +45,13 @@ mod zstd_compression {
     /// Computes the compression ratio for the provided bytes.
     ///
     /// This is computed as:
-    /// `(original_size * TX_L1_FEE_PRECISION_U256) / compressed_size`
+    /// `max(1, original_size * TX_L1_FEE_PRECISION_U256 / encoded_size)`
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
         // Instantiate the compressor
         let mut compressor = compressor(N_BLOCK_SIZE_TARGET);
 
-        // Set the pledged source size to the length of the bytes and write the bytes to the
-        // compressor.
+        // Set the pledged source size to the length of the bytes
+        // and write the bytes to the compressor.
         let original_bytes_len = bytes.as_ref().len();
         compressor
             .set_pledged_src_size(Some(original_bytes_len as u64))
@@ -60,17 +60,17 @@ mod zstd_compression {
 
         // Finish the compression and get the result.
         let result = compressor.finish().expect("failed to finish compression");
-        let compressed_bytes_len = result.len();
+        let encoded_bytes_len = result.len();
 
         // Make sure that the compression ratio >= 1.0
-        if compressed_bytes_len > original_bytes_len {
+        if encoded_bytes_len > original_bytes_len {
             return TX_L1_FEE_PRECISION_U256;
         }
 
         // compression_ratio(tx) = size(tx) * PRECISION / size(zstd(tx))
         U256::from(original_bytes_len)
             .saturating_mul(TX_L1_FEE_PRECISION_U256)
-            .wrapping_div(U256::from(compressed_bytes_len))
+            .wrapping_div(U256::from(encoded_bytes_len))
     }
 }
 
@@ -88,18 +88,21 @@ mod zstd_compression {
 
 /// A generic wrapper for a type that includes a compression ratio and encoded bytes.
 #[derive(Debug, Clone)]
-pub struct WithCompression<T> {
+pub struct WithCompressionRatio<T> {
+    // The original value.
     value: T,
+    // The compression ratio:
+    // compression_ratio = max(1, size(v) * 1e9 / size(compress(v)))
     compression_ratio: U256,
     encoded_bytes: Bytes,
 }
 
-/// A trait for types that can be constructed from a transaction, its sender, encoded bytes and
-/// compression ratio.
-pub trait FromTxWithCompression<Tx> {
-    /// Builds a `TxEnv` from a transaction, its sender, encoded transaction bytes, and a
-    /// compression ratio.
-    fn from_compressed_tx(
+/// A trait for types that can be constructed from a transaction,
+/// its sender, encoded bytes and compression ratio.
+pub trait FromTxWithCompressionRatio<Tx> {
+    /// Builds a `TxEnv` from a transaction, its sender, encoded transaction bytes,
+    /// and a compression ratio.
+    fn from_tx_with_compression_ratio(
         tx: &Tx,
         sender: Address,
         encoded: Bytes,
@@ -107,24 +110,26 @@ pub trait FromTxWithCompression<Tx> {
     ) -> Self;
 }
 
-impl<TxEnv, T> FromTxWithCompression<&T> for TxEnv
+impl<TxEnv, T> FromTxWithCompressionRatio<&T> for TxEnv
 where
-    TxEnv: FromTxWithCompression<T>,
+    TxEnv: FromTxWithCompressionRatio<T>,
 {
-    fn from_compressed_tx(
+    fn from_tx_with_compression_ratio(
         tx: &&T,
         sender: Address,
         encoded: Bytes,
         compression_ratio: Option<U256>,
     ) -> Self {
-        TxEnv::from_compressed_tx(tx, sender, encoded, compression_ratio)
+        TxEnv::from_tx_with_compression_ratio(tx, sender, encoded, compression_ratio)
     }
 }
 
-impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for WithCompression<Recovered<T>> {
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+    for WithCompressionRatio<Recovered<T>>
+{
     fn into_tx_env(self) -> TxEnv {
         let recovered = &self.value;
-        TxEnv::from_compressed_tx(
+        TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),
             recovered.signer(),
             self.encoded_bytes.clone(),
@@ -133,10 +138,12 @@ impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for WithCompression<Re
     }
 }
 
-impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for &WithCompression<Recovered<T>> {
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+    for &WithCompressionRatio<Recovered<T>>
+{
     fn into_tx_env(self) -> TxEnv {
         let recovered = &self.value;
-        TxEnv::from_compressed_tx(
+        TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),
             recovered.signer(),
             self.encoded_bytes.clone(),
@@ -145,10 +152,12 @@ impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for &WithCompression<R
     }
 }
 
-impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for WithCompression<&Recovered<T>> {
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+    for WithCompressionRatio<&Recovered<T>>
+{
     fn into_tx_env(self) -> TxEnv {
         let recovered = &self.value;
-        TxEnv::from_compressed_tx(
+        TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),
             *recovered.signer(),
             self.encoded_bytes.clone(),
@@ -157,10 +166,12 @@ impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for WithCompression<&R
     }
 }
 
-impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for &WithCompression<&Recovered<T>> {
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+    for &WithCompressionRatio<&Recovered<T>>
+{
     fn into_tx_env(self) -> TxEnv {
         let recovered = &self.value;
-        TxEnv::from_compressed_tx(
+        TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),
             *recovered.signer(),
             self.encoded_bytes.clone(),
@@ -169,8 +180,8 @@ impl<T, TxEnv: FromTxWithCompression<T>> IntoTxEnv<TxEnv> for &WithCompression<&
     }
 }
 
-impl FromTxWithCompression<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
-    fn from_compressed_tx(
+impl FromTxWithCompressionRatio<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
+    fn from_tx_with_compression_ratio(
         tx: &ScrollTxEnvelope,
         caller: Address,
         encoded: Bytes,
@@ -199,20 +210,31 @@ impl FromTxWithCompression<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEn
     }
 }
 
-/// A trait that allows a type to be converted into [`WithCompression`].
-pub trait ToCompressed<T> {
-    /// Converts the type into a [`WithCompression`] instance using the provided compression ratio.
-    fn to_compressed(&self, compression_ratio: U256) -> WithCompression<Recovered<&T>>;
+/// A trait that allows a type to be converted into [`WithCompressionRatio`].
+pub trait ToTxWithCompressionRatio<Tx> {
+    /// Converts the type into a [`WithCompressionRatio`] instance using the provided compression
+    /// ratio.
+    fn with_compression_ratio(
+        &self,
+        compression_ratio: U256,
+    ) -> WithCompressionRatio<Recovered<&Tx>>;
 }
 
-impl<T: Encodable2718> ToCompressed<T> for Recovered<&T> {
-    fn to_compressed(&self, compression_ratio: U256) -> WithCompression<Recovered<&T>> {
+impl<Tx: Encodable2718> ToTxWithCompressionRatio<Tx> for Recovered<&Tx> {
+    fn with_compression_ratio(
+        &self,
+        compression_ratio: U256,
+    ) -> WithCompressionRatio<Recovered<&Tx>> {
         let encoded_bytes = self.inner().encoded_2718();
-        WithCompression { value: *self, compression_ratio, encoded_bytes: encoded_bytes.into() }
+        WithCompressionRatio {
+            value: *self,
+            compression_ratio,
+            encoded_bytes: encoded_bytes.into(),
+        }
     }
 }
 
-impl<Tx, T: RecoveredTx<Tx>> RecoveredTx<Tx> for WithCompression<T> {
+impl<Tx, T: RecoveredTx<Tx>> RecoveredTx<Tx> for WithCompressionRatio<T> {
     fn tx(&self) -> &Tx {
         self.value.tx()
     }

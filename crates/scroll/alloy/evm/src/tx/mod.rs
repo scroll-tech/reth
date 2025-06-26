@@ -13,7 +13,8 @@ use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTI
 
 mod compression;
 pub use compression::{
-    compute_compression_ratio, FromTxWithCompression, ToCompressed, WithCompression,
+    compute_compression_ratio, FromTxWithCompressionRatio, ToTxWithCompressionRatio,
+    WithCompressionRatio,
 };
 
 /// This structure wraps around a [`ScrollTransaction`] and allows us to implement the [`IntoTxEnv`]
