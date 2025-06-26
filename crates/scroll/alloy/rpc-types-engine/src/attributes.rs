@@ -18,6 +18,8 @@ pub struct ScrollPayloadAttributes {
     /// The pre-Euclid block data hint, necessary for the block builder to derive the correct block
     /// hash.
     pub block_data_hint: Option<BlockDataHint>,
+    /// The gas limit for the block building task.
+    pub gas_limit: Option<u64>,
 }
 
 /// Block data provided as a hint to the payload attributes.
@@ -64,6 +66,7 @@ impl<'a> arbitrary::Arbitrary<'a> for ScrollPayloadAttributes {
             transactions: Some(Vec::arbitrary(u)?),
             no_tx_pool: bool::arbitrary(u)?,
             block_data_hint: Some(BlockDataHint::arbitrary(u)?),
+            gas_limit: Some(u64::arbitrary(u)?),
         })
     }
 }
@@ -93,6 +96,7 @@ mod test {
                 nonce: Some(0x12345),
                 difficulty: U256::from(10),
             }),
+            gas_limit: Some(10_000_000),
         };
 
         let ser = serde_json::to_string(&attributes).unwrap();

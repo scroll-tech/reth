@@ -26,6 +26,8 @@ pub struct ScrollPayloadBuilderAttributes {
     /// The pre-Euclid block data hint, necessary for the block builder to derive the correct block
     /// hash.
     pub block_data_hint: Option<BlockDataHint>,
+    /// The gas limit for the generated payload.
+    pub gas_limit: Option<u64>,
 }
 
 impl PayloadBuilderAttributes for ScrollPayloadBuilderAttributes {
@@ -70,6 +72,7 @@ impl PayloadBuilderAttributes for ScrollPayloadBuilderAttributes {
             no_tx_pool: attributes.no_tx_pool,
             transactions,
             block_data_hint: attributes.block_data_hint,
+            gas_limit: attributes.gas_limit,
         })
     }
 
@@ -154,6 +157,10 @@ pub(crate) fn payload_id_scroll(
         hasher.update(block_data.difficulty.to_be_bytes::<32>());
     }
 
+    if let Some(gas_limit) = attributes.gas_limit {
+        hasher.update(gas_limit.to_be_bytes());
+    }
+
     let mut out = hasher.finalize();
     out[0] = payload_version;
     PayloadId::new(out.as_slice()[..8].try_into().expect("sufficient length"))
@@ -176,7 +183,7 @@ mod tests {
     #[test]
     fn test_payload_id() {
         let expected =
-            PayloadId::new(FixedBytes::<8>::from_str("0x03e72aa4f73fbe90").unwrap().into());
+            PayloadId::new(FixedBytes::<8>::from_str("0x036369370c155d4c").unwrap().into());
         let attrs = ScrollPayloadAttributes {
             payload_attributes: PayloadAttributes {
                 timestamp: 1728933301,
@@ -194,6 +201,7 @@ mod tests {
                 nonce: Some(u64::MAX),
                 difficulty: U256::from(10)
             }),
+            gas_limit: Some(10_000_000),
         };
 
         assert_eq!(
