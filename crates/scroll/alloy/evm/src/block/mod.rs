@@ -1,5 +1,5 @@
 pub mod curie;
-mod feynman;
+pub mod feynman;
 
 pub use receipt_builder::{ReceiptBuilderCtx, ScrollReceiptBuilder};
 mod receipt_builder;

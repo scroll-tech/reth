@@ -6,7 +6,7 @@
 
 mod block;
 pub use block::{
-    curie, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
+    curie, feynman, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
     ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionRatios,
 };
 

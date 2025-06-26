@@ -83,6 +83,7 @@ mod tests {
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
             L1_GAS_PRICE_ORACLE_ADDRESS,
         },
+        feynman::{IS_FEYNMAN_SLOT, PENALTY_FACTOR_SLOT, PENALTY_THRESHOLD_SLOT},
         ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm,
     };
     use scroll_alloy_hardforks::ScrollHardforks;
@@ -228,25 +229,39 @@ mod tests {
         let mut strategy = executor(&block, &mut state);
 
         // determine l1 gas oracle storage
-        let l1_gas_oracle_storage = if strategy.spec().is_curie_active_at_block(block_number) {
-            vec![
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                (BLOB_SCALAR_SLOT, U256::from(10000)),
-                (IS_CURIE_SLOT, U256::from(1)),
-            ]
-        } else {
-            vec![
-                (L1_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-            ]
-        }
-        .into_iter()
-        .collect();
+        let l1_gas_oracle_storage =
+            if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
+                    (PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
+                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                ]
+            } else if strategy.spec().is_curie_active_at_block(block_number) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                ]
+            } else {
+                vec![
+                    (L1_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                ]
+            }
+            .into_iter()
+            .collect();
 
         // load accounts in state
         strategy.evm_mut().db_mut().insert_account_with_storage(
@@ -287,25 +302,39 @@ mod tests {
         let mut strategy = executor(&block, &mut state);
 
         // determine l1 gas oracle storage
-        let l1_gas_oracle_storage = if strategy.spec().is_curie_active_at_block(block_number) {
-            vec![
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-                (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                (BLOB_SCALAR_SLOT, U256::from(10000)),
-                (IS_CURIE_SLOT, U256::from(1)),
-            ]
-        } else {
-            vec![
-                (L1_BASE_FEE_SLOT, U256::from(1000)),
-                (OVER_HEAD_SLOT, U256::from(1000)),
-                (SCALAR_SLOT, U256::from(1000)),
-            ]
-        }
-        .into_iter()
-        .collect();
+        let l1_gas_oracle_storage =
+            if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
+                    (PENALTY_FACTOR_SLOT, U256::from(2_000_000_000u64)),
+                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                ]
+            } else if strategy.spec().is_curie_active_at_block(block_number) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                ]
+            } else {
+                vec![
+                    (L1_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                ]
+            }
+            .into_iter()
+            .collect();
 
         // load accounts in state
         strategy.evm_mut().db_mut().insert_account_with_storage(
