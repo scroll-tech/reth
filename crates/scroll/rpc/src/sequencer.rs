@@ -4,7 +4,6 @@ use crate::SequencerClientError;
 use alloy_json_rpc::{RpcRecv, RpcSend};
 use alloy_primitives::{hex, B256};
 use alloy_rpc_client::{BuiltInConnectionString, ClientBuilder, RpcClient as Client};
-use alloy_rpc_types_eth::erc4337::TransactionConditional;
 use alloy_transport_http::Http;
 use std::{str::FromStr, sync::Arc};
 use thiserror::Error;
@@ -122,26 +121,6 @@ impl SequencerClient {
 
         Ok(tx_hash)
     }
-
-    /// Forwards a transaction conditional to the sequencer endpoint.
-    pub async fn forward_raw_transaction_conditional(
-        &self,
-        tx: &[u8],
-        condition: TransactionConditional,
-    ) -> Result<B256, SequencerClientError> {
-        let rlp_hex = hex::encode_prefixed(tx);
-        let tx_hash = self
-            .send_rpc_call("eth_sendRawTransactionConditional", (rlp_hex, condition))
-            .await
-            .inspect_err(|err| {
-                warn!(
-                    target: "rpc::eth",
-                    %err,
-                    "Failed to forward transaction conditional for sequencer",
-                );
-            })?;
-        Ok(tx_hash)
-    }
 }
 
 #[derive(Debug)]
@@ -174,13 +153,11 @@ mod tests {
             r#"{"method":"eth_getBlockByNumber","params":["0xa"],"id":0,"jsonrpc":"2.0"}"#
         );
 
-        let condition = TransactionConditional::default();
-
         let request = client
             .client()
             .make_request(
-                "eth_sendRawTransactionConditional",
-                (format!("0x{}", hex::encode("abcd")), condition),
+                "eth_sendRawTransaction",
+                format!("0x{}", hex::encode("abcd")),
             )
             .serialize()
             .unwrap()
@@ -189,7 +166,7 @@ mod tests {
 
         assert_eq!(
             body,
-            r#"{"method":"eth_sendRawTransactionConditional","params":["0x61626364",{"knownAccounts":{}}],"id":1,"jsonrpc":"2.0"}"#
+            r#"{"method":"eth_sendRawTransaction","params":"0x61626364","id":1,"jsonrpc":"2.0"}"#
         );
     }
 
@@ -211,13 +188,11 @@ mod tests {
             r#"{"method":"eth_getBlockByNumber","params":["0xa"],"id":0,"jsonrpc":"2.0"}"#
         );
 
-        let condition = TransactionConditional::default();
-
         let request = client
             .client()
             .make_request(
-                "eth_sendRawTransactionConditional",
-                (format!("0x{}", hex::encode("abcd")), condition),
+                "eth_sendRawTransaction",
+                format!("0x{}", hex::encode("abcd")),
             )
             .serialize()
             .unwrap()
@@ -226,7 +201,7 @@ mod tests {
 
         assert_eq!(
             body,
-            r#"{"method":"eth_sendRawTransactionConditional","params":["0x61626364",{"knownAccounts":{}}],"id":1,"jsonrpc":"2.0"}"#
+            r#"{"method":"eth_sendRawTransaction","params":"0x61626364","id":1,"jsonrpc":"2.0"}"#
         );
     }
 }
