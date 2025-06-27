@@ -6,12 +6,15 @@
 
 mod block;
 pub use block::{
-    curie, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
-    ScrollBlockExecutorFactory, ScrollReceiptBuilder,
+    curie, feynman, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
+    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionRatios,
 };
 
 mod tx;
-pub use tx::ScrollTransactionIntoTxEnv;
+pub use tx::{
+    compute_compression_ratio, FromTxWithCompressionRatio, ScrollTransactionIntoTxEnv,
+    ToTxWithCompressionRatio, WithCompressionRatio,
+};
 
 mod system_caller;
 
@@ -21,7 +24,7 @@ use alloc::vec::Vec;
 use alloy_evm::{precompiles::PrecompilesMap, Database, Evm, EvmEnv, EvmFactory};
 use alloy_primitives::{Address, Bytes, TxKind, U256};
 use core::{
-    fmt::Debug,
+    fmt,
     ops::{Deref, DerefMut},
 };
 use revm::{
@@ -42,6 +45,9 @@ use revm_scroll::{
     ScrollSpecId, ScrollTransaction,
 };
 
+/// Re-export `TX_L1_FEE_PRECISION_U256` from `revm-scroll` for convenience.
+pub use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
+
 /// Scroll EVM implementation.
 #[allow(missing_debug_implementations)]
 pub struct ScrollEvm<DB: Database, I, P = ScrollPrecompileProvider> {
@@ -55,6 +61,19 @@ pub struct ScrollEvm<DB: Database, I, P = ScrollPrecompileProvider> {
 }
 
 impl<DB: Database, I, P> ScrollEvm<DB, I, P> {
+    /// Creates a new instance of [`ScrollEvm`].
+    pub const fn new(
+        inner: revm_scroll::ScrollEvm<
+            ScrollContext<DB>,
+            I,
+            ScrollInstructions<EthInterpreter, ScrollContext<DB>>,
+            P,
+        >,
+        inspect: bool,
+    ) -> Self {
+        Self { inner, inspect }
+    }
+
     /// Provides a reference to the EVM context.
     pub const fn ctx(&self) -> &ScrollContext<DB> {
         &self.inner.0.ctx
@@ -148,6 +167,9 @@ where
                 authorization_list: Default::default(),
             },
             rlp_bytes: Some(Default::default()),
+            // System transactions (similar to L1MessageTx) do not pay a rollup fee,
+            // so this field is not used; we just set it to the default value.
+            compression_ratio: Some(TX_L1_FEE_PRECISION_U256),
         };
 
         let mut gas_limit = tx.base.gas_limit;
@@ -210,9 +232,11 @@ where
 /// Factory producing [`ScrollEvm`]s.
 #[derive(Debug, Default, Clone, Copy)]
 #[non_exhaustive]
-pub struct ScrollEvmFactory;
+pub struct ScrollEvmFactory<P = ScrollDefaultPrecompilesFactory> {
+    _precompiles_factory: core::marker::PhantomData<P>,
+}
 
-impl EvmFactory for ScrollEvmFactory {
+impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
     type Evm<DB: Database, I: Inspector<ScrollContext<DB>>> = ScrollEvm<DB, I, Self::Precompiles>;
     type Context<DB: Database> = ScrollContext<DB>;
     type Tx = ScrollTransactionIntoTxEnv<TxEnv>;
@@ -235,9 +259,7 @@ impl EvmFactory for ScrollEvmFactory {
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
                 .build_scroll_with_inspector(NoOpInspector {})
-                .with_precompiles(PrecompilesMap::from_static(
-                    ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
-                )),
+                .with_precompiles(P::with_spec(spec_id)),
             inspect: false,
         }
     }
@@ -257,10 +279,24 @@ impl EvmFactory for ScrollEvmFactory {
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
                 .build_scroll_with_inspector(inspector)
-                .with_precompiles(PrecompilesMap::from_static(
-                    ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
-                )),
+                .with_precompiles(P::with_spec(spec_id)),
             inspect: true,
         }
+    }
+}
+
+/// A factory trait for creating precompiles for Scroll EVM.
+pub trait ScrollPrecompilesFactory: Default + fmt::Debug {
+    /// Creates a new instance of precompiles for the given Scroll specification ID.
+    fn with_spec(spec: ScrollSpecId) -> PrecompilesMap;
+}
+
+/// Default implementation of the Scroll precompiles factory.
+#[derive(Default, Debug, Copy, Clone)]
+pub struct ScrollDefaultPrecompilesFactory;
+
+impl ScrollPrecompilesFactory for ScrollDefaultPrecompilesFactory {
+    fn with_spec(spec_id: ScrollSpecId) -> PrecompilesMap {
+        PrecompilesMap::from_static(ScrollPrecompileProvider::new_with_spec(spec_id).precompiles())
     }
 }

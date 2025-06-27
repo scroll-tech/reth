@@ -25,8 +25,11 @@ use reth_primitives_traits::NodePrimitives;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
-use scroll_alloy_evm::{ScrollBlockExecutorFactory, ScrollEvmFactory};
-use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
+pub use scroll_alloy_evm::{
+    compute_compression_ratio, ScrollBlockExecutorFactory, ScrollDefaultPrecompilesFactory,
+    ScrollEvmFactory, ScrollTxCompressionRatios,
+};
+pub use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 /// Scroll EVM configuration.
 #[derive(Debug)]
@@ -34,9 +37,10 @@ pub struct ScrollEvmConfig<
     ChainSpec = ScrollChainSpec,
     N: NodePrimitives = ScrollPrimitives,
     R = ScrollRethReceiptBuilder,
+    P = ScrollDefaultPrecompilesFactory,
 > {
     /// Executor factory.
-    executor_factory: ScrollBlockExecutorFactory<R, Arc<ChainSpec>>,
+    executor_factory: ScrollBlockExecutorFactory<R, Arc<ChainSpec>, P>,
     /// Block assembler.
     block_assembler: ScrollBlockAssembler<ChainSpec>,
     /// Node primitives marker.
@@ -50,7 +54,9 @@ impl<ChainSpec: ScrollHardforks> ScrollEvmConfig<ChainSpec> {
     }
 }
 
-impl<ChainSpec, N: NodePrimitives, R: Clone> Clone for ScrollEvmConfig<ChainSpec, N, R> {
+impl<ChainSpec, N: NodePrimitives, R: Clone, P: Clone> Clone
+    for ScrollEvmConfig<ChainSpec, N, R, P>
+{
     fn clone(&self) -> Self {
         Self {
             executor_factory: self.executor_factory.clone(),
@@ -60,7 +66,9 @@ impl<ChainSpec, N: NodePrimitives, R: Clone> Clone for ScrollEvmConfig<ChainSpec
     }
 }
 
-impl<ChainSpec: ScrollHardforks, N: NodePrimitives, R> ScrollEvmConfig<ChainSpec, N, R> {
+impl<ChainSpec: ScrollHardforks, N: NodePrimitives, R, P: Default>
+    ScrollEvmConfig<ChainSpec, N, R, P>
+{
     /// Creates a new [`ScrollEvmConfig`] with the given chain spec.
     pub fn new(chain_spec: Arc<ChainSpec>, receipt_builder: R) -> Self {
         Self {
@@ -97,6 +105,11 @@ pub fn spec_id_at_timestamp_and_number(
     chain_spec: impl ScrollHardforks,
 ) -> ScrollSpecId {
     if chain_spec
+        .scroll_fork_activation(ScrollHardfork::Feynman)
+        .active_at_timestamp_or_number(timestamp, number)
+    {
+        ScrollSpecId::FEYNMAN
+    } else if chain_spec
         .scroll_fork_activation(ScrollHardfork::EuclidV2)
         .active_at_timestamp_or_number(timestamp, number)
     {

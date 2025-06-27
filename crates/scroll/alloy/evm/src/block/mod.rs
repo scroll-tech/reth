@@ -1,12 +1,17 @@
 pub mod curie;
+pub mod feynman;
 
 pub use receipt_builder::{ReceiptBuilderCtx, ScrollReceiptBuilder};
 mod receipt_builder;
 
 use crate::{
-    block::curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
+    block::{
+        curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
+        feynman::apply_feynman_hard_fork,
+    },
     system_caller::ScrollSystemCaller,
-    ScrollEvm, ScrollEvmFactory, ScrollTransactionIntoTxEnv,
+    FromTxWithCompressionRatio, ScrollDefaultPrecompilesFactory, ScrollEvm, ScrollEvmFactory,
+    ScrollPrecompilesFactory, ScrollTransactionIntoTxEnv, ToTxWithCompressionRatio,
 };
 use alloc::{boxed::Box, format, vec::Vec};
 
@@ -33,6 +38,9 @@ use revm::{
 use revm_scroll::builder::ScrollContext;
 use scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
+
+/// A cache for transaction compression ratios.
+pub type ScrollTxCompressionRatios = Vec<U256>;
 
 /// Context for Scroll Block Execution.
 #[derive(Debug, Default, Clone)]
@@ -87,6 +95,44 @@ where
     }
 }
 
+impl<'db, DB, E, R, Spec> ScrollBlockExecutor<E, R, Spec>
+where
+    DB: Database + 'db,
+    E: EvmExt<
+        DB = &'db mut State<DB>,
+        Tx: FromRecoveredTx<R::Transaction>
+                + FromTxWithEncoded<R::Transaction>
+                + FromTxWithCompressionRatio<R::Transaction>,
+    >,
+    R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
+    Spec: ScrollHardforks,
+{
+    /// Executes all transactions in a block, applying pre and post execution changes. The provided
+    /// transaction compression ratios are expected to be in the same order as the
+    /// transactions.
+    pub fn execute_block_with_compression_cache(
+        mut self,
+        transactions: impl IntoIterator<
+            Item = impl ExecutableTx<Self>
+                       + ToTxWithCompressionRatio<<Self as BlockExecutor>::Transaction>,
+        >,
+        compression_ratios: impl IntoIterator<Item = U256>,
+    ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
+    where
+        Self: Sized,
+    {
+        self.apply_pre_execution_changes()?;
+
+        for (tx, compression_ratio) in transactions.into_iter().zip(compression_ratios.into_iter())
+        {
+            let tx = tx.with_compression_ratio(compression_ratio);
+            self.execute_transaction(&tx)?;
+        }
+
+        self.apply_post_execution_changes()
+    }
+}
+
 impl<'db, DB, E, R, Spec> BlockExecutor for ScrollBlockExecutor<E, R, Spec>
 where
     DB: Database + 'db,
@@ -114,9 +160,7 @@ where
             .load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)
             .map_err(BlockExecutionError::other)?;
 
-        // apply eip-2935.
-        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
-
+        // apply gas oracle predeploy upgrade at Curie transition block.
         if self
             .spec
             .scroll_fork_activation(ScrollHardfork::Curie)
@@ -128,6 +172,22 @@ where
                 )));
             };
         }
+
+        // apply gas oracle predeploy upgrade at Feynman transition block.
+        if self
+            .spec
+            .scroll_fork_activation(ScrollHardfork::Feynman)
+            .active_at_timestamp(self.evm.block().timestamp)
+        {
+            if let Err(err) = apply_feynman_hard_fork(self.evm.db_mut()) {
+                return Err(BlockExecutionError::msg(format!(
+                    "error occurred at Feynman fork: {err:?}"
+                )));
+            };
+        }
+
+        // apply eip-2935.
+        self.system_caller.apply_blockhashes_contract_call(self.ctx.parent_hash, &mut self.evm)?;
 
         Ok(())
     }
@@ -267,25 +327,31 @@ where
     fn l1_fee(&self) -> Option<U256> {
         let l1_block_info = &self.ctx().chain;
         let transaction_rlp_bytes = self.ctx().tx.rlp_bytes.as_ref()?;
-        Some(l1_block_info.calculate_tx_l1_cost(transaction_rlp_bytes, self.ctx().cfg.spec))
+        let compression_ratio = self.ctx().tx.compression_ratio;
+        Some(l1_block_info.calculate_tx_l1_cost(
+            transaction_rlp_bytes,
+            self.ctx().cfg.spec,
+            compression_ratio,
+        ))
     }
 }
 
 /// Scroll block executor factory.
 #[derive(Debug, Clone, Default, Copy)]
-pub struct ScrollBlockExecutorFactory<R, Spec = ScrollHardfork, EvmFactory = ScrollEvmFactory> {
+pub struct ScrollBlockExecutorFactory<R, Spec = ScrollHardfork, P = ScrollDefaultPrecompilesFactory>
+{
     /// Receipt builder.
     receipt_builder: R,
     /// Chain specification.
     spec: Spec,
     /// EVM factory.
-    evm_factory: EvmFactory,
+    evm_factory: ScrollEvmFactory<P>,
 }
 
-impl<R, Spec, EvmFactory> ScrollBlockExecutorFactory<R, Spec, EvmFactory> {
+impl<R, Spec, P> ScrollBlockExecutorFactory<R, Spec, P> {
     /// Creates a new [`ScrollBlockExecutorFactory`] with the given receipt builder, spec and
     /// factory.
-    pub const fn new(receipt_builder: R, spec: Spec, evm_factory: EvmFactory) -> Self {
+    pub const fn new(receipt_builder: R, spec: Spec, evm_factory: ScrollEvmFactory<P>) -> Self {
         Self { receipt_builder, spec, evm_factory }
     }
 
@@ -300,20 +366,21 @@ impl<R, Spec, EvmFactory> ScrollBlockExecutorFactory<R, Spec, EvmFactory> {
     }
 
     /// Exposes the EVM factory.
-    pub const fn evm_factory(&self) -> &EvmFactory {
+    pub const fn evm_factory(&self) -> &ScrollEvmFactory<P> {
         &self.evm_factory
     }
 }
 
-impl<R, Spec> BlockExecutorFactory for ScrollBlockExecutorFactory<R, Spec>
+impl<R, Spec, P> BlockExecutorFactory for ScrollBlockExecutorFactory<R, Spec, P>
 where
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
     Spec: ScrollHardforks,
+    P: ScrollPrecompilesFactory,
     ScrollTransactionIntoTxEnv<TxEnv>:
         FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
     Self: 'static,
 {
-    type EvmFactory = ScrollEvmFactory;
+    type EvmFactory = ScrollEvmFactory<P>;
     type ExecutionCtx<'a> = ScrollBlockExecutionCtx;
     type Transaction = R::Transaction;
     type Receipt = R::Receipt;
@@ -324,12 +391,12 @@ where
 
     fn create_executor<'a, DB, I>(
         &'a self,
-        evm: <ScrollEvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
+        evm: <Self::EvmFactory as EvmFactory>::Evm<&'a mut State<DB>, I>,
         ctx: Self::ExecutionCtx<'a>,
     ) -> impl BlockExecutorFor<'a, Self, DB, I>
     where
         DB: Database + 'a,
-        I: Inspector<ScrollContext<&'a mut State<DB>>> + 'a,
+        I: Inspector<<Self::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
     {
         ScrollBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
     }
