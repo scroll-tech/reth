@@ -160,8 +160,8 @@ impl FromTxWithEncoded<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let encoded = (!tx.is_l1_message()).then_some(encoded);
-        let compression_ratio = encoded.as_ref().map(compute_compression_ratio);
-        Self::new(base, encoded, compression_ratio)
+        let compression_ratio = compute_compression_ratio(base.input());
+        Self::new(base, encoded, Some(compression_ratio))
     }
 }
 
@@ -268,7 +268,7 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let rlp_bytes = (!tx.is_l1_message()).then_some(envelope.into());
-        let compression_ratio = rlp_bytes.as_ref().map(compute_compression_ratio);
-        Self::new(base, rlp_bytes, compression_ratio)
+        let compression_ratio = compute_compression_ratio(base.input());
+        Self::new(base, rlp_bytes, Some(compression_ratio))
     }
 }
