@@ -26,8 +26,8 @@ use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
 pub use scroll_alloy_evm::{
-    compute_compression_ratio, ScrollBlockExecutorFactory, ScrollEvmFactory,
-    ScrollDefaultPrecompilesFactory, ScrollTxCompressionRatios,
+    compute_compression_ratio, ScrollBlockExecutorFactory, ScrollDefaultPrecompilesFactory,
+    ScrollEvmFactory, ScrollTxCompressionRatios,
 };
 pub use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
