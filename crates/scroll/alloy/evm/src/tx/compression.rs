@@ -47,6 +47,10 @@ mod zstd_compression {
     /// This is computed as:
     /// `max(1, original_size * TX_L1_FEE_PRECISION_U256 / encoded_size)`
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
+        if bytes.as_ref().len() == 0 {
+            return U256::MAX
+        }
+
         // Instantiate the compressor
         let mut compressor = compressor(N_BLOCK_SIZE_TARGET);
 
