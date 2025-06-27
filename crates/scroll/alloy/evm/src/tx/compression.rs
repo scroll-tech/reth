@@ -47,7 +47,7 @@ mod zstd_compression {
     /// This is computed as:
     /// `max(1, original_size * TX_L1_FEE_PRECISION_U256 / encoded_size)`
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
-        if bytes.as_ref().len() == 0 {
+        if bytes.as_ref().is_empty() {
             return U256::MAX
         }
 
