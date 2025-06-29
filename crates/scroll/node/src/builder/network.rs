@@ -21,7 +21,7 @@ pub struct ScrollNetworkBuilder {
     pub disable_txpool_broadcast: bool,
     /// Disable transaction pool receive
     pub disable_txpool_receive: bool,
-};
+}
 
 impl ScrollNetworkBuilder {
     /// Returns the [`NetworkConfig`] that contains the settings to launch the p2p network.
