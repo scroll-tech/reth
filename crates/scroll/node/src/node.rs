@@ -21,11 +21,11 @@ pub struct ScrollNode {
     pub disable_tx_broadcast: bool,
     /// A bool that represents if the transaction receiving should be disabled.
     pub disable_tx_receive: bool,
-};
+}
 
 impl ScrollNode {
     /// Returns a [`ComponentsBuilder`] configured for a regular Ethereum node.
-    pub fn components<Node>(disable_txpool_broadcast: bool, disable_txpool_receive: bool) -> ComponentsBuilder<
+    pub fn components<Node>() -> ComponentsBuilder<
         Node,
         ScrollPoolBuilder,
         BasicPayloadServiceBuilder<ScrollPayloadBuilderBuilder>,
