@@ -25,7 +25,7 @@ pub struct ScrollNode {
 
 impl ScrollNode {
     /// Returns a [`ComponentsBuilder`] configured for a regular Ethereum node.
-    pub fn components<Node>() -> ComponentsBuilder<
+    pub fn components<Node>(&self) -> ComponentsBuilder<
         Node,
         ScrollPoolBuilder,
         BasicPayloadServiceBuilder<ScrollPayloadBuilderBuilder>,
@@ -48,8 +48,8 @@ impl ScrollNode {
             .executor(ScrollExecutorBuilder::default())
             .payload(BasicPayloadServiceBuilder::new(ScrollPayloadBuilderBuilder::default()))
             .network(ScrollNetworkBuilder {
-                disable_txpool_broadcast: self::disable_txpool_broadcast,
-                disable_txpool_receive: self::disable_txpool_receive,
+                disable_txpool_broadcast: self.disable_txpool_broadcast,
+                disable_txpool_receive: self.disable_txpool_receive,
             })
             .executor(ScrollExecutorBuilder)
             .consensus(ScrollConsensusBuilder)
@@ -74,7 +74,7 @@ where
     >;
 
     fn components_builder(&self) -> Self::ComponentsBuilder {
-        Self::components()
+        Self::components(self)
     }
 
     fn add_ons(&self) -> Self::AddOns {
