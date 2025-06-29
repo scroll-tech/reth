@@ -46,11 +46,11 @@ mod tests {
 
     use alloy_consensus::{
         transaction::{Recovered, SignerRecoverable},
-        Block, BlockBody, Header, SignableTransaction, Signed, TxLegacy,
+        Block, BlockBody, Header, SignableTransaction, Signed, Transaction, TxLegacy,
     };
     use alloy_eips::{
         eip7702::{constants::PER_EMPTY_ACCOUNT_COST, Authorization, SignedAuthorization},
-        Encodable2718, Typed2718,
+        Typed2718,
     };
     use alloy_evm::{
         block::{BlockExecutionResult, BlockExecutor},
@@ -641,13 +641,8 @@ mod tests {
             transaction(ScrollTxType::Eip1559, MIN_TRANSACTION_GAS),
             transaction(ScrollTxType::Eip7702, MIN_TRANSACTION_GAS),
         ];
-        let compression_ratios = transactions
-            .iter()
-            .map(|tx| {
-                let encoded = tx.encoded_2718();
-                compute_compression_ratio(&encoded)
-            })
-            .collect::<Vec<_>>();
+        let compression_ratios =
+            transactions.iter().map(|tx| compute_compression_ratio(tx.input())).collect::<Vec<_>>();
         let with_compression_ratios = execute_block(
             transactions.clone(),
             CURIE_BLOCK_NUMBER + 1,

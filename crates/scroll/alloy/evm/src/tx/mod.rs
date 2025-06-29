@@ -160,6 +160,7 @@ impl FromTxWithEncoded<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         let encoded = (!tx.is_l1_message()).then_some(encoded);
+        // Note: We compute the transaction ratio on tx.data, not on the full encoded transaction.
         let compression_ratio = compute_compression_ratio(base.input());
         Self::new(base, encoded, Some(compression_ratio))
     }
@@ -267,8 +268,9 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
             },
         };
 
-        let rlp_bytes = (!tx.is_l1_message()).then_some(envelope.into());
+        let encoded = (!tx.is_l1_message()).then_some(envelope.into());
+        // Note: We compute the transaction ratio on tx.data, not on the full encoded transaction.
         let compression_ratio = compute_compression_ratio(base.input());
-        Self::new(base, rlp_bytes, Some(compression_ratio))
+        Self::new(base, encoded, Some(compression_ratio))
     }
 }
