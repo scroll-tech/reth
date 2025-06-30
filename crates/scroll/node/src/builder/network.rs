@@ -36,9 +36,14 @@ impl ScrollNetworkBuilder {
             FullNodeTypes<Types: NodeTypes<ChainSpec = ScrollChainSpec, Primitives = ScrollPrimitives>>,
     {
         let Self { disable_txpool_broadcast, disable_txpool_receive } = self.clone();
-        // set the network mode to work.
+
+        // get the header transform.
+        let chain_spec = ctx.chain_spec();
+        let transform = ScrollHeaderTransform { chain_spec };
+
         let config = ctx.network_config()?;
 
+        // set the network mode to work.
         let network_config = NetworkConfig {
             network_mode: NetworkMode::Work,
             header_transform: Box::new(transform),
@@ -73,12 +78,7 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<Self::Network> {
-        // get the header transform.
-        let chain_spec = ctx.chain_spec();
-        let transform = ScrollHeaderTransform { chain_spec };
-
-        let config = self::network_config(ctx);
-
+        let config = self::network_config(ctx)?;
         let network = NetworkManager::builder(config).await?;
         let handle = ctx.start_network(network, pool);
         info!(target: "reth::cli", enode=%handle.local_node_record(), "P2P networking initialized");
