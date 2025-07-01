@@ -5,6 +5,7 @@ use alloy_primitives::{Address, B256};
 use reth_chainspec::EthereumHardforks;
 use reth_ethereum_engine_primitives::EthPayloadAttributes;
 use reth_payload_primitives::PayloadAttributesBuilder;
+use scroll_alloy_rpc_types_engine::BlockDataHint;
 use std::sync::Arc;
 
 /// The attributes builder for local Ethereum payload.
@@ -75,7 +76,7 @@ where
             payload_attributes: self.build(timestamp),
             transactions: None,
             no_tx_pool: false,
-            block_data_hint: None,
+            block_data_hint: BlockDataHint::none(),
             gas_limit: None,
         }
     }
