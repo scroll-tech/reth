@@ -198,6 +198,7 @@ where
         //
         // We're doing this state cleanup to make sure that changeset only includes the changed
         // contract storage.
+        // Specifically prevents incorrect nonce increment for system contract caller.
         if let Ok(res) = &mut res {
             res.state.retain(|addr, _| *addr == contract);
         }
