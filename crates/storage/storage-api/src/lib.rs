@@ -85,6 +85,9 @@ pub use legacy::*;
 mod primitives;
 pub use primitives::*;
 
+mod base_fee;
+pub use base_fee::*;
+
 mod block_indices;
 pub use block_indices::*;
 
