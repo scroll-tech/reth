@@ -1,8 +1,13 @@
 use crate::genesis::L1Config;
+use alloy_eips::eip1559::BaseFeeParams;
 use alloy_primitives::{address, b256, Address, B256};
 
 /// The transaction fee recipient on the L2.
 pub const SCROLL_FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
+
+/// The system contract on L2 mainnet.
+pub const SCROLL_MAINNET_SYSTEM_CONTRACT_ADDRESS: Address =
+    address!("331A873a2a85219863d80d248F9e2978fE88D0Ea");
 
 /// The L1 message queue address for Scroll mainnet.
 /// <https://etherscan.io/address/0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B>.
@@ -29,6 +34,10 @@ pub const SCROLL_MAINNET_L1_CONFIG: L1Config = L1Config {
 pub const SCROLL_MAINNET_GENESIS_HASH: B256 =
     b256!("bbc05efd412b7cd47a2ed0e5ddfcf87af251e414ea4c801d78b6784513180a80");
 
+/// The system contract on L2 sepolia.
+pub const SCROLL_SEPOLIA_SYSTEM_CONTRACT_ADDRESS: Address =
+    address!("F444cF06A3E3724e20B35c2989d3942ea8b59124");
+
 /// The L1 message queue address for Scroll sepolia.
 /// <https://sepolia.etherscan.io/address/0xF0B2293F5D834eAe920c6974D50957A1732de763>.
 pub const SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS: Address =
@@ -49,6 +58,10 @@ pub const SCROLL_SEPOLIA_L1_CONFIG: L1Config = L1Config {
     scroll_chain_address: SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
     num_l1_messages_per_block: SCROLL_SEPOLIA_MAX_L1_MESSAGES,
 };
+
+/// The system contract on devnet.
+pub const SCROLL_DEV_SYSTEM_CONTRACT_ADDRESS: Address =
+    address!("0000000000000000000000000000000000000000");
 
 /// The L1 message queue address for Scroll dev.
 pub const SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS: Address =
@@ -72,3 +85,15 @@ pub const SCROLL_DEV_L1_CONFIG: L1Config = L1Config {
 /// The Scroll Sepolia genesis hash
 pub const SCROLL_SEPOLIA_GENESIS_HASH: B256 =
     b256!("aa62d1a8b2bffa9e5d2368b63aae0d98d54928bd713125e3fd9e5c896c68592c");
+
+/// The base fee params for Feynman.
+pub const SCROLL_BASE_FEE_PARAMS_FEYNMAN: BaseFeeParams = BaseFeeParams::new(
+    SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
+    SCROLL_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER_FEYNMAN,
+);
+
+/// The scroll EIP1559 max change denominator for Feynman.
+pub const SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN: u128 = 8;
+
+/// The scroll EIP1559 default elasticity multiplier for Feynman.
+pub const SCROLL_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER_FEYNMAN: u128 = 2;

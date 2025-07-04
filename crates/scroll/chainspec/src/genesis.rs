@@ -1,7 +1,11 @@
 //! Scroll types for genesis data.
 
 use crate::{
-    constants::{SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG, SCROLL_SEPOLIA_L1_CONFIG},
+    constants::{
+        SCROLL_DEV_SYSTEM_CONTRACT_ADDRESS, SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG,
+        SCROLL_MAINNET_SYSTEM_CONTRACT_ADDRESS, SCROLL_SEPOLIA_L1_CONFIG,
+        SCROLL_SEPOLIA_SYSTEM_CONTRACT_ADDRESS,
+    },
     SCROLL_DEV_L1_CONFIG,
 };
 use alloy_primitives::Address;
@@ -108,6 +112,8 @@ pub struct ScrollChainConfig {
     /// This is an optional field that, when set, specifies where L2 transaction fees
     /// will be sent or stored.
     pub fee_vault_address: Option<Address>,
+    /// The address of the L2 system contract.
+    pub l2_system_contract_address: Address,
     /// The L1 configuration.
     /// This field encapsulates specific settings and parameters required for L1
     pub l1_config: L1Config,
@@ -124,6 +130,7 @@ impl ScrollChainConfig {
     pub const fn mainnet() -> Self {
         Self {
             fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            l2_system_contract_address: SCROLL_MAINNET_SYSTEM_CONTRACT_ADDRESS,
             l1_config: SCROLL_MAINNET_L1_CONFIG,
         }
     }
@@ -132,13 +139,18 @@ impl ScrollChainConfig {
     pub const fn sepolia() -> Self {
         Self {
             fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            l2_system_contract_address: SCROLL_SEPOLIA_SYSTEM_CONTRACT_ADDRESS,
             l1_config: SCROLL_SEPOLIA_L1_CONFIG,
         }
     }
 
     /// Returns the [`ScrollChainConfig`] for Scroll dev.
     pub const fn dev() -> Self {
-        Self { fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS), l1_config: SCROLL_DEV_L1_CONFIG }
+        Self {
+            fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            l2_system_contract_address: SCROLL_DEV_SYSTEM_CONTRACT_ADDRESS,
+            l1_config: SCROLL_DEV_L1_CONFIG,
+        }
     }
 }
 
@@ -202,6 +214,7 @@ mod tests {
           "feynmanTime": 100,
           "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+            "l2SystemContractAddress: "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -228,6 +241,7 @@ mod tests {
             }),
             scroll_chain_config: ScrollChainConfig {
                 fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),
+                l2_system_contract_address: SCROLL_MAINNET_SYSTEM_CONTRACT_ADDRESS,
                 l1_config: L1Config {
                     l1_chain_id: 1,
                     l1_message_queue_address: address!("0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"),
