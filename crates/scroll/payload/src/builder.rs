@@ -394,9 +394,9 @@ where
         builder_config: &ScrollBuilderConfig,
     ) -> Result<impl BlockBuilder<Primitives = Evm::Primitives> + 'a, PayloadBuilderError> {
         // get the base fee for the attributes.
-        let mut base_fee_provider = ScrollBaseFeeProvider::new(self.chain_spec.clone(), &mut *db);
+        let base_fee_provider = ScrollBaseFeeProvider::new(self.chain_spec.clone());
         let base_fee: u64 = base_fee_provider
-            .next_block_base_fee(self.parent().header(), self.attributes().timestamp())
+            .next_block_base_fee(db, self.parent().header(), self.attributes().timestamp())
             .map_err(|err| PayloadBuilderError::Other(Box::new(err)))?;
 
         self.evm_config

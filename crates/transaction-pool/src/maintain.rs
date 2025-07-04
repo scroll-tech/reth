@@ -22,7 +22,10 @@ use reth_fs_util::FsPathError;
 use reth_primitives_traits::{
     transaction::signed::SignedTransaction, NodePrimitives, SealedHeader,
 };
-use reth_storage_api::{errors::provider::ProviderError, BlockReaderIdExt, StateProviderFactory};
+use reth_storage_api::{
+    errors::provider::ProviderError, BaseFeeProvider, BlockReaderIdExt, StateProviderBox,
+    StateProviderFactory,
+};
 use reth_tasks::TaskSpawner;
 use std::{
     borrow::Borrow,
@@ -91,8 +94,9 @@ impl LocalTransactionBackupConfig {
 }
 
 /// Returns a spawnable future for maintaining the state of the transaction pool.
-pub fn maintain_transaction_pool_future<N, Client, P, St, Tasks>(
+pub fn maintain_transaction_pool_future<N, Client, BaseFee, P, St, Tasks>(
     client: Client,
+    base_fee_provider: BaseFee,
     pool: P,
     events: St,
     task_spawner: Tasks,
@@ -101,12 +105,14 @@ pub fn maintain_transaction_pool_future<N, Client, P, St, Tasks>(
 where
     N: NodePrimitives,
     Client: StateProviderFactory + BlockReaderIdExt + ChainSpecProvider + Clone + 'static,
+    BaseFee: BaseFeeProvider<StateProviderBox> + Send + 'static,
     P: TransactionPoolExt<Transaction: PoolTransaction<Consensus = N::SignedTx>> + 'static,
     St: Stream<Item = CanonStateNotification<N>> + Send + Unpin + 'static,
     Tasks: TaskSpawner + 'static,
 {
     async move {
-        maintain_transaction_pool(client, pool, events, task_spawner, config).await;
+        maintain_transaction_pool(client, base_fee_provider, pool, events, task_spawner, config)
+            .await;
     }
     .boxed()
 }
@@ -114,8 +120,9 @@ where
 /// Maintains the state of the transaction pool by handling new blocks and reorgs.
 ///
 /// This listens for any new blocks and reorgs and updates the transaction pool's state accordingly
-pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
+pub async fn maintain_transaction_pool<N, Client, BaseFee, P, St, Tasks>(
     client: Client,
+    base_fee_provider: BaseFee,
     pool: P,
     mut events: St,
     task_spawner: Tasks,
@@ -123,6 +130,7 @@ pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
 ) where
     N: NodePrimitives,
     Client: StateProviderFactory + BlockReaderIdExt + ChainSpecProvider + Clone + 'static,
+    BaseFee: BaseFeeProvider<StateProviderBox> + Send + 'static,
     P: TransactionPoolExt<Transaction: PoolTransaction<Consensus = N::SignedTx>> + 'static,
     St: Stream<Item = CanonStateNotification<N>> + Send + Unpin + 'static,
     Tasks: TaskSpawner + 'static,
@@ -133,13 +141,13 @@ pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
     if let Ok(Some(latest)) = client.header_by_number_or_tag(BlockNumberOrTag::Latest) {
         let latest = SealedHeader::seal_slow(latest);
         let chain_spec = client.chain_spec();
+        let base_fee = pool_pending_base_fee(&client, &base_fee_provider, latest.header());
+
         let info = BlockInfo {
             block_gas_limit: latest.gas_limit(),
             last_seen_block_hash: latest.hash(),
             last_seen_block_number: latest.number(),
-            pending_basefee: latest
-                .next_block_base_fee(chain_spec.base_fee_params_at_timestamp(latest.timestamp()))
-                .unwrap_or_default(),
+            pending_basefee: base_fee,
             pending_blob_fee: latest
                 .maybe_next_block_blob_fee(chain_spec.blob_params_at_timestamp(latest.timestamp())),
         };
@@ -317,12 +325,9 @@ pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
                 let chain_spec = client.chain_spec();
 
                 // fees for the next block: `new_tip+1`
-                let pending_block_base_fee = new_tip
-                    .header()
-                    .next_block_base_fee(
-                        chain_spec.base_fee_params_at_timestamp(new_tip.timestamp()),
-                    )
-                    .unwrap_or_default();
+                let pending_block_base_fee =
+                    pool_pending_base_fee(&client, &base_fee_provider, new_tip.header());
+
                 let pending_block_blob_fee = new_tip.header().maybe_next_block_blob_fee(
                     chain_spec.blob_params_at_timestamp(new_tip.timestamp()),
                 );
@@ -423,10 +428,8 @@ pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
                 let chain_spec = client.chain_spec();
 
                 // fees for the next block: `tip+1`
-                let pending_block_base_fee = tip
-                    .header()
-                    .next_block_base_fee(chain_spec.base_fee_params_at_timestamp(tip.timestamp()))
-                    .unwrap_or_default();
+                let pending_block_base_fee =
+                    pool_pending_base_fee(&client, &base_fee_provider, tip.header());
                 let pending_block_blob_fee = tip.header().maybe_next_block_blob_fee(
                     chain_spec.blob_params_at_timestamp(tip.timestamp()),
                 );
@@ -494,6 +497,24 @@ pub async fn maintain_transaction_pool<N, Client, P, St, Tasks>(
             }
         }
     }
+}
+
+/// Computes the pending base fee for the pool.
+fn pool_pending_base_fee<
+    Client: StateProviderFactory + BlockReaderIdExt,
+    BaseFee: BaseFeeProvider<StateProviderBox>,
+    H: BlockHeader,
+>(
+    client: &Client,
+    base_fee_provider: &BaseFee,
+    parent_header: &H,
+) -> u64 {
+    let provider = client.state_by_block_id(parent_header.number().into());
+    provider
+        .and_then(|mut p| {
+            base_fee_provider.next_block_base_fee(&mut p, &parent_header, parent_header.timestamp())
+        })
+        .unwrap_or_else(|_| parent_header.base_fee_per_gas().unwrap_or_default())
 }
 
 struct FinalizedBlockTracker {
