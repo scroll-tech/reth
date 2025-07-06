@@ -2,7 +2,7 @@
 
 use crate::{
     eth::{ScrollEthApiInner, ScrollNodeCore},
-    ScrollEthApi, SequencerClient,
+    ScrollEthApi, ScrollEthApiError, SequencerClient,
 };
 use alloy_consensus::transaction::TransactionInfo;
 use alloy_primitives::{Bytes, B256};
@@ -13,7 +13,7 @@ use reth_provider::{
 };
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    try_into_scroll_tx_info, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,
+    try_into_scroll_tx_info, EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,
     TxInfoMapper,
 };
 use reth_rpc_eth_types::utils::recover_raw_transaction;
@@ -27,7 +27,7 @@ use std::{
 
 impl<N> EthTransactions for ScrollEthApi<N>
 where
-    Self: LoadTransaction<Provider: BlockReaderIdExt>,
+    Self: LoadTransaction<Provider: BlockReaderIdExt> + EthApiTypes<Error = ScrollEthApiError>,
     N: ScrollNodeCore<Provider: BlockReader<Transaction = ProviderTx<Self::Provider>>>,
 {
     fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
@@ -45,9 +45,30 @@ where
         // blocks that it builds.
         if let Some(client) = self.raw_tx_forwarder().as_ref() {
             tracing::debug!(target: "rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
-            let _ = client.forward_raw_transaction(&tx).await.inspect_err(|err| {
-                    tracing::debug!(target: "rpc::eth", %err, hash=% *pool_transaction.hash(), "failed to forward raw transaction");
-                });
+            
+            match client.forward_raw_transaction(&tx).await {
+                Ok(hash) => {
+                    // Sequencer succeeded, try to add to local pool too
+                    let _ = self
+                        .pool()
+                        .add_transaction(TransactionOrigin::Local, pool_transaction)
+                        .await.inspect_err(|err| {
+                            tracing::debug!(target: "rpc::eth", %err, %hash, "successfully sent tx to sequencer, but failed to persist in local tx pool");
+                        });
+                    return Ok(hash);
+                }
+                Err(err) => {
+                    tracing::warn!(target: "rpc::eth", %err, hash=% *pool_transaction.hash(), "failed to forward raw transaction to sequencer");
+                    // Sequencer failed, try local pool instead
+                    let hash = self
+                        .pool()
+                        .add_transaction(TransactionOrigin::Local, pool_transaction)
+                        .await
+                        .map_err(Self::Error::from_eth_err)?;
+                    tracing::debug!(target: "rpc::eth", %hash, "failed to forward tx to sequencer, but successfully added to local tx pool");
+                    return Ok(hash);
+                }
+            }
         }
 
         // submit the transaction to the pool with a `Local` origin

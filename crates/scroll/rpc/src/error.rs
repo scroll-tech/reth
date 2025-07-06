@@ -1,5 +1,6 @@
 //! RPC errors specific to Scroll.
 
+use alloy_json_rpc::ErrorPayload;
 use alloy_rpc_types_eth::BlockError;
 use alloy_transport::{RpcError, TransportErrorKind};
 use jsonrpsee_types::error::{INTERNAL_ERROR_CODE};
@@ -14,12 +15,16 @@ pub enum ScrollEthApiError {
     /// L1 ethereum error.
     #[error(transparent)]
     Eth(#[from] EthApiError),
+    /// Sequencer client error.
+    #[error(transparent)]
+    Sequencer(#[from] SequencerClientError),
 }
 
 impl AsEthApiError for ScrollEthApiError {
     fn as_err(&self) -> Option<&EthApiError> {
         match self {
             Self::Eth(err) => Some(err),
+            _ => None,
         }
     }
 }
@@ -28,6 +33,7 @@ impl From<ScrollEthApiError> for jsonrpsee_types::error::ErrorObject<'static> {
     fn from(err: ScrollEthApiError) -> Self {
         match err {
             ScrollEthApiError::Eth(err) => err.into(),
+            ScrollEthApiError::Sequencer(err) => err.into(),
         }
     }
 }
@@ -78,10 +84,17 @@ pub enum SequencerClientError {
 
 impl From<SequencerClientError> for jsonrpsee_types::error::ErrorObject<'static> {
     fn from(err: SequencerClientError) -> Self {
-        jsonrpsee_types::error::ErrorObject::owned(
-            INTERNAL_ERROR_CODE,
-            err.to_string(),
-            None::<String>,
-        )
+        match err {
+            SequencerClientError::HttpError(RpcError::ErrorResp(ErrorPayload {
+                code,
+                message,
+                data,
+            })) => jsonrpsee_types::error::ErrorObject::owned(code as i32, message, data),
+            err => jsonrpsee_types::error::ErrorObject::owned(
+                INTERNAL_ERROR_CODE,
+                err.to_string(),
+                None::<String>,
+            ),
+        }
     }
 }
