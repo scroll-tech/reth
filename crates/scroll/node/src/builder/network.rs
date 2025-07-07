@@ -78,7 +78,7 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<Self::Network> {
-        let config = self::network_config(ctx)?;
+        let config = ctx.network_config()?;
         let network = NetworkManager::builder(config).await?;
         let handle = ctx.start_network(network, pool);
         info!(target: "reth::cli", enode=%handle.local_node_record(), "P2P networking initialized");
