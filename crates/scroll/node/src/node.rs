@@ -42,10 +42,7 @@ impl ScrollNode {
             .pool(ScrollPoolBuilder::default())
             .executor(ScrollExecutorBuilder::default())
             .payload(BasicPayloadServiceBuilder::new(ScrollPayloadBuilderBuilder::default()))
-            .network(ScrollNetworkBuilder {
-                disable_txpool_broadcast: self.disable_txpool_broadcast,
-                disable_txpool_receive: self.disable_txpool_receive,
-            })
+            .network(ScrollNetworkBuilder::default())
             .executor(ScrollExecutorBuilder)
             .consensus(ScrollConsensusBuilder)
     }
