@@ -58,7 +58,6 @@ install-op: ## Build and install the op-reth binary under `~/.cargo/bin`.
 .PHONY: install-scroll
 install-scroll: ## Build and install the scroll-reth binary under `~/.cargo/bin`.
 	cargo install --path crates/scroll/bin/scroll-reth --bin scroll-reth --force --locked \
-		--features "skip-state-root-validation" \
 		--profile "$(PROFILE)" \
 		$(CARGO_INSTALL_EXTRA_FLAGS)
 
@@ -375,7 +374,7 @@ db-tools: ## Compile MDBX debugging tools.
 .PHONY: update-book-cli
 update-book-cli: build-debug ## Update book cli documentation.
 	@echo "Updating book cli doc..."
-	@./book/cli/update.sh $(CARGO_TARGET_DIR)/debug/reth
+	@./docs/cli/update.sh $(CARGO_TARGET_DIR)/debug/reth
 
 .PHONY: profiling
 profiling: ## Builds `reth` with optimisations, but also symbols.
@@ -430,7 +429,7 @@ lint-scroll-reth:
 	--examples \
 	--tests \
 	--benches \
-	--features "$(BIN_OTHER_FEATURES) skip-state-root-validation" \
+	--features "$(BIN_OTHER_FEATURES)" \
 	-- -D warnings
 
 lint-all:

@@ -11,6 +11,7 @@ use reth_node_api::FullNodeComponents;
 use reth_provider::{
     BlockReader, BlockReaderIdExt, ProviderTx, ReceiptProvider, TransactionsProvider,
 };
+use reth_rpc_convert::try_into_scroll_tx_info;
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
     try_into_scroll_tx_info, EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,

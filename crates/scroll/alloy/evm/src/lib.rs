@@ -24,7 +24,7 @@ use alloc::vec::Vec;
 use alloy_evm::{precompiles::PrecompilesMap, Database, Evm, EvmEnv, EvmFactory};
 use alloy_primitives::{Address, Bytes, TxKind, U256};
 use core::{
-    fmt::Debug,
+    fmt,
     ops::{Deref, DerefMut},
 };
 use revm::{
@@ -61,6 +61,19 @@ pub struct ScrollEvm<DB: Database, I, P = ScrollPrecompileProvider> {
 }
 
 impl<DB: Database, I, P> ScrollEvm<DB, I, P> {
+    /// Creates a new instance of [`ScrollEvm`].
+    pub const fn new(
+        inner: revm_scroll::ScrollEvm<
+            ScrollContext<DB>,
+            I,
+            ScrollInstructions<EthInterpreter, ScrollContext<DB>>,
+            P,
+        >,
+        inspect: bool,
+    ) -> Self {
+        Self { inner, inspect }
+    }
+
     /// Provides a reference to the EVM context.
     pub const fn ctx(&self) -> &ScrollContext<DB> {
         &self.inner.0.ctx
@@ -115,8 +128,7 @@ where
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         if self.inspect {
-            self.inner.set_tx(tx.into());
-            self.inner.inspect_replay()
+            self.inner.inspect_tx(tx.into())
         } else {
             self.inner.transact(tx.into())
         }
@@ -170,7 +182,7 @@ where
         // disable the nonce check
         core::mem::swap(&mut self.cfg.disable_nonce_check, &mut disable_nonce_check);
 
-        let res = self.transact(ScrollTransactionIntoTxEnv::from(tx));
+        let mut res = self.transact(ScrollTransactionIntoTxEnv::from(tx));
 
         // swap back to the previous gas limit
         core::mem::swap(&mut self.block.gas_limit, &mut gas_limit);
@@ -178,6 +190,17 @@ where
         core::mem::swap(&mut self.block.basefee, &mut basefee);
         // swap back to the previous nonce check flag
         core::mem::swap(&mut self.cfg.disable_nonce_check, &mut disable_nonce_check);
+
+        // NOTE: We assume that only the contract storage is modified. Revm currently marks the
+        // caller and block beneficiary accounts as "touched" when we do the above transact calls,
+        // and includes them in the result.
+        //
+        // We're doing this state cleanup to make sure that changeset only includes the changed
+        // contract storage.
+        // Specifically prevents incorrect nonce increment for system contract caller.
+        if let Ok(res) = &mut res {
+            res.state.retain(|addr, _| *addr == contract);
+        }
 
         res
     }
@@ -219,9 +242,11 @@ where
 /// Factory producing [`ScrollEvm`]s.
 #[derive(Debug, Default, Clone, Copy)]
 #[non_exhaustive]
-pub struct ScrollEvmFactory;
+pub struct ScrollEvmFactory<P = ScrollDefaultPrecompilesFactory> {
+    _precompiles_factory: core::marker::PhantomData<P>,
+}
 
-impl EvmFactory for ScrollEvmFactory {
+impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
     type Evm<DB: Database, I: Inspector<ScrollContext<DB>>> = ScrollEvm<DB, I, Self::Precompiles>;
     type Context<DB: Database> = ScrollContext<DB>;
     type Tx = ScrollTransactionIntoTxEnv<TxEnv>;
@@ -244,9 +269,7 @@ impl EvmFactory for ScrollEvmFactory {
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
                 .build_scroll_with_inspector(NoOpInspector {})
-                .with_precompiles(PrecompilesMap::from_static(
-                    ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
-                )),
+                .with_precompiles(P::with_spec(spec_id)),
             inspect: false,
         }
     }
@@ -266,10 +289,24 @@ impl EvmFactory for ScrollEvmFactory {
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
                 .build_scroll_with_inspector(inspector)
-                .with_precompiles(PrecompilesMap::from_static(
-                    ScrollPrecompileProvider::new_with_spec(spec_id).precompiles(),
-                )),
+                .with_precompiles(P::with_spec(spec_id)),
             inspect: true,
         }
+    }
+}
+
+/// A factory trait for creating precompiles for Scroll EVM.
+pub trait ScrollPrecompilesFactory: Default + fmt::Debug {
+    /// Creates a new instance of precompiles for the given Scroll specification ID.
+    fn with_spec(spec: ScrollSpecId) -> PrecompilesMap;
+}
+
+/// Default implementation of the Scroll precompiles factory.
+#[derive(Default, Debug, Copy, Clone)]
+pub struct ScrollDefaultPrecompilesFactory;
+
+impl ScrollPrecompilesFactory for ScrollDefaultPrecompilesFactory {
+    fn with_spec(spec_id: ScrollSpecId) -> PrecompilesMap {
+        PrecompilesMap::from_static(ScrollPrecompileProvider::new_with_spec(spec_id).precompiles())
     }
 }
