@@ -4,7 +4,7 @@ use crate::{
     constants::SCROLL_BASE_FEE_PARAMS_FEYNMAN, make_genesis_header, LazyLock, ScrollChainConfig,
     ScrollChainSpec, SCROLL_SEPOLIA_GENESIS_HASH,
 };
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec};
 
 use alloy_chains::{Chain, NamedChain};
 use reth_chainspec::{BaseFeeParamsKind, ChainSpec, Hardfork};
