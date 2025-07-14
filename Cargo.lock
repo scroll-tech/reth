@@ -10342,7 +10342,6 @@ dependencies = [
  "reth-execution-types",
  "reth-primitives",
  "reth-primitives-traits",
- "reth-revm",
  "reth-scroll-chainspec",
  "reth-scroll-forks",
  "reth-scroll-primitives",
