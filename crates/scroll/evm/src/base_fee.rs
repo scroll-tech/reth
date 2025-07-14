@@ -71,7 +71,7 @@ where
         );
 
         if chain_spec.is_feynman_active_at_timestamp(ts) {
-            Ok(feynman_base_fee(chain_spec, parent_header, overhead.saturating_to()))
+            Ok(feynman_base_fee(chain_spec, parent_header, ts, overhead.saturating_to()))
         } else {
             let parent_l1_base_fee =
                 provider.storage(L1_GAS_PRICE_ORACLE_ADDRESS, L1_BASE_FEE_SLOT)?;
@@ -84,13 +84,14 @@ where
 fn feynman_base_fee<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks>(
     chainspec: ChainSpec,
     parent_header: H,
+    ts: u64,
     overhead: u64,
 ) -> u64 {
     let eip_1559_base_fee = if chainspec.is_feynman_active_at_timestamp(parent_header.timestamp()) {
         // extract the eip 1559 base fee from parent header by subtracting overhead from it.
         let parent_eip_1559_base_fee =
             parent_header.base_fee_per_gas().expect("Feynman active").saturating_sub(overhead);
-        let base_fee_params = chainspec.base_fee_params_at_timestamp(parent_header.timestamp());
+        let base_fee_params = chainspec.base_fee_params_at_timestamp(ts);
         calc_next_block_base_fee(
             parent_header.gas_used(),
             parent_header.gas_limit(),

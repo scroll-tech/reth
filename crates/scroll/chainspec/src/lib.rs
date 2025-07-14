@@ -514,11 +514,11 @@ mod tests {
                 ),
                 (
                     Head { number: 7096836, timestamp: 1745305200, ..Default::default() },
-                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 18446744073709551615 },
+                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 6000000000 },
                 ),
                 (
-                    Head { number: 7096836, timestamp: 18446744073709551615, ..Default::default() },
-                    ForkId { hash: ForkHash([0x80, 0x47, 0xc0, 0x76]), next: 0 },
+                    Head { number: 7096836, timestamp: 6000000000, ..Default::default() },
+                    ForkId { hash: ForkHash([0x64, 0xb1, 0x52, 0x56]), next: 0 },
                 ),
             ],
         );
@@ -602,11 +602,11 @@ mod tests {
                 ),
                 (
                     Head { number: 4740239, timestamp: 1741852800, ..Default::default() },
-                    ForkId { hash: ForkHash([0x51, 0x7e, 0x0f, 0x1c]), next: 18446744073709551615 },
+                    ForkId { hash: ForkHash([0x51, 0x7e, 0x0f, 0x1c]), next: 6000000000 },
                 ),
                 (
-                    Head { number: 4740239, timestamp: 18446744073709551615, ..Default::default() },
-                    ForkId { hash: ForkHash([0xc8, 0x43, 0x01, 0x5b]), next: 0 },
+                    Head { number: 4740239, timestamp: 6000000000, ..Default::default() },
+                    ForkId { hash: ForkHash([0x2c, 0xb5, 0x93, 0x7b]), next: 0 },
                 ),
             ],
         );
@@ -630,6 +630,7 @@ mod tests {
         "darwinV2Time": 31,
         "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+            "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -655,6 +656,7 @@ mod tests {
             scroll_object,
             &serde_json::json!({
                 "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                 "l1Config": {
                     "l1ChainId": 1,
                     "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -701,10 +703,12 @@ mod tests {
                     (String::from("curieBlock"), 0.into()),
                     (String::from("darwinTime"), 0.into()),
                     (String::from("darwinV2Time"), 0.into()),
+                    (String::from("feynmanTime"), 0.into()),
                     (
                         String::from("scroll"),
                         serde_json::json!({
                             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                            "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                             "l1Config": {
                                 "l1ChainId": 1,
                                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -740,6 +744,7 @@ mod tests {
             ScrollHardfork::Curie.boxed(),
             ScrollHardfork::Darwin.boxed(),
             ScrollHardfork::DarwinV2.boxed(),
+            ScrollHardfork::Feynman.boxed(),
         ];
 
         assert!(expected_hardforks

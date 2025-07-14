@@ -214,7 +214,7 @@ mod tests {
           "feynmanTime": 100,
           "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-            "l2SystemContractAddress: "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
+            "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
