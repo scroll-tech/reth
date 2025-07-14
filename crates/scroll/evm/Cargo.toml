@@ -74,4 +74,6 @@ std = [
     "thiserror/std",
     "tracing/std",
     "scroll-alloy-hardforks/std",
+    "reth-revm/std",
+    "reth-storage-api/std",
 ]
