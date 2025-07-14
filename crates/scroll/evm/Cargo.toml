@@ -52,7 +52,6 @@ eyre.workspace = true
 reth-revm = { workspace = true, features = ["test-utils"] }
 
 [features]
-default = ["std"]
 std = [
     "scroll-alloy-consensus/std",
     "scroll-alloy-evm/std",
