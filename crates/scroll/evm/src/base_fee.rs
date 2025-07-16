@@ -11,7 +11,7 @@ use scroll_alloy_hardforks::ScrollHardforks;
 pub const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
 
 /// Protocol-enforced maximum L2 base fee.
-pub const MAX_L2_BASE_FEE: U256 = U256::from_limbs([10_000_000_000, 0, 0, 0]);
+pub const MAX_L2_BASE_FEE: u64 = 10_000_000_000;
 
 /// The base fee overhead slot.
 const L1_BASE_FEE_OVERHEAD_SLOT: U256 = U256::from_limbs([101, 0, 0, 0]);
@@ -57,12 +57,13 @@ where
     ) -> Result<u64, P::Error> {
         let chain_spec = &self.0;
 
-        // load system contract into cache.
-        let system_contract_address = chain_spec.chain_config().l2_system_contract_address;
+        // load l2 system config contract into cache.
+        let system_config_contract_address =
+            chain_spec.chain_config().l1_config.l2_system_config_address;
         // query scalar and overhead.
         let (mut scalar, mut overhead) = (
-            provider.storage(system_contract_address, L1_BASE_FEE_SCALAR_SLOT)?,
-            provider.storage(system_contract_address, L1_BASE_FEE_OVERHEAD_SLOT)?,
+            provider.storage(system_config_contract_address, L1_BASE_FEE_SCALAR_SLOT)?,
+            provider.storage(system_config_contract_address, L1_BASE_FEE_OVERHEAD_SLOT)?,
         );
         // if any value is 0, use the default values.
         (scalar, overhead) = (
@@ -70,13 +71,19 @@ where
             if overhead == U256::ZERO { DEFAULT_L1_BASE_FEE_OVERHEAD } else { overhead },
         );
 
-        if chain_spec.is_feynman_active_at_timestamp(ts) {
-            Ok(feynman_base_fee(chain_spec, parent_header, ts, overhead.saturating_to()))
+        let mut base_fee = if chain_spec.is_feynman_active_at_timestamp(ts) {
+            feynman_base_fee(chain_spec, parent_header, ts, overhead.saturating_to())
         } else {
             let parent_l1_base_fee =
                 provider.storage(L1_GAS_PRICE_ORACLE_ADDRESS, L1_BASE_FEE_SLOT)?;
-            Ok(pre_feynman_base_fee(parent_l1_base_fee, scalar, overhead).saturating_to())
+            pre_feynman_base_fee(parent_l1_base_fee, scalar, overhead).saturating_to()
+        };
+
+        if base_fee > MAX_L2_BASE_FEE {
+            base_fee = MAX_L2_BASE_FEE;
         }
+
+        Ok(base_fee)
     }
 }
 
@@ -114,13 +121,7 @@ fn feynman_base_fee<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks>(
 /// Returns the pre Feynman base fee.
 fn pre_feynman_base_fee(parent_l1_base_fee: U256, scalar: U256, overhead: U256) -> U256 {
     // l1 base fee * scalar / precision + overhead.
-    let mut base_fee = parent_l1_base_fee * scalar / L1_BASE_FEE_PRECISION + overhead;
-
-    if base_fee > MAX_L2_BASE_FEE {
-        base_fee = MAX_L2_BASE_FEE;
-    }
-
-    base_fee
+    parent_l1_base_fee * scalar / L1_BASE_FEE_PRECISION + overhead
 }
 
 #[cfg(test)]
@@ -205,7 +206,7 @@ mod tests {
             (L1_BASE_FEE_OVERHEAD_SLOT, U256::ONE),
         ]);
         state.insert_account_with_storage(
-            SCROLL_MAINNET.config.l2_system_contract_address,
+            SCROLL_MAINNET.config.l1_config.l2_system_config_address,
             Default::default(),
             system_contract_storage,
         );

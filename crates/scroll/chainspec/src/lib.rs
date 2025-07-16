@@ -35,14 +35,16 @@ extern crate alloc;
 mod constants;
 pub use constants::{
     SCROLL_BASE_FEE_PARAMS_FEYNMAN, SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS,
-    SCROLL_DEV_L1_PROXY_ADDRESS, SCROLL_DEV_MAX_L1_MESSAGES, SCROLL_DEV_SYSTEM_CONTRACT_ADDRESS,
+    SCROLL_DEV_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
+    SCROLL_DEV_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS, SCROLL_DEV_MAX_L1_MESSAGES,
     SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
     SCROLL_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER_FEYNMAN, SCROLL_FEE_VAULT_ADDRESS,
     SCROLL_MAINNET_GENESIS_HASH, SCROLL_MAINNET_L1_CONFIG, SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
-    SCROLL_MAINNET_L1_PROXY_ADDRESS, SCROLL_MAINNET_MAX_L1_MESSAGES,
-    SCROLL_MAINNET_SYSTEM_CONTRACT_ADDRESS, SCROLL_SEPOLIA_GENESIS_HASH, SCROLL_SEPOLIA_L1_CONFIG,
-    SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
-    SCROLL_SEPOLIA_MAX_L1_MESSAGES, SCROLL_SEPOLIA_SYSTEM_CONTRACT_ADDRESS,
+    SCROLL_MAINNET_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_MAINNET_L1_PROXY_ADDRESS,
+    SCROLL_MAINNET_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS, SCROLL_MAINNET_MAX_L1_MESSAGES,
+    SCROLL_SEPOLIA_GENESIS_HASH, SCROLL_SEPOLIA_L1_CONFIG, SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS,
+    SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
+    SCROLL_SEPOLIA_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS, SCROLL_SEPOLIA_MAX_L1_MESSAGES,
 };
 
 mod dev;
@@ -218,12 +220,10 @@ impl EthChainSpec for ScrollChainSpec {
     }
 
     fn base_fee_params_at_block(&self, block_number: u64) -> BaseFeeParams {
-        // TODO(scroll): need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_block(block_number)
     }
 
     fn base_fee_params_at_timestamp(&self, timestamp: u64) -> BaseFeeParams {
-        // TODO(scroll): need to implement Scroll L2 formula related to https://github.com/scroll-tech/reth/issues/60
         self.inner.base_fee_params_at_timestamp(timestamp)
     }
 
@@ -630,10 +630,11 @@ mod tests {
         "darwinV2Time": 31,
         "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-            "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+                "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                 "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
                 "numL1MessagesPerBlock": 10
             }
@@ -656,10 +657,11 @@ mod tests {
             scroll_object,
             &serde_json::json!({
                 "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-                "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                 "l1Config": {
                     "l1ChainId": 1,
                     "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                    "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+                    "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                     "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
                     "numL1MessagesPerBlock": 10
                 }
@@ -708,10 +710,11 @@ mod tests {
                         String::from("scroll"),
                         serde_json::json!({
                             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-                            "l2SystemContractAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                             "l1Config": {
                                 "l1ChainId": 1,
                                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                                "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+                                "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
                                 "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
                                 "numL1MessagesPerBlock": 10
                             }
