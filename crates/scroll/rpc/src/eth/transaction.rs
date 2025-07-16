@@ -47,29 +47,26 @@ where
         if let Some(client) = self.raw_tx_forwarder().as_ref() {
             tracing::debug!(target: "rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
             
+            // Retain tx in local tx pool before forwarding to sequencer rpc, for local RPC usage.
+            let hash = self
+                .pool()
+                .add_transaction(TransactionOrigin::Local, pool_transaction.clone())
+                .await
+                .map_err(Self::Error::from_eth_err)?;
+            
+            tracing::debug!(target: "rpc::eth", %hash, "successfully added transaction to local tx pool");
+            
+            // Forward to remote sequencer RPC.
             match client.forward_raw_transaction(&tx).await {
-                Ok(hash) => {
-                    // Sequencer succeeded, try to add to local pool too
-                    let _ = self
-                        .pool()
-                        .add_transaction(TransactionOrigin::Local, pool_transaction)
-                        .await.inspect_err(|err| {
-                            tracing::debug!(target: "rpc::eth", %err, %hash, "successfully sent tx to sequencer, but failed to persist in local tx pool");
-                        });
-                    return Ok(hash);
+                Ok(sequencer_hash) => {
+                    tracing::debug!(target: "rpc::eth", local_hash=%hash, sequencer_hash=%sequencer_hash, "successfully forwarded transaction to sequencer");
                 }
                 Err(err) => {
-                    tracing::warn!(target: "rpc::eth", %err, hash=% *pool_transaction.hash(), "failed to forward raw transaction to sequencer");
-                    // Sequencer failed, try local pool instead
-                    let hash = self
-                        .pool()
-                        .add_transaction(TransactionOrigin::Local, pool_transaction)
-                        .await
-                        .map_err(Self::Error::from_eth_err)?;
-                    tracing::debug!(target: "rpc::eth", %hash, "failed to forward tx to sequencer, but successfully added to local tx pool");
-                    return Ok(hash);
+                    tracing::warn!(target: "rpc::eth", %err, %hash, "failed to forward transaction to sequencer, but transaction is in local pool");
                 }
             }
+            
+            return Ok(hash);
         }
 
         // submit the transaction to the pool with a `Local` origin
