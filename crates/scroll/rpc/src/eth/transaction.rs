@@ -13,7 +13,7 @@ use reth_provider::{
 };
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,
+    try_into_scroll_tx_info, EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,
     TxInfoMapper,
 };
 use reth_rpc_eth_types::utils::recover_raw_transaction;
