@@ -41,8 +41,8 @@ impl PayloadBuildingBreaker {
 
     /// Returns whether the payload building should stop.
     pub(super) fn should_break(&self, cumulative_gas_used: u64) -> bool {
-        self.start.elapsed() >= self.time_limit
-            || cumulative_gas_used > self.gas_limit.saturating_sub(MIN_TRANSACTION_GAS)
+        self.start.elapsed() >= self.time_limit ||
+            cumulative_gas_used > self.gas_limit.saturating_sub(MIN_TRANSACTION_GAS)
     }
 }
 

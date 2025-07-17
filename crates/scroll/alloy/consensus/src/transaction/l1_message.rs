@@ -102,12 +102,12 @@ impl TxL1Message {
 
     /// Outputs the length of the transaction's fields, without a RLP header.
     pub fn rlp_encoded_fields_length(&self) -> usize {
-        self.queue_index.length()
-            + self.gas_limit.length()
-            + self.to.length()
-            + self.value.length()
-            + self.input.0.length()
-            + self.sender.length()
+        self.queue_index.length() +
+            self.gas_limit.length() +
+            self.to.length() +
+            self.value.length() +
+            self.input.0.length() +
+            self.sender.length()
     }
 
     /// Encode the fields of the transaction without a RLP header.

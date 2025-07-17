@@ -207,7 +207,7 @@ where
                 transaction_gas_limit: tx.tx().gas_limit(),
                 block_available_gas,
             }
-            .into());
+            .into())
         }
 
         let hash = tx.tx().trie_hash();
@@ -219,30 +219,30 @@ where
                 hash,
                 error: Box::new(InvalidTransaction::Eip2930NotSupported),
             }
-            .into());
+            .into())
         }
         if tx.tx().is_eip1559() && !chain_spec.is_curie_active_at_block(block.number.to()) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip1559NotSupported),
             }
-            .into());
+            .into())
         }
         if tx.tx().is_eip4844() {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip4844NotSupported),
             }
-            .into());
+            .into())
         }
-        if tx.tx().is_eip7702()
-            && !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp.to())
+        if tx.tx().is_eip7702() &&
+            !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp.to())
         {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip7702NotSupported),
             }
-            .into());
+            .into())
         }
 
         // disable the base fee and nonce checks for l1 messages.
@@ -254,7 +254,7 @@ where
             self.evm.transact(tx).map_err(move |err| BlockExecutionError::evm(err, hash))?;
 
         if !f(&result).should_commit() {
-            return Ok(None);
+            return Ok(None)
         };
 
         let l1_fee = if is_l1_message {

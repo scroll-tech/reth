@@ -139,12 +139,12 @@ where
                 "eth_getBlockByNumber" | "eth_getBlockByHash" => {
                     parse_block_id_from_params(&req.params(), 0)
                 }
-                "eth_getBalance"
-                | "eth_getCode"
-                | "eth_getTransactionCount"
-                | "eth_call"
-                | "eth_estimateGas"
-                | "eth_createAccessList" => parse_block_id_from_params(&req.params(), 1),
+                "eth_getBalance" |
+                "eth_getCode" |
+                "eth_getTransactionCount" |
+                "eth_call" |
+                "eth_estimateGas" |
+                "eth_createAccessList" => parse_block_id_from_params(&req.params(), 1),
                 "eth_getStorageAt" | "eth_getProof" => parse_block_id_from_params(&req.params(), 2),
                 _ => None,
             };

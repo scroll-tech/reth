@@ -133,7 +133,7 @@ pub fn validate_state_root<H: BlockHeader>(header: &H, root: B256) -> Result<(),
     if header.state_root() != root {
         return Err(ConsensusError::BodyStateRootDiff(
             GotExpected { got: root, expected: header.state_root() }.into(),
-        ));
+        ))
     }
 
     Ok(())

@@ -13,7 +13,8 @@ use reth_provider::{
 };
 use reth_rpc_eth_api::{
     helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt, TxInfoMapper,
+    EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore, RpcNodeCoreExt,
+    TxInfoMapper,
 };
 use reth_rpc_eth_types::utils::recover_raw_transaction;
 use reth_scroll_primitives::ScrollReceipt;
@@ -44,16 +45,16 @@ where
         // blocks that it builds.
         if let Some(client) = self.raw_tx_forwarder().as_ref() {
             tracing::debug!(target: "rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
-
+            
             // Retain tx in local tx pool before forwarding to sequencer rpc, for local RPC usage.
             let hash = self
                 .pool()
                 .add_transaction(TransactionOrigin::Local, pool_transaction.clone())
                 .await
                 .map_err(Self::Error::from_eth_err)?;
-
+            
             tracing::debug!(target: "rpc::eth", %hash, "successfully added transaction to local tx pool");
-
+            
             // Forward to remote sequencer RPC.
             match client.forward_raw_transaction(&tx).await {
                 Ok(sequencer_hash) => {
@@ -63,7 +64,7 @@ where
                     tracing::warn!(target: "rpc::eth", %err, %hash, "failed to forward transaction to sequencer, but transaction is in local pool");
                 }
             }
-
+            
             return Ok(hash);
         }
 

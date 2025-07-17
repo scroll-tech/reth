@@ -98,19 +98,17 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, B: Block> Consensus<B>
                     expected: block.ommers_hash(),
                 }
                 .into(),
-            ));
+            ))
         }
 
         // Check transaction root
         if let Err(error) = block.ensure_transaction_root_valid() {
-            return Err(ConsensusError::BodyTransactionRootDiff(error.into()));
+            return Err(ConsensusError::BodyTransactionRootDiff(error.into()))
         }
 
         // Check withdrawals are empty
         if block.body().withdrawals().is_some() {
-            return Err(ConsensusError::Other(
-                ScrollConsensusError::WithdrawalsNonEmpty.to_string(),
-            ));
+            return Err(ConsensusError::Other(ScrollConsensusError::WithdrawalsNonEmpty.to_string()))
         }
 
         Ok(())
@@ -122,7 +120,7 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
 {
     fn validate_header(&self, header: &SealedHeader<H>) -> Result<(), ConsensusError> {
         if header.ommers_hash() != EMPTY_OMMER_ROOT_HASH {
-            return Err(ConsensusError::TheMergeOmmerRootIsNotEmpty);
+            return Err(ConsensusError::TheMergeOmmerRootIsNotEmpty)
         }
 
         validate_header_gas(header.header())?;
@@ -145,7 +143,7 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
         if self.chain_spec.blob_params_at_timestamp(header.timestamp()).is_some() {
             return Err(ConsensusError::Other(
                 ScrollConsensusError::UnexpectedBlobParams.to_string(),
-            ));
+            ))
         }
 
         Ok(())
@@ -166,10 +164,10 @@ fn validate_header_base_fee<H: BlockHeader, ChainSpec: ScrollHardforks>(
     header: &H,
     chain_spec: &ChainSpec,
 ) -> Result<(), ConsensusError> {
-    if chain_spec.scroll_fork_activation(ScrollHardfork::Curie).active_at_block(header.number())
-        && header.base_fee_per_gas().is_none()
+    if chain_spec.scroll_fork_activation(ScrollHardfork::Curie).active_at_block(header.number()) &&
+        header.base_fee_per_gas().is_none()
     {
-        return Err(ConsensusError::BaseFeeMissing);
+        return Err(ConsensusError::BaseFeeMissing)
     }
     Ok(())
 }
@@ -187,7 +185,7 @@ fn validate_against_parent_timestamp<H: BlockHeader>(
         return Err(ConsensusError::TimestampIsInPast {
             parent_timestamp: parent.timestamp(),
             timestamp: header.timestamp(),
-        });
+        })
     }
     Ok(())
 }
