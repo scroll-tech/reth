@@ -155,10 +155,7 @@ mod tests {
 
         let request = client
             .client()
-            .make_request(
-                "eth_sendRawTransaction",
-                format!("0x{}", hex::encode("abcd")),
-            )
+            .make_request("eth_sendRawTransaction", format!("0x{}", hex::encode("abcd")))
             .serialize()
             .unwrap()
             .take_request();
@@ -190,10 +187,7 @@ mod tests {
 
         let request = client
             .client()
-            .make_request(
-                "eth_sendRawTransaction",
-                format!("0x{}", hex::encode("abcd")),
-            )
+            .make_request("eth_sendRawTransaction", format!("0x{}", hex::encode("abcd")))
             .serialize()
             .unwrap()
             .take_request();
