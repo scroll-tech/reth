@@ -7232,7 +7232,6 @@ name = "reth"
 version = "1.5.0"
 dependencies = [
  "alloy-rpc-types",
- "alloy-transport",
  "aquamarine",
  "backon",
  "clap",
