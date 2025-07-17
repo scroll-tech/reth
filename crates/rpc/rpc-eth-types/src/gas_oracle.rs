@@ -128,7 +128,7 @@ where
 
     /// Suggests a gas price estimate based on recent blocks, using the configured percentile.
     pub async fn suggest_tip_cap(&self) -> EthResult<U256> {
-        let header = self
+        let header: reth_primitives_traits::SealedHeader<<Provider as HeaderProvider>::Header> = self
             .provider
             .sealed_header_by_number_or_tag(BlockNumberOrTag::Latest)?
             .ok_or(EthApiError::HeaderNotFound(BlockId::latest()))?;
