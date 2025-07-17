@@ -79,7 +79,9 @@ fn transact_blockhashes_contract_call<Halt>(
     ) {
         Ok(res) => res,
         Err(e) => {
-            return Err(BlockValidationError::BlockHashContractCall { message: e.to_string() }.into())
+            return Err(
+                BlockValidationError::BlockHashContractCall { message: e.to_string() }.into()
+            )
         }
     };
 

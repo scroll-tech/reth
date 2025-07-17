@@ -85,7 +85,7 @@ where
                     .build())
                 })
                 .collect::<Result<Vec<_>, Self::Error>>()
-                .map(Some)
+                .map(Some);
         }
 
         Ok(None)

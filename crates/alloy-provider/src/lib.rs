@@ -828,9 +828,9 @@ impl<P: Clone, Node: NodeTypes, N> AlloyRethStateProvider<P, Node, N> {
                 .map_err(ProviderError::other)?;
 
             // Only return account if it exists (has balance, nonce, or code)
-            if account_info.balance.is_zero() &&
-                account_info.nonce == 0 &&
-                account_info.code.is_empty()
+            if account_info.balance.is_zero()
+                && account_info.nonce == 0
+                && account_info.code.is_empty()
             {
                 Ok(None)
             } else {
@@ -1711,9 +1711,9 @@ where
                 .map_err(ProviderError::other)?;
 
             // Only return account if it exists
-            if account_info.balance.is_zero() &&
-                account_info.nonce == 0 &&
-                account_info.code.is_empty()
+            if account_info.balance.is_zero()
+                && account_info.nonce == 0
+                && account_info.code.is_empty()
             {
                 Ok(None)
             } else {

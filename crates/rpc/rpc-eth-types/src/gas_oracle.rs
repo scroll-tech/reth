@@ -128,16 +128,16 @@ where
 
     /// Suggests a gas price estimate based on recent blocks, using the configured percentile.
     pub async fn suggest_tip_cap(&self) -> EthResult<U256> {
-        let header: reth_primitives_traits::SealedHeader<<Provider as HeaderProvider>::Header> = self
-            .provider
-            .sealed_header_by_number_or_tag(BlockNumberOrTag::Latest)?
-            .ok_or(EthApiError::HeaderNotFound(BlockId::latest()))?;
+        let header: reth_primitives_traits::SealedHeader<<Provider as HeaderProvider>::Header> =
+            self.provider
+                .sealed_header_by_number_or_tag(BlockNumberOrTag::Latest)?
+                .ok_or(EthApiError::HeaderNotFound(BlockId::latest()))?;
 
         let mut inner = self.inner.lock().await;
 
         // if we have stored a last price, then we check whether or not it was for the same head
         if inner.last_price.block_hash == header.hash() {
-            return Ok(inner.last_price.price)
+            return Ok(inner.last_price.price);
         }
 
         // if all responses are empty, then we can return a maximum of 2*check_block blocks' worth
@@ -182,7 +182,7 @@ where
 
             // break when we have enough populated blocks
             if populated_blocks >= self.oracle_config.blocks {
-                break
+                break;
             }
 
             current_hash = parent_hash;
@@ -224,7 +224,7 @@ where
     ) -> EthResult<Option<(B256, Vec<U256>)>> {
         // check the cache (this will hit the disk if the block is not cached)
         let Some(block) = self.cache.get_recovered_block(block_hash).await? else {
-            return Ok(None)
+            return Ok(None);
         };
 
         let base_fee_per_gas = block.base_fee_per_gas();
@@ -251,13 +251,13 @@ where
             // ignore transactions with a tip under the configured threshold
             if let Some(ignore_under) = self.ignore_price {
                 if effective_tip < Some(ignore_under) {
-                    continue
+                    continue;
                 }
             }
 
             // check if the sender was the coinbase, if so, ignore
             if tx.signer() == block.beneficiary() {
-                continue
+                continue;
             }
 
             // a `None` effective_gas_tip represents a transaction where the max_fee_per_gas is
@@ -266,7 +266,7 @@ where
 
             // we have enough entries
             if prices.len() >= limit {
-                break
+                break;
             }
         }
 
@@ -352,7 +352,7 @@ where
     pub async fn get_block_median_tip(&self, block_hash: B256) -> EthResult<Option<U256>> {
         // check the cache (this will hit the disk if the block is not cached)
         let Some(block) = self.cache.get_recovered_block(block_hash).await? else {
-            return Ok(None)
+            return Ok(None);
         };
 
         let base_fee_per_gas = block.base_fee_per_gas();

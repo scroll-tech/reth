@@ -47,11 +47,11 @@ impl BlockDataHint {
 
     /// Returns `true` if the [`BlockDataHint`] is empty.
     pub const fn is_empty(&self) -> bool {
-        self.extra_data.is_none() &&
-            self.state_root.is_none() &&
-            self.coinbase.is_none() &&
-            self.nonce.is_none() &&
-            self.difficulty.is_none()
+        self.extra_data.is_none()
+            && self.state_root.is_none()
+            && self.coinbase.is_none()
+            && self.nonce.is_none()
+            && self.difficulty.is_none()
     }
 }
 

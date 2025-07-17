@@ -116,11 +116,11 @@ impl<T> ScrollReceiptEnvelope<T> {
     /// Return the receipt's bloom.
     pub const fn logs_bloom(&self) -> &Bloom {
         match self {
-            Self::Legacy(t) |
-            Self::Eip2930(t) |
-            Self::Eip1559(t) |
-            Self::Eip7702(t) |
-            Self::L1Message(t) => &t.logs_bloom,
+            Self::Legacy(t)
+            | Self::Eip2930(t)
+            | Self::Eip1559(t)
+            | Self::Eip7702(t)
+            | Self::L1Message(t) => &t.logs_bloom,
         }
     }
 
@@ -144,11 +144,11 @@ impl<T> ScrollReceiptEnvelope<T> {
     /// receipt types may be added.
     pub const fn as_receipt(&self) -> Option<&Receipt<T>> {
         match self {
-            Self::Legacy(t) |
-            Self::Eip2930(t) |
-            Self::Eip1559(t) |
-            Self::Eip7702(t) |
-            Self::L1Message(t) => Some(&t.receipt),
+            Self::Legacy(t)
+            | Self::Eip2930(t)
+            | Self::Eip1559(t)
+            | Self::Eip7702(t)
+            | Self::L1Message(t) => Some(&t.receipt),
         }
     }
 }
@@ -157,11 +157,11 @@ impl ScrollReceiptEnvelope {
     /// Get the length of the inner receipt in the 2718 encoding.
     pub fn inner_length(&self) -> usize {
         match self {
-            Self::Legacy(t) |
-            Self::Eip2930(t) |
-            Self::Eip1559(t) |
-            Self::Eip7702(t) |
-            Self::L1Message(t) => t.length(),
+            Self::Legacy(t)
+            | Self::Eip2930(t)
+            | Self::Eip1559(t)
+            | Self::Eip7702(t)
+            | Self::L1Message(t) => t.length(),
         }
     }
 
@@ -251,11 +251,11 @@ impl Encodable2718 for ScrollReceiptEnvelope {
             Some(ty) => out.put_u8(ty),
         }
         match self {
-            Self::Legacy(t) |
-            Self::Eip2930(t) |
-            Self::Eip1559(t) |
-            Self::Eip7702(t) |
-            Self::L1Message(t) => t.encode(out),
+            Self::Legacy(t)
+            | Self::Eip2930(t)
+            | Self::Eip1559(t)
+            | Self::Eip7702(t)
+            | Self::L1Message(t) => t.encode(out),
         }
     }
 }

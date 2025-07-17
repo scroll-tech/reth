@@ -49,7 +49,7 @@ mod zstd_compression {
     pub fn compute_compression_ratio<T: AsRef<[u8]>>(bytes: &T) -> U256 {
         // By definition, the compression ratio of empty data is infinity
         if bytes.as_ref().is_empty() {
-            return U256::MAX
+            return U256::MAX;
         }
 
         // Instantiate the compressor

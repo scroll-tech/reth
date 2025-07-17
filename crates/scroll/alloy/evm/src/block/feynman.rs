@@ -50,7 +50,7 @@ pub(super) fn apply_feynman_hard_fork<DB: Database>(
     // other reliable way to apply the change only at the transition block, since
     // `ScrollBlockExecutor` does not have access to the parent timestamp.
     if matches!(oracle.storage_slot(IS_FEYNMAN_SLOT), Some(val) if val == IS_FEYNMAN) {
-        return Ok(())
+        return Ok(());
     }
 
     // compute the code hash
