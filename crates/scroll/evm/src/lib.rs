@@ -16,7 +16,7 @@ pub use l1::RethL1BlockInfo;
 
 mod base_fee;
 pub use base_fee::{
-    ScrollBaseFeeProvider, DEFAULT_L1_BASE_FEE_OVERHEAD, DEFAULT_L1_BASE_FEE_SCALAR,
+    ScrollBaseFeeProvider, DEFAULT_BASE_FEE_OVERHEAD, DEFAULT_BASE_FEE_SCALAR,
     L1_BASE_FEE_PRECISION, L1_BASE_FEE_SLOT, MAX_L2_BASE_FEE,
 };
 

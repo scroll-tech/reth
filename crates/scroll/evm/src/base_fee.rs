@@ -14,18 +14,18 @@ pub const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
 pub const MAX_L2_BASE_FEE: u64 = 10_000_000_000;
 
 /// The base fee overhead slot.
-const L1_BASE_FEE_OVERHEAD_SLOT: U256 = U256::from_limbs([101, 0, 0, 0]);
+const L2_BASE_FEE_OVERHEAD_SLOT: U256 = U256::from_limbs([101, 0, 0, 0]);
 
 /// The default base fee overhead, in case the L2 system contract isn't deployed or
 /// initialized.
-pub const DEFAULT_L1_BASE_FEE_OVERHEAD: U256 = U256::from_limbs([15_680_000, 0, 0, 0]);
+pub const DEFAULT_BASE_FEE_OVERHEAD: U256 = U256::from_limbs([15_680_000, 0, 0, 0]);
 
 /// The base fee scalar slot.
-const L1_BASE_FEE_SCALAR_SLOT: U256 = U256::from_limbs([102, 0, 0, 0]);
+const L2_BASE_FEE_SCALAR_SLOT: U256 = U256::from_limbs([102, 0, 0, 0]);
 
 /// The default scalar applied on the L1 base fee, in case the L2 system contract isn't deployed or
 /// initialized.
-pub const DEFAULT_L1_BASE_FEE_SCALAR: U256 = U256::from_limbs([34_000_000_000_000, 0, 0, 0]);
+pub const DEFAULT_BASE_FEE_SCALAR: U256 = U256::from_limbs([34_000_000_000_000, 0, 0, 0]);
 
 /// The precision of the L1 base fee.
 pub const L1_BASE_FEE_PRECISION: U256 = U256::from_limbs([1_000_000_000_000_000_000, 0, 0, 0]);
@@ -62,13 +62,13 @@ where
             chain_spec.chain_config().l1_config.l2_system_config_address;
         // query scalar and overhead.
         let (mut scalar, mut overhead) = (
-            provider.storage(system_config_contract_address, L1_BASE_FEE_SCALAR_SLOT)?,
-            provider.storage(system_config_contract_address, L1_BASE_FEE_OVERHEAD_SLOT)?,
+            provider.storage(system_config_contract_address, L2_BASE_FEE_SCALAR_SLOT)?,
+            provider.storage(system_config_contract_address, L2_BASE_FEE_OVERHEAD_SLOT)?,
         );
         // if any value is 0, use the default values.
         (scalar, overhead) = (
-            if scalar == U256::ZERO { DEFAULT_L1_BASE_FEE_SCALAR } else { scalar },
-            if overhead == U256::ZERO { DEFAULT_L1_BASE_FEE_OVERHEAD } else { overhead },
+            if scalar == U256::ZERO { DEFAULT_BASE_FEE_SCALAR } else { scalar },
+            if overhead == U256::ZERO { DEFAULT_BASE_FEE_OVERHEAD } else { overhead },
         );
 
         let mut base_fee = if chain_spec.is_feynman_active_at_timestamp(ts) {
@@ -202,8 +202,8 @@ mod tests {
 
         // insert the base fee params.
         let system_contract_storage = PlainStorage::from_iter([
-            (L1_BASE_FEE_SCALAR_SLOT, U256::from(10000000)),
-            (L1_BASE_FEE_OVERHEAD_SLOT, U256::ONE),
+            (L2_BASE_FEE_SCALAR_SLOT, U256::from(10000000)),
+            (L2_BASE_FEE_OVERHEAD_SLOT, U256::ONE),
         ]);
         state.insert_account_with_storage(
             SCROLL_MAINNET.config.l1_config.l2_system_config_address,
