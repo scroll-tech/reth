@@ -1,6 +1,9 @@
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
-    config::NetworkMode, protocol::{RlpxSubProtocol, RlpxSubProtocols}, transform::header::HeaderTransform, NetworkConfig, NetworkHandle, NetworkManager, PeersInfo
+    config::NetworkMode,
+    protocol::{RlpxSubProtocol, RlpxSubProtocols},
+    transform::header::HeaderTransform,
+    NetworkConfig, NetworkHandle, NetworkManager, PeersInfo,
 };
 use reth_node_api::TxTy;
 use reth_node_builder::{components::NetworkBuilder, BuilderContext, FullNodeTypes};
