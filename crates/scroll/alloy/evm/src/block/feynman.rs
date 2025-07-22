@@ -42,16 +42,16 @@ const FEYNMAN_L1_GAS_PRICE_ORACLE_STORAGE: [(U256, U256); 3] = [
 pub(super) fn apply_feynman_hard_fork<DB: Database>(
     state: &mut State<DB>,
 ) -> Result<(), DB::Error> {
-    let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
-
     // No-op if already applied.
     // Note: This requires a storage read for every Feynman block, and it means this
     // read needs to be included in the execution witness. Unfortunately, there is no
     // other reliable way to apply the change only at the transition block, since
     // `ScrollBlockExecutor` does not have access to the parent timestamp.
-    if matches!(oracle.storage_slot(IS_FEYNMAN_SLOT), Some(val) if val == IS_FEYNMAN) {
+    if state.storage(L1_GAS_PRICE_ORACLE_ADDRESS, IS_FEYNMAN_SLOT)? == IS_FEYNMAN {
         return Ok(())
     }
+
+    let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
 
     // compute the code hash
     let bytecode = Bytecode::new_raw(FEYNMAN_L1_GAS_PRICE_ORACLE_BYTECODE);
