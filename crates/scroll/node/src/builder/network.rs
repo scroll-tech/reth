@@ -19,7 +19,7 @@ use std::fmt::Debug;
 /// The network builder for Scroll.
 #[derive(Debug, Default)]
 pub struct ScrollNetworkBuilder {
-    /// Additional RLPx sub-protocols to be added to the network.
+    /// Additional `RLPx` sub-protocols to be added to the network.
     scroll_sub_protocols: RlpxSubProtocols,
 }
 
