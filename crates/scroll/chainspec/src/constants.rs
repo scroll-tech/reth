@@ -68,8 +68,8 @@ pub const SCROLL_SEPOLIA_L1_CONFIG: L1Config = L1Config {
     l1_chain_id: alloy_chains::NamedChain::Sepolia as u64,
     l1_message_queue_address: SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_ADDRESS,
     l1_message_queue_v2_address: SCROLL_SEPOLIA_L1_MESSAGE_QUEUE_V2_ADDRESS,
-    scroll_chain_address: SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
     l2_system_config_address: SCROLL_SEPOLIA_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS,
+    scroll_chain_address: SCROLL_SEPOLIA_L1_PROXY_ADDRESS,
     num_l1_messages_per_block: SCROLL_SEPOLIA_MAX_L1_MESSAGES,
 };
 
