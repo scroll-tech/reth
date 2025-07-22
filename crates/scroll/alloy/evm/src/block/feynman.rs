@@ -94,7 +94,7 @@ mod tests {
     use revm::{
         database::{
             states::{bundle_state::BundleRetention, plain_account::PlainStorage, StorageSlot},
-            EmptyDB, State,
+            CacheDB, EmptyDB, State,
         },
         primitives::{keccak256, U256},
         state::{AccountInfo, Bytecode},
@@ -192,6 +192,72 @@ mod tests {
 
         // check deployed contract
         assert_bytecode_eq(bundle.contracts.get(&code_hash).unwrap(), &bytecode);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_feynman_fork_only_once() -> eyre::Result<()> {
+        let bytecode = Bytecode::new_raw(FEYNMAN_L1_GAS_PRICE_ORACLE_BYTECODE);
+
+        let oracle_account = AccountInfo {
+            code_hash: bytecode.hash_slow(),
+            code: Some(bytecode),
+            ..Default::default()
+        };
+
+        let oracle_storage = PlainStorage::from_iter([
+            // owner
+            (U256::ZERO, U256::from_str("0x13d24a7ff6f5ec5ff0e9c40fc3b8c9c01c65437b")?),
+            // l1BaseFee
+            (U256::from(1), U256::from(0x15f50e5e)),
+            // overhead
+            (U256::from(2), U256::from(0x38)),
+            // scalar
+            (U256::from(3), U256::from(0x3e95ba80)),
+            // whitelist
+            (U256::from(4), U256::from_str("0x5300000000000000000000000000000000000003")?),
+            // l1BlobBaseFee
+            (U256::from(5), U256::from(0x15f50e5e)),
+            // commitScalar
+            (U256::from(6), U256::from(0x3e95ba80)),
+            // blobScalar
+            (U256::from(7), U256::from(0x3e95ba80)),
+            // isCurie
+            (U256::from(8), U256::from(1)),
+            // penaltyThreshold
+            (U256::from(9), U256::from(1_100_000_000u64)),
+            // penaltyFactor
+            (U256::from(10), U256::from(3_000_000_000u64)),
+            // isFeynman
+            (U256::from(11), U256::from(1)),
+        ]);
+
+        // init state,
+        // we write to db directly to make sure we do not have account storage in cache
+        let mut db = CacheDB::new(EmptyDB::default());
+
+        db.insert_account_info(L1_GAS_PRICE_ORACLE_ADDRESS, oracle_account);
+
+        for (slot, value) in oracle_storage {
+            db.insert_account_storage(L1_GAS_PRICE_ORACLE_ADDRESS, slot, value).unwrap();
+        }
+
+        let mut state =
+            State::builder().with_database(db).with_bundle_update().without_state_clear().build();
+
+        // make sure account is in cache
+        state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
+
+        // apply feynman fork
+        apply_feynman_hard_fork(&mut state)?;
+
+        // merge transitions
+        state.merge_transitions(BundleRetention::Reverts);
+        let bundle = state.take_bundle();
+
+        // isFeynman is already set, apply_feynman_hard_fork should be a no-op
+        assert_eq!(bundle.state.get(&L1_GAS_PRICE_ORACLE_ADDRESS), None);
 
         Ok(())
     }
