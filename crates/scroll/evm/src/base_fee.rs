@@ -57,6 +57,13 @@ where
     ) -> Result<u64, P::Error> {
         let chain_spec = &self.0;
 
+        // Return early if Curie isn't active. This branch will be taken by the
+        // `ScrollPayloadBuilder` when executing `PayloadAttributes` that were derived from the L1
+        // (during the L1 consolidation phase of the Rollup Node).
+        if !chain_spec.is_curie_active_at_block(parent_header.number() + 1) {
+            return Ok(0);
+        }
+
         // load l2 system config contract into cache.
         let system_config_contract_address =
             chain_spec.chain_config().l1_config.l2_system_config_address;

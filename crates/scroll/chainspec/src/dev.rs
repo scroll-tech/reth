@@ -21,7 +21,7 @@ pub static SCROLL_DEV: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
     let genesis = serde_json::from_str(include_str!("../res/genesis/dev.json"))
         .expect("Can't deserialize Dev testnet genesis json");
 
-    // In order to have Feynman activated at block 0, we need to set the base_fee_per_gas of the
+    // In order to have Feynman activated at block 0, we need to set the `base_fee_per_gas` of the
     // genesis.
     let mut genesis_header = make_genesis_header(&genesis);
     genesis_header.base_fee_per_gas = Some(0);
