@@ -169,6 +169,7 @@ mod tests {
     ];
 
     const CURIE_TIMESTAMP: u64 = 1719994280;
+    const CURIE_BLOCK: u64 = 7096836;
 
     #[test]
     fn test_should_return_correct_base_fee() -> Result<(), Box<dyn core::error::Error>> {
@@ -179,8 +180,11 @@ mod tests {
 
         // init the provider and parent header.
         let base_fee_provider = ScrollBaseFeeProvider::new(SCROLL_MAINNET.clone());
-        let parent_header =
-            alloy_consensus::Header { timestamp: CURIE_TIMESTAMP, ..Default::default() };
+        let parent_header = alloy_consensus::Header {
+            timestamp: CURIE_TIMESTAMP,
+            number: CURIE_BLOCK,
+            ..Default::default()
+        };
         let parent_header_ts = parent_header.timestamp();
 
         // helper closure to insert the l1 base fee in state.
@@ -238,8 +242,11 @@ mod tests {
             .unwrap()
             .as_timestamp()
             .expect("Feynman is timestamp based forked.");
-        let mut parent_header =
-            alloy_consensus::Header { timestamp: feynman_fork_ts + 1, ..Default::default() };
+        let mut parent_header = alloy_consensus::Header {
+            timestamp: feynman_fork_ts + 1,
+            number: CURIE_BLOCK + 1,
+            ..Default::default()
+        };
         let parent_header_ts = parent_header.timestamp();
 
         // for each test case, update the parent header fields and check the expected value matches.
