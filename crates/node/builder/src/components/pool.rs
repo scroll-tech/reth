@@ -102,8 +102,6 @@ impl PoolBuilderConfigOverrides {
             config.minimal_protocol_basefee = minimal_protocol_basefee;
         }
         config.local_transactions_config.local_addresses.extend(local_addresses);
-        config.local_transactions_config.propagate_local_transactions =
-            propagate_local_transactions;
 
         config
     }
