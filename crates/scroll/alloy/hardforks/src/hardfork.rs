@@ -36,8 +36,7 @@ impl ScrollHardfork {
             (Self::DarwinV2, ForkCondition::Timestamp(1725264000)),
             (Self::Euclid, ForkCondition::Timestamp(1744815600)),
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
-            // TODO: update
-            (Self::Feynman, ForkCondition::Timestamp(6000000000)),
+            (Self::Feynman, ForkCondition::Timestamp(1755576000)),
         ]
     }
 

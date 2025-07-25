@@ -516,11 +516,11 @@ mod tests {
                 ),
                 (
                     Head { number: 7096836, timestamp: 1745305200, ..Default::default() },
-                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 6000000000 },
+                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 1755576000 },
                 ),
                 (
-                    Head { number: 7096836, timestamp: 6000000000, ..Default::default() },
-                    ForkId { hash: ForkHash([0x64, 0xb1, 0x52, 0x56]), next: 0 },
+                    Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
+                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: 0 },
                 ),
             ],
         );
