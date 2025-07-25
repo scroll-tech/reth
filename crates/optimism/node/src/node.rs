@@ -800,7 +800,7 @@ where
             .await;
 
         let blob_store = reth_node_builder::components::create_blob_store(ctx)?;
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
+        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), None)
             .no_eip4844()
             .with_head_timestamp(ctx.head().timestamp)
             .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)

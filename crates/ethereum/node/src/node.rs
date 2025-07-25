@@ -405,7 +405,7 @@ where
         let blob_store =
             reth_node_builder::components::create_blob_store_with_cache(ctx, blob_cache_size)?;
 
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
+        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), Some(pool_config.local_transactions_config.clone()))
             .with_head_timestamp(ctx.head().timestamp)
             .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)
             .kzg_settings(ctx.kzg_settings()?)

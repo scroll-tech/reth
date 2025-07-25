@@ -325,7 +325,7 @@ mod tests {
     #[tokio::test]
     async fn validate_optimism_transaction() {
         let client = MockEthProvider::default().with_chain_spec(OP_MAINNET.clone());
-        let validator = EthTransactionValidatorBuilder::new(client)
+        let validator = EthTransactionValidatorBuilder::new(client, None)
             .no_shanghai()
             .no_cancun()
             .build(InMemoryBlobStore::default());

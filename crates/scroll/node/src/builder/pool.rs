@@ -61,7 +61,7 @@ where
         let data_dir = ctx.config().datadir();
         let blob_store = DiskFileBlobStore::open(data_dir.blobstore(), Default::default())?;
 
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
+        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), Some(pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config))
             .no_eip4844()
             .with_head_timestamp(ctx.head().timestamp)
             .kzg_settings(ctx.kzg_settings()?)
