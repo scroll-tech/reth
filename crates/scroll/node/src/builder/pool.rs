@@ -61,22 +61,25 @@ where
         let data_dir = ctx.config().datadir();
         let blob_store = DiskFileBlobStore::open(data_dir.blobstore(), Default::default())?;
 
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), Some(pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config))
-            .no_eip4844()
-            .with_head_timestamp(ctx.head().timestamp)
-            .kzg_settings(ctx.kzg_settings()?)
-            .with_additional_tasks(
-                pool_config_overrides
-                    .additional_validation_tasks
-                    .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
-            )
-            .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator)
-                    // In --dev mode we can't require gas fees because we're unable to decode
-                    // the L1 block info
-                    .require_l1_data_gas_fee(!ctx.config().dev.dev)
-            });
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            ctx.provider().clone(),
+            Some(pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config),
+        )
+        .no_eip4844()
+        .with_head_timestamp(ctx.head().timestamp)
+        .kzg_settings(ctx.kzg_settings()?)
+        .with_additional_tasks(
+            pool_config_overrides
+                .additional_validation_tasks
+                .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
+        )
+        .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
+        .map(|validator| {
+            ScrollTransactionValidator::new(validator)
+                // In --dev mode we can't require gas fees because we're unable to decode
+                // the L1 block info
+                .require_l1_data_gas_fee(!ctx.config().dev.dev)
+        });
 
         let transaction_pool = reth_transaction_pool::Pool::new(
             validator,

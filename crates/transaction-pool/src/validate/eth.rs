@@ -1201,7 +1201,8 @@ mod tests {
             ExtendedAccount::new(transaction.nonce(), U256::MAX),
         );
         let blob_store = InMemoryBlobStore::default();
-        let validator = EthTransactionValidatorBuilder::new(provider, None).build(blob_store.clone());
+        let validator =
+            EthTransactionValidatorBuilder::new(provider, None).build(blob_store.clone());
 
         let outcome = validator.validate_one(TransactionOrigin::External, transaction.clone());
 

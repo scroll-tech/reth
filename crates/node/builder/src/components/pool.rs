@@ -62,8 +62,6 @@ pub struct PoolBuilderConfigOverrides {
     pub minimal_protocol_basefee: Option<u64>,
     /// Addresses that will be considered as local. Above exemptions apply.
     pub local_addresses: HashSet<Address>,
-    /// Whether to propagate local transactions to the network.
-    pub propagate_local_transactions: bool,
     /// Additional tasks to validate new transactions.
     pub additional_validation_tasks: Option<usize>,
 }
@@ -79,7 +77,6 @@ impl PoolBuilderConfigOverrides {
             max_account_slots,
             minimal_protocol_basefee,
             local_addresses,
-            propagate_local_transactions,
             additional_validation_tasks: _,
         } = self;
 

@@ -1,7 +1,10 @@
 //! A validation service for transactions.
 
 use crate::{
-    blobstore::BlobStore, validate::{EthTransactionValidatorBuilder, TransactionValidatorError}, EthTransactionValidator, LocalTransactionConfig, PoolTransaction, TransactionOrigin, TransactionValidationOutcome, TransactionValidator
+    blobstore::BlobStore,
+    validate::{EthTransactionValidatorBuilder, TransactionValidatorError},
+    EthTransactionValidator, LocalTransactionConfig, PoolTransaction, TransactionOrigin,
+    TransactionValidationOutcome, TransactionValidator,
 };
 use futures_util::{lock::Mutex, StreamExt};
 use reth_primitives_traits::{Block, SealedBlock};
@@ -87,7 +90,10 @@ pub struct TransactionValidationTaskExecutor<V> {
 
 impl TransactionValidationTaskExecutor<()> {
     /// Convenience method to create a [`EthTransactionValidatorBuilder`]
-    pub fn eth_builder<Client>(client: Client, local_transactions_config: Option<LocalTransactionConfig>) -> EthTransactionValidatorBuilder<Client> {
+    pub fn eth_builder<Client>(
+        client: Client,
+        local_transactions_config: Option<LocalTransactionConfig>,
+    ) -> EthTransactionValidatorBuilder<Client> {
         EthTransactionValidatorBuilder::new(client, local_transactions_config)
     }
 }

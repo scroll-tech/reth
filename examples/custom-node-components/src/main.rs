@@ -58,11 +58,12 @@ where
     async fn build_pool(self, ctx: &BuilderContext<Node>) -> eyre::Result<Self::Pool> {
         let data_dir = ctx.config().datadir();
         let blob_store = InMemoryBlobStore::default();
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), None)
-            .with_head_timestamp(ctx.head().timestamp)
-            .kzg_settings(ctx.kzg_settings()?)
-            .with_additional_tasks(ctx.config().txpool.additional_validation_tasks)
-            .build_with_tasks(ctx.task_executor().clone(), blob_store.clone());
+        let validator =
+            TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), None)
+                .with_head_timestamp(ctx.head().timestamp)
+                .kzg_settings(ctx.kzg_settings()?)
+                .with_additional_tasks(ctx.config().txpool.additional_validation_tasks)
+                .build_with_tasks(ctx.task_executor().clone(), blob_store.clone());
 
         let transaction_pool =
             reth_ethereum::pool::Pool::eth_pool(validator, blob_store, self.pool_config);
