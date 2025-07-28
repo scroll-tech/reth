@@ -44,7 +44,7 @@ where
         // On scroll, transactions are forwarded directly to the sequencer to be included in
         // blocks that it builds.
         if let Some(client) = self.raw_tx_forwarder().as_ref() {
-            tracing::debug!(target: "rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
+            tracing::debug!(target: "scroll::rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
 
             // Retain tx in local tx pool before forwarding to sequencer rpc, for local RPC usage.
             let hash = self
@@ -53,15 +53,15 @@ where
                 .await
                 .map_err(Self::Error::from_eth_err)?;
 
-            tracing::debug!(target: "rpc::eth", %hash, "successfully added transaction to local tx pool");
+            tracing::debug!(target: "scroll::rpc::eth", %hash, "successfully added transaction to local tx pool");
 
             // Forward to remote sequencer RPC.
             match client.forward_raw_transaction(&tx).await {
                 Ok(sequencer_hash) => {
-                    tracing::debug!(target: "rpc::eth", local_hash=%hash, sequencer_hash=%sequencer_hash, "successfully forwarded transaction to sequencer");
+                    tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, sequencer_hash=%sequencer_hash, "successfully forwarded transaction to sequencer");
                 }
                 Err(err) => {
-                    tracing::warn!(target: "rpc::eth", %err, %hash, "failed to forward transaction to sequencer, but transaction is in local pool");
+                    tracing::warn!(target: "scroll::rpc::eth", %err, %hash, "failed to forward transaction to sequencer, but transaction is in local pool");
                 }
             }
 

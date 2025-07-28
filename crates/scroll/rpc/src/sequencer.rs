@@ -98,7 +98,7 @@ impl SequencerClient {
             self.client().request::<Params, Resp>(method.to_string(), params).await.inspect_err(
                 |err| {
                     warn!(
-                        target: "rpc::sequencer",
+                        target: "scroll::rpc::sequencer",
                         %err,
                         "HTTP request to sequencer failed",
                     );
@@ -113,7 +113,7 @@ impl SequencerClient {
         let tx_hash =
             self.send_rpc_call("eth_sendRawTransaction", (rlp_hex,)).await.inspect_err(|err| {
                 warn!(
-                    target: "rpc::eth",
+                    target: "scroll::rpc::eth",
                     %err,
                     "Failed to forward transaction to sequencer",
                 );
