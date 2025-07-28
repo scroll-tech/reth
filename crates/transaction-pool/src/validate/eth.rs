@@ -785,14 +785,14 @@ impl<Client> EthTransactionValidatorBuilder<Client> {
     ///  - EIP-1559
     ///  - EIP-4844
     ///  - EIP-7702
-    pub fn new(client: Client, local_transactions_config: Option<LocalTransactionConfig>) -> Self {
+    pub fn new(client: Client) -> Self {
         Self {
             block_gas_limit: ETHEREUM_BLOCK_GAS_LIMIT_30M.into(),
             client,
             minimum_priority_fee: None,
             additional_tasks: 1,
             kzg_settings: EnvKzgSettings::Default,
-            local_transactions_config: local_transactions_config.unwrap_or_default(),
+            local_transactions_config: Default::default(),
             max_tx_input_bytes: DEFAULT_MAX_TX_INPUT_BYTES,
             tx_fee_cap: Some(1e18 as u128),
             // by default all transaction types are allowed
@@ -1201,8 +1201,7 @@ mod tests {
             ExtendedAccount::new(transaction.nonce(), U256::MAX),
         );
         let blob_store = InMemoryBlobStore::default();
-        let validator =
-            EthTransactionValidatorBuilder::new(provider, None).build(blob_store.clone());
+        let validator = EthTransactionValidatorBuilder::new(provider).build(blob_store.clone());
 
         let outcome = validator.validate_one(TransactionOrigin::External, transaction.clone());
 
@@ -1229,7 +1228,7 @@ mod tests {
         );
 
         let blob_store = InMemoryBlobStore::default();
-        let validator = EthTransactionValidatorBuilder::new(provider, None)
+        let validator = EthTransactionValidatorBuilder::new(provider)
             .set_block_gas_limit(1_000_000) // tx gas limit is 1_015_288
             .build(blob_store.clone());
 
@@ -1262,7 +1261,7 @@ mod tests {
         );
 
         let blob_store = InMemoryBlobStore::default();
-        let validator = EthTransactionValidatorBuilder::new(provider, None)
+        let validator = EthTransactionValidatorBuilder::new(provider)
             .set_tx_fee_cap(100) // 100 wei cap
             .build(blob_store.clone());
 
@@ -1299,7 +1298,7 @@ mod tests {
         );
 
         let blob_store = InMemoryBlobStore::default();
-        let validator = EthTransactionValidatorBuilder::new(provider, None)
+        let validator = EthTransactionValidatorBuilder::new(provider)
             .set_tx_fee_cap(0) // no cap
             .build(blob_store);
 
@@ -1317,7 +1316,7 @@ mod tests {
         );
 
         let blob_store = InMemoryBlobStore::default();
-        let validator = EthTransactionValidatorBuilder::new(provider, None)
+        let validator = EthTransactionValidatorBuilder::new(provider)
             .set_tx_fee_cap(2e18 as u128) // 2 ETH cap
             .build(blob_store);
 

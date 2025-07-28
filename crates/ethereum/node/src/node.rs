@@ -405,17 +405,14 @@ where
         let blob_store =
             reth_node_builder::components::create_blob_store_with_cache(ctx, blob_cache_size)?;
 
-        let validator = TransactionValidationTaskExecutor::eth_builder(
-            ctx.provider().clone(),
-            Some(pool_config.local_transactions_config.clone()),
-        )
-        .with_head_timestamp(ctx.head().timestamp)
-        .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)
-        .kzg_settings(ctx.kzg_settings()?)
-        .with_local_transactions_config(pool_config.local_transactions_config.clone())
-        .set_tx_fee_cap(ctx.config().rpc.rpc_tx_fee_cap)
-        .with_additional_tasks(ctx.config().txpool.additional_validation_tasks)
-        .build_with_tasks(ctx.task_executor().clone(), blob_store.clone());
+        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
+            .with_head_timestamp(ctx.head().timestamp)
+            .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)
+            .kzg_settings(ctx.kzg_settings()?)
+            .with_local_transactions_config(pool_config.local_transactions_config.clone())
+            .set_tx_fee_cap(ctx.config().rpc.rpc_tx_fee_cap)
+            .with_additional_tasks(ctx.config().txpool.additional_validation_tasks)
+            .build_with_tasks(ctx.task_executor().clone(), blob_store.clone());
 
         let transaction_pool = TxPoolBuilder::new(ctx)
             .with_validator(validator)

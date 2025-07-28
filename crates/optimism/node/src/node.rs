@@ -800,26 +800,25 @@ where
             .await;
 
         let blob_store = reth_node_builder::components::create_blob_store(ctx)?;
-        let validator =
-            TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), None)
-                .no_eip4844()
-                .with_head_timestamp(ctx.head().timestamp)
-                .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)
-                .kzg_settings(ctx.kzg_settings()?)
-                .set_tx_fee_cap(ctx.config().rpc.rpc_tx_fee_cap)
-                .with_additional_tasks(
-                    pool_config_overrides
-                        .additional_validation_tasks
-                        .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
-                )
-                .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
-                .map(|validator| {
-                    OpTransactionValidator::new(validator)
-                        // In --dev mode we can't require gas fees because we're unable to decode
-                        // the L1 block info
-                        .require_l1_data_gas_fee(!ctx.config().dev.dev)
-                        .with_supervisor(supervisor_client.clone())
-                });
+        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
+            .no_eip4844()
+            .with_head_timestamp(ctx.head().timestamp)
+            .with_max_tx_input_bytes(ctx.config().txpool.max_tx_input_bytes)
+            .kzg_settings(ctx.kzg_settings()?)
+            .set_tx_fee_cap(ctx.config().rpc.rpc_tx_fee_cap)
+            .with_additional_tasks(
+                pool_config_overrides
+                    .additional_validation_tasks
+                    .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
+            )
+            .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
+            .map(|validator| {
+                OpTransactionValidator::new(validator)
+                    // In --dev mode we can't require gas fees because we're unable to decode
+                    // the L1 block info
+                    .require_l1_data_gas_fee(!ctx.config().dev.dev)
+                    .with_supervisor(supervisor_client.clone())
+            });
 
         let final_pool_config = pool_config_overrides.apply(ctx.pool_config());
 
