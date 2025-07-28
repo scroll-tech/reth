@@ -91,7 +91,7 @@ mod tests {
         let breaker = PayloadBuildingBreaker::new(
             Duration::from_secs(1),
             2 * MIN_TRANSACTION_GAS,
-            2 *MIN_TRANSACTION_DATA_SIZE,
+            2 * MIN_TRANSACTION_DATA_SIZE,
         );
         assert!(!breaker.should_break(MIN_TRANSACTION_GAS, MIN_TRANSACTION_DATA_SIZE));
         assert!(breaker.should_break(MIN_TRANSACTION_GAS + 1, MIN_TRANSACTION_DATA_SIZE));
