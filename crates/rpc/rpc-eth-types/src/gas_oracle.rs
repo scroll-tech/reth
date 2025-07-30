@@ -440,11 +440,11 @@ where
 
         // sanity check the max gas used and transaction size value
         if max_tx_gas_used > header.gas_limit() {
-            warn!(target: "scroll::gas_price_oracle", ?max_tx_gas_used, "found tx consuming more gas than the block limit");
+            warn!(target: "scroll::gas_price_oracle", ?max_tx_gas_used, "Found tx consuming more gas than the block limit");
             return (Ok(suggestion), is_at_capacity);
         }
         if max_tx_payload_size > payload_size_limit {
-            warn!(target: "scroll::gas_price_oracle", ?max_tx_payload_size, "found tx consuming more size than the block size limit");
+            warn!(target: "scroll::gas_price_oracle", ?max_tx_payload_size, "Found tx consuming more size than the block size limit");
             return (Ok(suggestion), is_at_capacity);
         }
 
