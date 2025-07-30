@@ -3,7 +3,6 @@ use alloy_consensus::BlockHeader;
 use alloy_eips::eip7840::BlobParams;
 use alloy_primitives::{Sealable, U256};
 use alloy_rpc_types_eth::{BlockNumberOrTag, FeeHistory};
-use futures::Future;
 use reth_chainspec::EthChainSpec;
 use reth_primitives_traits::BlockBody;
 use reth_provider::{
@@ -18,6 +17,7 @@ use reth_rpc_eth_types::{fee_history::calculate_reward_percentiles_for_block, Et
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_evm::ScrollBaseFeeProvider;
 use scroll_alloy_hardforks::ScrollHardforks;
+use std::future::Future;
 use tracing::debug;
 
 impl<N, NetworkT> EthFees for ScrollEthApi<N, NetworkT>

@@ -10484,7 +10484,6 @@ dependencies = [
  "alloy-transport",
  "alloy-transport-http",
  "eyre",
- "futures",
  "jsonrpsee-types",
  "parking_lot",
  "reqwest",

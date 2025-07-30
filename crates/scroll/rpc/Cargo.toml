@@ -58,7 +58,6 @@ tracing.workspace = true
 # async
 parking_lot.workspace = true
 tokio.workspace = true
-futures = "0.3"
 
 # rpc
 jsonrpsee-types.workspace = true
