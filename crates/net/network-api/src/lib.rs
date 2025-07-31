@@ -24,7 +24,7 @@ pub mod noop;
 pub mod block;
 
 pub mod test_utils;
-use block::EthWireBlockListenerProvider;
+use block::EthWireProvider;
 use test_utils::PeersHandleProvider;
 
 pub use alloy_rpc_types_admin::EthProtocolInfo;
@@ -57,7 +57,7 @@ pub trait FullNetwork:
     + NetworkEventListenerProvider
     + Peers
     + PeersHandleProvider
-    + EthWireBlockListenerProvider<Block = <Self::Primitives as NetworkPrimitives>::Block>
+    + EthWireProvider<Self::Primitives>
     + Clone
     + Unpin
     + 'static
@@ -72,7 +72,7 @@ impl<T> FullNetwork for T where
         + NetworkEventListenerProvider
         + Peers
         + PeersHandleProvider
-        + EthWireBlockListenerProvider<Block = <Self::Primitives as NetworkPrimitives>::Block>
+        + EthWireProvider<Self::Primitives>
         + Clone
         + Unpin
         + 'static
