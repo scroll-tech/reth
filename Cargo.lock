@@ -11701,7 +11701,6 @@ dependencies = [
  "scroll-alloy-hardforks",
  "scroll-encoder",
  "serde",
- "zstd 0.13.3",
 ]
 
 [[package]]
@@ -11798,7 +11797,7 @@ dependencies = [
 
 [[package]]
 name = "scroll-encoder"
-version = "0.1.0"
+version = "1.5.0"
 dependencies = [
  "zstd 0.13.0",
 ]

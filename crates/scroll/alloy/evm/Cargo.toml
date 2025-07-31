@@ -71,4 +71,4 @@ serde = [
     "scroll-alloy-hardforks/serde",
     "alloy-hardforks/serde",
 ]
-zstd_compression = ["zstd"]
+zstd_compression = []
