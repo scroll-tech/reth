@@ -14,7 +14,7 @@ mod zstd_compression {
     use std::io::Write;
 
     use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
-    use scroll_encoder::{compressor, N_BLOCK_SIZE_TARGET};
+    use reth_scroll_encoder::{compressor, N_BLOCK_SIZE_TARGET};
 
     /// Computes the compression ratio for the provided bytes.
     ///

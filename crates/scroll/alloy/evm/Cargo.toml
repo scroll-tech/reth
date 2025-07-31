@@ -29,7 +29,7 @@ scroll-alloy-consensus = { workspace = true, default-features = false }
 scroll-alloy-hardforks = { workspace = true, default-features = false }
 
 # scroll
-scroll-encoder = { workspace = true, default-features = false }
+reth-scroll-encoder = { workspace = true, default-features = false }
 
 # misc
 auto_impl = { workspace = true, default-features = false }

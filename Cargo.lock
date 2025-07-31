@@ -10301,6 +10301,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "reth-scroll-encoder"
+version = "1.5.0"
+dependencies = [
+ "zstd 0.13.0",
+]
+
+[[package]]
 name = "reth-scroll-engine-primitives"
 version = "1.5.0"
 dependencies = [
@@ -11694,12 +11701,12 @@ dependencies = [
  "eyre",
  "reth-evm",
  "reth-scroll-chainspec",
+ "reth-scroll-encoder",
  "reth-scroll-evm",
  "revm",
  "revm-scroll",
  "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
- "scroll-encoder",
  "serde",
 ]
 
@@ -11793,13 +11800,6 @@ dependencies = [
  "arbitrary",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "scroll-encoder"
-version = "1.5.0"
-dependencies = [
- "zstd 0.13.0",
 ]
 
 [[package]]
