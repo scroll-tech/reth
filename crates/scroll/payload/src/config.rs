@@ -8,7 +8,7 @@ use std::{fmt::Debug, time::Instant};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ScrollBuilderConfig {
     /// Gas limit.
-    pub gas_limit: u64,
+    pub gas_limit: Option<u64>,
     /// Time limit for payload building.
     pub time_limit: Duration,
     /// Maximum total data availability size for a block.
@@ -20,7 +20,11 @@ pub const MIN_TRANSACTION_DATA_SIZE: u64 = 115u64;
 
 impl ScrollBuilderConfig {
     /// Returns a new instance of [`ScrollBuilderConfig`].
-    pub const fn new(gas_limit: u64, time_limit: Duration, max_da_block_size: Option<u64>) -> Self {
+    pub const fn new(
+        gas_limit: Option<u64>,
+        time_limit: Duration,
+        max_da_block_size: Option<u64>,
+    ) -> Self {
         Self { gas_limit, time_limit, max_da_block_size }
     }
 
@@ -35,13 +39,13 @@ impl ScrollBuilderConfig {
 pub struct PayloadBuildingBreaker {
     start: Instant,
     time_limit: Duration,
-    gas_limit: u64,
+    gas_limit: Option<u64>,
     max_da_block_size: Option<u64>,
 }
 
 impl PayloadBuildingBreaker {
     /// Returns a new instance of the [`PayloadBuildingBreaker`].
-    fn new(time_limit: Duration, gas_limit: u64, max_da_block_size: Option<u64>) -> Self {
+    fn new(time_limit: Duration, gas_limit: Option<u64>, max_da_block_size: Option<u64>) -> Self {
         Self { start: Instant::now(), time_limit, gas_limit, max_da_block_size }
     }
 
@@ -56,9 +60,11 @@ impl PayloadBuildingBreaker {
             return true;
         }
 
-        // Check gas limit
-        if cumulative_gas_used > self.gas_limit.saturating_sub(MIN_TRANSACTION_GAS) {
-            return true;
+        // Check gas limit if configured
+        if let Some(gas_limit) = self.gas_limit {
+            if cumulative_gas_used > gas_limit.saturating_sub(MIN_TRANSACTION_GAS) {
+                return true;
+            }
         }
 
         // Check data availability size limit if configured
@@ -80,7 +86,7 @@ mod tests {
     fn test_should_break_on_time_limit() {
         let breaker = PayloadBuildingBreaker::new(
             Duration::from_millis(200),
-            2 * MIN_TRANSACTION_GAS,
+            Some(2 * MIN_TRANSACTION_GAS),
             Some(2 * MIN_TRANSACTION_DATA_SIZE),
         );
         assert!(!breaker.should_break(MIN_TRANSACTION_GAS, MIN_TRANSACTION_DATA_SIZE));
@@ -92,7 +98,7 @@ mod tests {
     fn test_should_break_on_gas_limit() {
         let breaker = PayloadBuildingBreaker::new(
             Duration::from_secs(1),
-            2 * MIN_TRANSACTION_GAS,
+            Some(2 * MIN_TRANSACTION_GAS),
             Some(2 * MIN_TRANSACTION_DATA_SIZE),
         );
         assert!(!breaker.should_break(MIN_TRANSACTION_GAS, MIN_TRANSACTION_DATA_SIZE));
@@ -103,7 +109,7 @@ mod tests {
     fn test_should_break_on_data_size_limit() {
         let breaker = PayloadBuildingBreaker::new(
             Duration::from_secs(1),
-            2 * MIN_TRANSACTION_GAS,
+            Some(2 * MIN_TRANSACTION_GAS),
             Some(2 * MIN_TRANSACTION_DATA_SIZE),
         );
         assert!(!breaker.should_break(MIN_TRANSACTION_GAS, MIN_TRANSACTION_DATA_SIZE));
@@ -114,7 +120,7 @@ mod tests {
     fn test_should_break_with_no_da_limit() {
         let breaker = PayloadBuildingBreaker::new(
             Duration::from_secs(1),
-            2 * MIN_TRANSACTION_GAS,
+            Some(2 * MIN_TRANSACTION_GAS),
             None, // No DA limit
         );
         // Should not break on large DA size when no limit is set

@@ -70,7 +70,7 @@ impl<Txs> ScrollPayloadBuilderBuilder<Txs> {
             evm_config,
             ctx.provider().clone(),
             ScrollBuilderConfig::new(
-                gas_limit,
+                Some(gas_limit),
                 self.payload_building_time_limit,
                 self.block_da_size_limit,
             ),

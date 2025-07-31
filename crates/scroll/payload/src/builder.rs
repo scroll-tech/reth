@@ -414,7 +414,10 @@ where
                 ScrollNextBlockEnvAttributes {
                     timestamp: self.attributes().timestamp(),
                     suggested_fee_recipient: self.attributes().suggested_fee_recipient(),
-                    gas_limit: self.attributes().gas_limit.unwrap_or(builder_config.gas_limit),
+                    gas_limit: self
+                        .attributes()
+                        .gas_limit
+                        .unwrap_or_else(|| builder_config.gas_limit.unwrap_or_default()),
                     base_fee,
                 },
             )
