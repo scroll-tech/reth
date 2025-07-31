@@ -1373,8 +1373,8 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "tokio",
- "zstd",
- "zstd-safe",
+ "zstd 0.13.3",
+ "zstd-safe 7.2.4",
 ]
 
 [[package]]
@@ -8905,7 +8905,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.12",
  "tracing",
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -11037,7 +11037,7 @@ dependencies = [
 name = "reth-zstd-compressors"
 version = "1.5.0"
 dependencies = [
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -11699,8 +11699,9 @@ dependencies = [
  "revm-scroll",
  "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
+ "scroll-encoder",
  "serde",
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -11793,6 +11794,13 @@ dependencies = [
  "arbitrary",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "scroll-encoder"
+version = "0.1.0"
+dependencies = [
+ "zstd 0.13.0",
 ]
 
 [[package]]
@@ -14490,11 +14498,27 @@ dependencies = [
 
 [[package]]
 name = "zstd"
+version = "0.13.0"
+source = "git+https://github.com/scroll-tech/zstd-rs?branch=hack%2Fmul-block#5c0892b6567dab31394d701477183ce9d6a32aca"
+dependencies = [
+ "zstd-safe 7.0.0",
+]
+
+[[package]]
+name = "zstd"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 7.2.4",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "7.0.0"
+source = "git+https://github.com/scroll-tech/zstd-rs?branch=hack%2Fmul-block#5c0892b6567dab31394d701477183ce9d6a32aca"
+dependencies = [
+ "zstd-sys 2.0.9+zstd.1.5.5",
 ]
 
 [[package]]
@@ -14503,7 +14527,16 @@ version = "7.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f49c4d5f0abb602a93fb8736af2a4f4dd9512e36f7f570d66e65ff867ed3b9d"
 dependencies = [
- "zstd-sys",
+ "zstd-sys 2.0.15+zstd.1.5.7",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "2.0.9+zstd.1.5.5"
+source = "git+https://github.com/scroll-tech/zstd-rs?branch=hack%2Fmul-block#5c0892b6567dab31394d701477183ce9d6a32aca"
+dependencies = [
+ "cc",
+ "pkg-config",
 ]
 
 [[package]]
