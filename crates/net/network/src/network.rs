@@ -21,10 +21,7 @@ use reth_network_api::{
     NetworkEventListenerProvider, NetworkInfo, NetworkStatus, PeerInfo, PeerRequest, Peers,
     PeersInfo,
 };
-use reth_network_p2p::{
-    error::RequestResult,
-    sync::{NetworkSyncUpdater, SyncState, SyncStateProvider},
-};
+use reth_network_p2p::sync::{NetworkSyncUpdater, SyncState, SyncStateProvider};
 use reth_network_peers::{NodeRecord, PeerId};
 use reth_network_types::{PeerAddr, PeerKind, Reputation, ReputationChangeKind};
 use reth_tokio_util::{EventSender, EventStream};
@@ -237,9 +234,8 @@ impl<N: NetworkPrimitives> EthWireProvider<N> for NetworkHandle<N> {
         rx.await
     }
 
-    fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256) -> RequestResult<()> {
-        self.announce_block(block, hash);
-        Ok(())
+    fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256) {
+        self.announce_block(block, hash)
     }
 }
 

@@ -1,6 +1,5 @@
 use super::*;
 use alloy_primitives::B256;
-use reth_network_p2p::error::RequestResult;
 use reth_tokio_util::EventStream;
 use tokio::sync::oneshot;
 
@@ -23,5 +22,5 @@ pub trait EthWireProvider<N: NetworkPrimitives> {
     > + Send;
 
     /// Announce a new block to the network over the eth wire protocol.
-    fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256) -> RequestResult<()>;
+    fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256);
 }
