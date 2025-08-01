@@ -609,6 +609,7 @@ impl<N: NetworkPrimitives> NetworkManager<N> {
                 })
             }
             PeerMessage::NewBlock(block) => {
+                debug!(target: "net::sync_issue", block = ?block, "got new peer message");
                 self.within_pow_or_disconnect(peer_id, move |this| {
                     this.swarm.state_mut().on_new_block(peer_id, block.hash);
                     let block = Arc::unwrap_or_clone(block.block);
