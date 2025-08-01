@@ -1,6 +1,7 @@
 //! Scroll CLI implementation.
-mod args;
-pub use args::ScrollRollupArgs;
+
+mod app;
+pub use app::CliApp;
 
 mod commands;
 pub use commands::Commands;
@@ -10,22 +11,16 @@ pub use spec::ScrollChainSpecParser;
 
 use clap::{value_parser, Parser};
 use reth_cli::chainspec::ChainSpecParser;
-use reth_cli_commands::{common::CliNodeTypes, launcher::FnLauncher, node::NoArgs};
+use reth_cli_commands::{launcher::FnLauncher, node::NoArgs};
 use reth_cli_runner::CliRunner;
-use reth_consensus::noop::NoopConsensus;
 use reth_db::DatabaseEnv;
 use reth_node_builder::{NodeBuilder, WithLaunchContext};
 use reth_node_core::{
     args::LogArgs,
     version::{LONG_VERSION, SHORT_VERSION},
 };
-use reth_node_metrics::recorder::install_prometheus_recorder;
 use reth_scroll_chainspec::ScrollChainSpec;
-use reth_scroll_evm::ScrollExecutorProvider;
-use reth_scroll_primitives::ScrollPrimitives;
-use reth_tracing::FileWorkerGuard;
 use std::{ffi::OsString, fmt, future::Future, sync::Arc};
-use tracing::info;
 
 /// The main scroll cli interface.
 ///
@@ -94,63 +89,36 @@ where
     C: ChainSpecParser<ChainSpec = ScrollChainSpec>,
     Ext: clap::Args + fmt::Debug,
 {
+    /// Configures the CLI and returns a [`CliApp`] instance.
+    ///
+    /// This method is used to prepare the CLI for execution by wrapping it in a
+    /// [`CliApp`] that can be further configured before running.
+    pub fn configure(self) -> CliApp<C, Ext> {
+        CliApp::new(self)
+    }
+
     /// Execute the configured cli command.
     ///
     /// This accepts a closure that is used to launch the node via the
     /// [`NodeCommand`](reth_cli_commands::node::NodeCommand).
-    pub fn run<L, Fut, Types>(mut self, launcher: L) -> eyre::Result<()>
+    pub fn run<L, Fut>(self, launcher: L) -> eyre::Result<()>
     where
         L: FnOnce(WithLaunchContext<NodeBuilder<Arc<DatabaseEnv>, C::ChainSpec>>, Ext) -> Fut,
         Fut: Future<Output = eyre::Result<()>>,
-        Types: CliNodeTypes<ChainSpec = C::ChainSpec, Primitives = ScrollPrimitives>,
     {
-        // add network name to logs dir
-        self.logs.log_file_directory =
-            self.logs.log_file_directory.join(self.chain.chain().to_string());
-
-        let _guard = self.init_tracing()?;
-        info!(target: "reth::cli", "Initialized tracing, debug log directory: {}", self.logs.log_file_directory);
-
-        // Install the prometheus recorder to be sure to record all metrics
-        let _ = install_prometheus_recorder();
-        let components = |spec: Arc<C::ChainSpec>| {
-            (ScrollExecutorProvider::scroll(spec), NoopConsensus::default())
-        };
-
-        let runner = CliRunner::try_default_runtime()?;
-        match self.command {
-            Commands::Node(command) => runner.run_command_until_exit(|ctx| {
-                command.execute(ctx, FnLauncher::new::<C, Ext>(launcher))
-            }),
-            Commands::Init(command) => runner.run_blocking_until_ctrl_c(command.execute::<Types>()),
-            Commands::InitState(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<Types>())
-            }
-            Commands::Import(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<Types, _>(components))
-            }
-            Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
-            Commands::Db(command) => runner.run_blocking_until_ctrl_c(command.execute::<Types>()),
-            Commands::Stage(command) => {
-                runner.run_command_until_exit(|ctx| command.execute::<Types, _>(ctx, components))
-            }
-            Commands::P2P(command) => runner.run_until_ctrl_c(command.execute::<Types>()),
-            Commands::Config(command) => runner.run_until_ctrl_c(command.execute()),
-            Commands::Recover(command) => {
-                runner.run_command_until_exit(|ctx| command.execute::<Types>(ctx))
-            }
-            Commands::Prune(command) => runner.run_until_ctrl_c(command.execute::<Types>()),
-            #[cfg(feature = "dev")]
-            Commands::TestVectors(command) => runner.run_until_ctrl_c(command.execute()),
-        }
+        self.with_runner(CliRunner::try_default_runtime()?, launcher)
     }
 
-    /// Initializes tracing with the configured options.
-    ///
-    /// If file logging is enabled, this function returns a guard that must be kept alive to ensure
-    /// that all logs are flushed to disk.
-    pub fn init_tracing(&self) -> eyre::Result<Option<FileWorkerGuard>> {
-        let guard = self.logs.init_tracing()?;
-        Ok(guard)
+    /// Execute the configured cli command with the provided [`CliRunner`].
+    pub fn with_runner<L, Fut>(self, runner: CliRunner, launcher: L) -> eyre::Result<()>
+    where
+        L: FnOnce(WithLaunchContext<NodeBuilder<Arc<DatabaseEnv>, C::ChainSpec>>, Ext) -> Fut,
+        Fut: Future<Output = eyre::Result<()>>,
+    {
+        let mut this = self.configure();
+        this.set_runner(runner);
+        this.run(FnLauncher::new::<C, Ext>(async move |builder, chain_spec| {
+            launcher(builder, chain_spec).await
+        }))
     }
 }

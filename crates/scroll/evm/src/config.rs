@@ -155,8 +155,8 @@ mod tests {
 
         // prepare all fork heads
         let curie_head = &Head { number: 7096836, ..Default::default() };
-        let bernouilli_head = &Head { number: 5220340, ..Default::default() };
-        let pre_bernouilli_head = &Head { number: 0, ..Default::default() };
+        let bernoulli_head = &Head { number: 5220340, ..Default::default() };
+        let pre_bernoulli_head = &Head { number: 0, ..Default::default() };
 
         // check correct spec id
         assert_eq!(
@@ -164,14 +164,13 @@ mod tests {
             ScrollSpecId::CURIE
         );
         assert_eq!(
-            config
-                .spec_id_at_timestamp_and_number(bernouilli_head.timestamp, bernouilli_head.number),
+            config.spec_id_at_timestamp_and_number(bernoulli_head.timestamp, bernoulli_head.number),
             ScrollSpecId::BERNOULLI
         );
         assert_eq!(
             config.spec_id_at_timestamp_and_number(
-                pre_bernouilli_head.timestamp,
-                pre_bernouilli_head.number
+                pre_bernoulli_head.timestamp,
+                pre_bernoulli_head.number
             ),
             ScrollSpecId::SHANGHAI
         );
@@ -195,20 +194,20 @@ mod tests {
         assert_eq!(env.cfg_env.spec, ScrollSpecId::CURIE);
 
         // bernoulli
-        let bernouilli_header = Header { number: 5220340, ..Default::default() };
+        let bernoulli_header = Header { number: 5220340, ..Default::default() };
 
         // fill cfg env
-        let env = config.evm_env(&bernouilli_header);
+        let env = config.evm_env(&bernoulli_header);
 
         // check correct cfg env
         assert_eq!(env.cfg_env.chain_id, Scroll as u64);
         assert_eq!(env.cfg_env.spec, ScrollSpecId::BERNOULLI);
 
         // pre-bernoulli
-        let pre_bernouilli_header = Header { number: 0, ..Default::default() };
+        let pre_bernoulli_header = Header { number: 0, ..Default::default() };
 
         // fill cfg env
-        let env = config.evm_env(&pre_bernouilli_header);
+        let env = config.evm_env(&pre_bernoulli_header);
 
         // check correct cfg env
         assert_eq!(env.cfg_env.chain_id, Scroll as u64);

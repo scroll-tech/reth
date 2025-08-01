@@ -1,53 +1,36 @@
-use super::ScrollNodeCore;
 use crate::{ScrollEthApi, ScrollEthApiError};
 
-use alloy_rpc_types_eth::transaction::TransactionRequest;
-use reth_evm::{block::BlockExecutorFactory, ConfigureEvm, EvmFactory, TxEnvFor};
-use reth_primitives_traits::NodePrimitives;
-use reth_provider::{errors::ProviderError, ProviderHeader, ProviderTx};
+use reth_evm::TxEnvFor;
 use reth_rpc_eth_api::{
-    helpers::{estimate::EstimateCall, Call, EthCall, LoadBlock, LoadState, SpawnBlocking},
-    FullEthApiTypes, RpcConvert, RpcTypes,
+    helpers::{estimate::EstimateCall, Call, EthCall},
+    RpcConvert, RpcNodeCore,
 };
 use reth_rpc_eth_types::error::FromEvmError;
-use revm::context::TxEnv;
-use scroll_alloy_evm::ScrollTransactionIntoTxEnv;
 
-impl<N> EthCall for ScrollEthApi<N>
+impl<N, Rpc> EthCall for ScrollEthApi<N, Rpc>
 where
-    Self: EstimateCall + LoadBlock + FullEthApiTypes,
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc:
+        RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, TxEnv = TxEnvFor<N::Evm>>,
 {
 }
 
-impl<N> EstimateCall for ScrollEthApi<N>
+impl<N, Rpc> EstimateCall for ScrollEthApi<N, Rpc>
 where
-    Self: Call,
-    Self::Error: From<ScrollEthApiError>,
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc:
+        RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, TxEnv = TxEnvFor<N::Evm>>,
 {
 }
 
-impl<N> Call for ScrollEthApi<N>
+impl<N, Rpc> Call for ScrollEthApi<N, Rpc>
 where
-    Self: LoadState<
-            Evm: ConfigureEvm<
-                Primitives: NodePrimitives<
-                    BlockHeader = ProviderHeader<Self::Provider>,
-                    SignedTx = ProviderTx<Self::Provider>,
-                >,
-                BlockExecutorFactory: BlockExecutorFactory<
-                    EvmFactory: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>>,
-                >,
-            >,
-            RpcConvert: RpcConvert<TxEnv = TxEnvFor<Self::Evm>, Network = Self::NetworkTypes>,
-            NetworkTypes: RpcTypes<TransactionRequest: From<TransactionRequest>>,
-            Error: FromEvmError<Self::Evm>
-                       + From<<Self::RpcConvert as RpcConvert>::Error>
-                       + From<ProviderError>,
-        > + SpawnBlocking,
-    Self::Error: From<ScrollEthApiError>,
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc:
+        RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, TxEnv = TxEnvFor<N::Evm>>,
 {
     #[inline]
     fn call_gas_limit(&self) -> u64 {

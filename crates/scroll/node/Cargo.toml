@@ -59,9 +59,11 @@ reth-scroll-txpool.workspace = true
 scroll-alloy-consensus.workspace = true
 scroll-alloy-evm.workspace = true
 scroll-alloy-hardforks.workspace = true
+scroll-alloy-network.workspace = true
 scroll-alloy-rpc-types-engine.workspace = true
 
 # misc
+clap.workspace = true
 eyre.workspace = true
 serde_json = { workspace = true, optional = true }
 tracing.workspace = true

@@ -65,7 +65,7 @@ where
     fn validate_version_specific_fields(
         &self,
         _version: EngineApiMessageVersion,
-        payload_or_attrs: PayloadOrAttributes<'_, Self::ExecutionData, ScrollPayloadAttributes>,
+        payload_or_attrs: PayloadOrAttributes<'_, Types::ExecutionData, ScrollPayloadAttributes>,
     ) -> Result<(), EngineObjectValidationError> {
         validate_scroll_payload_or_attributes(
             &payload_or_attrs,
@@ -95,17 +95,6 @@ where
 
         Ok(())
     }
-
-    fn validate_payload_attributes_against_header(
-        &self,
-        attr: &<Types as PayloadTypes>::PayloadAttributes,
-        header: &<Self::Block as Block>::Header,
-    ) -> Result<(), InvalidPayloadAttributesError> {
-        if attr.timestamp() < header.timestamp() {
-            return Err(InvalidPayloadAttributesError::InvalidTimestamp);
-        }
-        Ok(())
-    }
 }
 
 /// Validates the payload or attributes for Scroll.
@@ -125,9 +114,11 @@ fn validate_scroll_payload_or_attributes<Payload: ExecutionPayload>(
     Ok(())
 }
 
-impl PayloadValidator for ScrollEngineValidator {
+impl<Types> PayloadValidator<Types> for ScrollEngineValidator
+where
+    Types: PayloadTypes<ExecutionData = ExecutionData>,
+{
     type Block = ScrollBlock;
-    type ExecutionData = ExecutionData;
 
     fn ensure_well_formed_payload(
         &self,
@@ -162,5 +153,16 @@ impl PayloadValidator for ScrollEngineValidator {
 
         Err(PayloadError::BlockHash { execution: block_hash_no_turn, consensus: expected_hash }
             .into())
+    }
+
+    fn validate_payload_attributes_against_header(
+        &self,
+        attr: &Types::PayloadAttributes,
+        header: &<Self::Block as Block>::Header,
+    ) -> Result<(), InvalidPayloadAttributesError> {
+        if attr.timestamp() < header.timestamp() {
+            return Err(InvalidPayloadAttributesError::InvalidTimestamp);
+        }
+        Ok(())
     }
 }
