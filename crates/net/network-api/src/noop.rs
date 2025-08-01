@@ -7,7 +7,7 @@ use core::{fmt, marker::PhantomData};
 use std::net::{IpAddr, SocketAddr};
 
 use crate::{
-    block::{EthWireBlockListenerProvider, NewBlockWithPeer},
+    block::{EthWireProvider, NewBlockWithPeer},
     events::{NetworkPeersEvents, PeerEventStream},
     test_utils::{PeersHandle, PeersHandleProvider},
     BlockDownloaderProvider, DiscoveryEvent, NetworkError, NetworkEvent,
@@ -201,12 +201,18 @@ where
     }
 }
 
-impl<N: NetworkPrimitives> EthWireBlockListenerProvider for NoopNetwork<N> {
-    type Block = N::Block;
-
+impl<N: NetworkPrimitives> EthWireProvider<N> for NoopNetwork<N> {
     async fn eth_wire_block_listener(
         &self,
-    ) -> Result<EventStream<NewBlockWithPeer<Self::Block>>, RecvError> {
+    ) -> Result<EventStream<NewBlockWithPeer<N::Block>>, RecvError> {
+        unreachable!()
+    }
+
+    fn eth_wire_announce_block(
+        &self,
+        _block: <N as NetworkPrimitives>::NewBlockPayload,
+        _hash: alloy_primitives::B256,
+    ) {
         unreachable!()
     }
 }
