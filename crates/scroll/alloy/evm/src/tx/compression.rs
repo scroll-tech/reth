@@ -13,8 +13,8 @@ mod zstd_compression {
     use super::*;
     use std::io::Write;
 
-    use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
     use encoder_standard::{init_zstd_encoder, N_BLOCK_SIZE_TARGET};
+    use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
 
     /// Computes the compression ratio for the provided bytes.
     ///

@@ -11838,7 +11838,6 @@ dependencies = [
  "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
  "serde",
- "zstd",
 ]
 
 [[package]]
