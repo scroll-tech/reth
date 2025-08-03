@@ -22,12 +22,13 @@ reth-ethereum-forks.workspace = true
 reth-primitives-traits.workspace = true
 
 # ethereum
+alloy-consensus.workspace = true
+alloy-rpc-types-eth.workspace = true
 alloy-primitives = { workspace = true, features = ["getrandom"] }
 alloy-rpc-types-admin.workspace = true
 enr = { workspace = true, default-features = false, features = ["rust-secp256k1"] }
 
 # async
-async-trait.workspace = true
 futures.workspace = true
 tokio-stream.workspace = true
 
@@ -46,5 +47,7 @@ serde = [
     "alloy-primitives/serde",
     "enr/serde",
     "reth-ethereum-forks/serde",
+    "alloy-consensus/serde",
+    "alloy-rpc-types-eth/serde",
     "reth-primitives-traits/serde",
 ]

@@ -1,36 +1,29 @@
 //! Loads and formats Scroll transaction RPC response.
 
-use crate::{
-    eth::{ScrollEthApiInner, ScrollNodeCore},
-    ScrollEthApi, ScrollEthApiError, SequencerClient,
-};
+use crate::{ScrollEthApi, ScrollEthApiError, SequencerClient};
 use alloy_consensus::transaction::TransactionInfo;
 use alloy_primitives::{Bytes, B256};
 use reth_evm::execute::ProviderError;
-use reth_node_api::FullNodeComponents;
-use reth_provider::{
-    BlockReader, BlockReaderIdExt, ProviderTx, ReceiptProvider, TransactionsProvider,
-};
+use reth_provider::ReceiptProvider;
+use reth_rpc_convert::RpcConvert;
 use reth_rpc_eth_api::{
-    helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
-    try_into_scroll_tx_info, EthApiTypes, FromEthApiError, FullEthApiTypes, RpcNodeCore,
-    RpcNodeCoreExt, TxInfoMapper,
+    helpers::{spec::SignersForRpc, EthTransactions, LoadTransaction},
+    try_into_scroll_tx_info, FromEthApiError, RpcNodeCore, TxInfoMapper,
 };
 use reth_rpc_eth_types::utils::recover_raw_transaction;
 use reth_scroll_primitives::ScrollReceipt;
-use reth_transaction_pool::{PoolTransaction, TransactionOrigin, TransactionPool};
-use scroll_alloy_consensus::{ScrollTransactionInfo, ScrollTxEnvelope};
-use std::{
-    fmt::{Debug, Formatter},
-    sync::Arc,
+use reth_transaction_pool::{
+    AddedTransactionOutcome, PoolTransaction, TransactionOrigin, TransactionPool,
 };
+use scroll_alloy_consensus::{ScrollTransactionInfo, ScrollTxEnvelope};
+use std::fmt::{Debug, Formatter};
 
-impl<N> EthTransactions for ScrollEthApi<N>
+impl<N, Rpc> EthTransactions for ScrollEthApi<N, Rpc>
 where
-    Self: LoadTransaction<Provider: BlockReaderIdExt> + EthApiTypes<Error = ScrollEthApiError>,
-    N: ScrollNodeCore<Provider: BlockReader<Transaction = ProviderTx<Self::Provider>>>,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
-    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
+    fn signers(&self) -> &SignersForRpc<Self::Provider, Self::NetworkTypes> {
         self.inner.eth_api.signers()
     }
 
@@ -47,7 +40,7 @@ where
             tracing::debug!(target: "scroll::rpc::eth", hash = %pool_transaction.hash(), "forwarding raw transaction to sequencer");
 
             // Retain tx in local tx pool before forwarding to sequencer rpc, for local RPC usage.
-            let hash = self
+            let AddedTransactionOutcome { hash, .. } = self
                 .pool()
                 .add_transaction(TransactionOrigin::Local, pool_transaction.clone())
                 .await
@@ -69,7 +62,7 @@ where
         }
 
         // submit the transaction to the pool with a `Local` origin
-        let hash = self
+        let AddedTransactionOutcome { hash, .. } = self
             .pool()
             .add_transaction(TransactionOrigin::Local, pool_transaction)
             .await
@@ -79,17 +72,17 @@ where
     }
 }
 
-impl<N> LoadTransaction for ScrollEthApi<N>
+impl<N, Rpc> LoadTransaction for ScrollEthApi<N, Rpc>
 where
-    Self: SpawnBlocking + FullEthApiTypes + RpcNodeCoreExt,
-    N: ScrollNodeCore<Provider: TransactionsProvider, Pool: TransactionPool>,
-    Self::Pool: TransactionPool,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
 }
 
-impl<N> ScrollEthApi<N>
+impl<N, Rpc> ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     /// Returns the [`SequencerClient`] if one is set.
     pub fn raw_tx_forwarder(&self) -> Option<SequencerClient> {
@@ -100,26 +93,30 @@ where
 /// Scroll implementation of [`TxInfoMapper`].
 ///
 /// Receipt is fetched to extract the `l1_fee` for all transactions but L1 messages.
-#[derive(Clone)]
-pub struct ScrollTxInfoMapper<N: ScrollNodeCore>(Arc<ScrollEthApiInner<N>>);
+pub struct ScrollTxInfoMapper<Provider>(Provider);
 
-impl<N: ScrollNodeCore> Debug for ScrollTxInfoMapper<N> {
+impl<Provider: Clone> Clone for ScrollTxInfoMapper<Provider> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<Provider: Debug> Debug for ScrollTxInfoMapper<Provider> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScrollTxInfoMapper").finish()
     }
 }
 
-impl<N: ScrollNodeCore> ScrollTxInfoMapper<N> {
+impl<Provider> ScrollTxInfoMapper<Provider> {
     /// Creates [`ScrollTxInfoMapper`] that uses [`ReceiptProvider`] borrowed from given `eth_api`.
-    pub const fn new(eth_api: Arc<ScrollEthApiInner<N>>) -> Self {
-        Self(eth_api)
+    pub const fn new(provider: Provider) -> Self {
+        Self(provider)
     }
 }
 
-impl<N> TxInfoMapper<&ScrollTxEnvelope> for ScrollTxInfoMapper<N>
+impl<Provider> TxInfoMapper<&ScrollTxEnvelope> for ScrollTxInfoMapper<Provider>
 where
-    N: FullNodeComponents,
-    N::Provider: ReceiptProvider<Receipt = ScrollReceipt>,
+    Provider: ReceiptProvider<Receipt = ScrollReceipt>,
 {
     type Out = ScrollTransactionInfo;
     type Err = ProviderError;
@@ -129,6 +126,6 @@ where
         tx: &ScrollTxEnvelope,
         tx_info: TransactionInfo,
     ) -> Result<Self::Out, ProviderError> {
-        try_into_scroll_tx_info(self.0.eth_api.provider(), tx, tx_info)
+        try_into_scroll_tx_info(&self.0, tx, tx_info)
     }
 }

@@ -1,4 +1,5 @@
-use crate::{eth::ScrollNodeCore, ScrollEthApi};
+use crate::{ScrollEthApi, ScrollEthApiError};
+
 use alloy_consensus::BlockHeader;
 use alloy_eips::eip7840::BlobParams;
 use alloy_primitives::{Sealable, U256};
@@ -9,18 +10,21 @@ use reth_provider::{
     BaseFeeProvider, BlockIdReader, ChainSpecProvider, HeaderProvider, ProviderHeader,
     StateProviderFactory,
 };
+use reth_rpc_convert::RpcConvert;
 use reth_rpc_eth_api::{
     helpers::{EthFees, LoadFee},
     FromEthApiError, RpcNodeCore, RpcNodeCoreExt,
 };
-use reth_rpc_eth_types::{fee_history::calculate_reward_percentiles_for_block, EthApiError};
+use reth_rpc_eth_types::{
+    error::FromEvmError, fee_history::calculate_reward_percentiles_for_block, EthApiError,
+};
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_evm::ScrollBaseFeeProvider;
 use scroll_alloy_hardforks::ScrollHardforks;
 use std::future::Future;
 use tracing::debug;
 
-impl<N, NetworkT> EthFees for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> EthFees for ScrollEthApi<N, Rpc>
 where
     Self: LoadFee<
         Provider: StateProviderFactory
@@ -30,7 +34,9 @@ where
                            + ChainConfig<Config = ScrollChainConfig>,
         >,
     >,
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
     #[allow(clippy::manual_async_fn)]
     fn fee_history(

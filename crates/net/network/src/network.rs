@@ -14,7 +14,7 @@ use reth_eth_wire::{
 };
 use reth_ethereum_forks::Head;
 use reth_network_api::{
-    block::{EthWireBlockListenerProvider, NewBlockWithPeer},
+    block::{EthWireProvider, NewBlockWithPeer},
     events::{NetworkPeersEvents, PeerEvent, PeerEventStream},
     test_utils::{PeersHandle, PeersHandleProvider},
     BlockDownloaderProvider, DiscoveryEvent, NetworkError, NetworkEvent,
@@ -225,15 +225,17 @@ impl<N: NetworkPrimitives> NetworkEventListenerProvider for NetworkHandle<N> {
     }
 }
 
-impl<N: NetworkPrimitives> EthWireBlockListenerProvider for NetworkHandle<N> {
-    type Block = <N as NetworkPrimitives>::Block;
-
+impl<N: NetworkPrimitives> EthWireProvider<N> for NetworkHandle<N> {
     async fn eth_wire_block_listener(
         &self,
-    ) -> Result<EventStream<NewBlockWithPeer<Self::Block>>, oneshot::error::RecvError> {
+    ) -> Result<EventStream<NewBlockWithPeer<N::Block>>, oneshot::error::RecvError> {
         let (tx, rx) = oneshot::channel();
         self.send_message(NetworkHandleMessage::EthWireBlockListener(tx));
         rx.await
+    }
+
+    fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256) {
+        self.announce_block(block, hash)
     }
 }
 

@@ -35,7 +35,7 @@ impl Default for ScrollPayloadBuilderBuilder {
 
 const SCROLL_GAS_LIMIT: u64 = 20_000_000;
 const SCROLL_PAYLOAD_BUILDING_DURATION: Duration = Duration::from_secs(1);
-const SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT: u64 = 122_880;
+pub(crate) const SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT: u64 = 122_880;
 
 impl<Txs> ScrollPayloadBuilderBuilder<Txs> {
     /// A helper method to initialize [`reth_scroll_payload::ScrollPayloadBuilder`] with the

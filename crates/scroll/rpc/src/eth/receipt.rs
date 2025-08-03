@@ -2,42 +2,48 @@
 
 use crate::{ScrollEthApi, ScrollEthApiError};
 use alloy_rpc_types_eth::{Log, TransactionReceipt};
-use reth_node_api::{FullNodeComponents, NodeTypes};
-use reth_primitives::TransactionMeta;
-use reth_provider::{ReceiptProvider, TransactionsProvider};
-use reth_rpc_eth_api::{helpers::LoadReceipt, FromEthApiError, RpcReceipt};
-use reth_rpc_eth_types::{receipt::build_receipt, EthApiError};
-
-use reth_scroll_chainspec::ScrollChainSpec;
+use reth_primitives_traits::NodePrimitives;
+use reth_rpc_convert::{
+    transaction::{ConvertReceiptInput, ReceiptConverter},
+    RpcConvert,
+};
+use reth_rpc_eth_api::{helpers::LoadReceipt, RpcNodeCore};
+use reth_rpc_eth_types::receipt::build_receipt;
 use reth_scroll_primitives::{ScrollReceipt, ScrollTransactionSigned};
 use scroll_alloy_consensus::ScrollReceiptEnvelope;
 use scroll_alloy_rpc_types::{ScrollTransactionReceipt, ScrollTransactionReceiptFields};
+use std::fmt::Debug;
 
-impl<N> LoadReceipt for ScrollEthApi<N>
+impl<N, Rpc> LoadReceipt for ScrollEthApi<N, Rpc>
 where
-    Self: Send + Sync,
-    N: FullNodeComponents<Types: NodeTypes<ChainSpec = ScrollChainSpec>>,
-    Self::Provider: TransactionsProvider<Transaction = ScrollTransactionSigned>
-        + ReceiptProvider<Receipt = ScrollReceipt>,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
-    async fn build_transaction_receipt(
-        &self,
-        tx: ScrollTransactionSigned,
-        meta: TransactionMeta,
-        receipt: ScrollReceipt,
-    ) -> Result<RpcReceipt<Self::NetworkTypes>, Self::Error> {
-        let all_receipts = self
-            .inner
-            .eth_api
-            .cache()
-            .get_receipts(meta.block_hash)
-            .await
-            .map_err(Self::Error::from_eth_err)?
-            .ok_or(Self::Error::from_eth_err(EthApiError::HeaderNotFound(
-                meta.block_hash.into(),
-            )))?;
+}
 
-        Ok(ScrollReceiptBuilder::new(&tx, meta, &receipt, &all_receipts)?.build())
+/// Converter for Scroll receipts.
+#[derive(Debug, Default, Clone)]
+#[non_exhaustive]
+pub struct ScrollReceiptConverter;
+
+impl<N> ReceiptConverter<N> for ScrollReceiptConverter
+where
+    N: NodePrimitives<SignedTx = ScrollTransactionSigned, Receipt = ScrollReceipt>,
+{
+    type RpcReceipt = ScrollTransactionReceipt;
+    type Error = ScrollEthApiError;
+
+    fn convert_receipts(
+        &self,
+        inputs: Vec<ConvertReceiptInput<'_, N>>,
+    ) -> Result<Vec<Self::RpcReceipt>, Self::Error> {
+        let mut receipts = Vec::with_capacity(inputs.len());
+
+        for input in inputs {
+            receipts.push(ScrollReceiptBuilder::new(input)?.build());
+        }
+
+        Ok(receipts)
     }
 }
 
@@ -52,35 +58,31 @@ pub struct ScrollReceiptBuilder {
 
 impl ScrollReceiptBuilder {
     /// Returns a new builder.
-    pub fn new(
-        transaction: &ScrollTransactionSigned,
-        meta: TransactionMeta,
-        receipt: &ScrollReceipt,
-        all_receipts: &[ScrollReceipt],
-    ) -> Result<Self, ScrollEthApiError> {
+    pub fn new<N>(input: ConvertReceiptInput<'_, N>) -> Result<Self, ScrollEthApiError>
+    where
+        N: NodePrimitives<SignedTx = ScrollTransactionSigned, Receipt = ScrollReceipt>,
+    {
         let core_receipt =
-            build_receipt(transaction, meta, receipt, all_receipts, None, |receipt_with_bloom| {
-                match receipt {
-                    ScrollReceipt::Legacy(_) => {
-                        ScrollReceiptEnvelope::<Log>::Legacy(receipt_with_bloom)
-                    }
-                    ScrollReceipt::Eip2930(_) => {
-                        ScrollReceiptEnvelope::<Log>::Eip2930(receipt_with_bloom)
-                    }
-                    ScrollReceipt::Eip1559(_) => {
-                        ScrollReceiptEnvelope::<Log>::Eip1559(receipt_with_bloom)
-                    }
-                    ScrollReceipt::Eip7702(_) => {
-                        ScrollReceiptEnvelope::<Log>::Eip7702(receipt_with_bloom)
-                    }
-                    ScrollReceipt::L1Message(_) => {
-                        ScrollReceiptEnvelope::<Log>::L1Message(receipt_with_bloom)
-                    }
+            build_receipt(&input, None, |receipt_with_bloom| match input.receipt.as_ref() {
+                ScrollReceipt::Legacy(_) => {
+                    ScrollReceiptEnvelope::<Log>::Legacy(receipt_with_bloom)
                 }
-            })?;
+                ScrollReceipt::Eip2930(_) => {
+                    ScrollReceiptEnvelope::<Log>::Eip2930(receipt_with_bloom)
+                }
+                ScrollReceipt::Eip1559(_) => {
+                    ScrollReceiptEnvelope::<Log>::Eip1559(receipt_with_bloom)
+                }
+                ScrollReceipt::Eip7702(_) => {
+                    ScrollReceiptEnvelope::<Log>::Eip7702(receipt_with_bloom)
+                }
+                ScrollReceipt::L1Message(_) => {
+                    ScrollReceiptEnvelope::<Log>::L1Message(receipt_with_bloom)
+                }
+            });
 
         let scroll_receipt_fields =
-            ScrollTransactionReceiptFields { l1_fee: Some(receipt.l1_fee().saturating_to()) };
+            ScrollTransactionReceiptFields { l1_fee: Some(input.receipt.l1_fee().saturating_to()) };
 
         Ok(Self { core_receipt, scroll_receipt_fields })
     }
