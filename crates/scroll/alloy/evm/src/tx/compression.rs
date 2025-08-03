@@ -14,34 +14,7 @@ mod zstd_compression {
     use std::io::Write;
 
     use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
-    use zstd::{
-        stream::Encoder,
-        zstd_safe::{CParameter, ParamSwitch},
-    };
-
-    /// The maximum size of the compression window in bytes (`2^CL_WINDOW_LIMIT`).
-    const CL_WINDOW_LIMIT: u32 = 22;
-
-    /// The zstd block size target.
-    const N_BLOCK_SIZE_TARGET: u32 = 124 * 1024;
-
-    fn compressor(target_block_size: u32) -> Encoder<'static, Vec<u8>> {
-        let mut encoder = Encoder::new(Vec::new(), 0).expect("Failed to create zstd encoder");
-        encoder
-            .set_parameter(CParameter::LiteralCompressionMode(ParamSwitch::Disable))
-            .expect("Failed to set literal compression mode");
-        encoder
-            .set_parameter(CParameter::WindowLog(CL_WINDOW_LIMIT))
-            .expect("Failed to set window log");
-        encoder
-            .set_parameter(CParameter::TargetCBlockSize(target_block_size))
-            .expect("Failed to set target block size");
-        encoder.include_checksum(false).expect("Failed to disable checksum");
-        encoder.include_magicbytes(false).expect("Failed to disable magic bytes");
-        encoder.include_dictid(false).expect("Failed to disable dictid");
-        encoder.include_contentsize(true).expect("Failed to include content size");
-        encoder
-    }
+    use encoder_standard::{init_zstd_encoder, N_BLOCK_SIZE_TARGET};
 
     /// Computes the compression ratio for the provided bytes.
     ///
@@ -54,7 +27,7 @@ mod zstd_compression {
         }
 
         // Instantiate the compressor
-        let mut compressor = compressor(N_BLOCK_SIZE_TARGET);
+        let mut compressor = init_zstd_encoder(N_BLOCK_SIZE_TARGET);
 
         // Set the pledged source size to the length of the bytes
         // and write the bytes to the compressor.
