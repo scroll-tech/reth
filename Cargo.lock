@@ -11342,7 +11342,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm#720ee7802e5ad695ac1f8699bbab9c9f2424417f"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Fl1-message-validation-pre-execution#2eda99940b93dee236ec003e8cdc57ef7ec1e7be"
 dependencies = [
  "auto_impl",
  "enumn",
