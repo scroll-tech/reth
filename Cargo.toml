@@ -613,7 +613,7 @@ mini-moka = "0.10"
 tar-no-std = { version = "0.3.2", default-features = false }
 miniz_oxide = { version = "0.8.4", default-features = false }
 chrono = "0.4.41"
-encoder-standard = { git = "https://github.com/scroll-tech/da-codec", branch = "add-license-for-libzstd", default-features = false, branch = "main" }
+encoder-standard = { git = "https://github.com/scroll-tech/da-codec", default-features = false, branch = "add-license-for-libzstd" }
 
 # metrics
 metrics = "0.24.0"
