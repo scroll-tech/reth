@@ -4567,7 +4567,7 @@ dependencies = [
  "potential_utf",
  "yoke 0.8.0",
  "zerofrom",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -4580,7 +4580,7 @@ dependencies = [
  "litemap 0.8.0",
  "tinystr 0.8.1",
  "writeable 0.6.1",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -4646,7 +4646,7 @@ dependencies = [
  "icu_properties 2.0.1",
  "icu_provider 2.0.0",
  "smallvec",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -4689,7 +4689,7 @@ dependencies = [
  "icu_provider 2.0.0",
  "potential_utf",
  "zerotrie",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -4735,7 +4735,7 @@ dependencies = [
  "yoke 0.8.0",
  "zerofrom",
  "zerotrie",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -6666,7 +6666,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5a7c30837279ca13e7c867e9e40053bc68740f988cb07f7ca6df43cc734b585"
 dependencies = [
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -12905,7 +12905,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d4f6d1145dcb577acf783d4e601bc1d76a13337bb54e6233add580b07344c8b"
 dependencies = [
  "displaydoc",
- "zerovec 0.11.3",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -14624,9 +14624,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.3"
+version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdbb9122ea75b11bf96e7492afb723e8a7fbe12c67417aa95e7e3d18144d37cd"
+checksum = "e7aa2bd55086f1ab526693ecbe444205da57e25f4489879da80635a46d90e73b"
 dependencies = [
  "yoke 0.8.0",
  "zerofrom",
