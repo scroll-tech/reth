@@ -360,9 +360,9 @@ impl<NetworkT> ScrollEthApiBuilder<NetworkT> {
 
     /// With whether local transactions should be propagated.
     pub const fn with_propagate_local_transactions(
-        mut self,
+        &mut self,
         propagate_local_transactions: bool,
-    ) -> Self {
+    ) -> &mut Self {
         self.propagate_local_transactions = propagate_local_transactions;
         self
     }
