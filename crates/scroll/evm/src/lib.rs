@@ -23,6 +23,9 @@ pub use base_fee::{
 mod receipt;
 pub use receipt::ScrollRethReceiptBuilder;
 
+mod withdraw_root;
+pub use withdraw_root::LoadWithdrawRoot;
+
 use crate::build::ScrollBlockAssembler;
 use alloc::sync::Arc;
 
