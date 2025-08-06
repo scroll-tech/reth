@@ -493,6 +493,11 @@ where
         }
     }
 
+    /// Returns a mutable reference to the eth API builder.
+    pub fn eth_api_builder(&mut self) -> &mut EthB {
+        &mut self.eth_api_builder
+    }
+
     /// Maps the [`EngineApiBuilder`] builder type.
     pub fn with_engine_api<T>(
         self,

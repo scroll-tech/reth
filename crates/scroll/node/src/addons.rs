@@ -17,7 +17,10 @@ use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
 use reth_scroll_evm::ScrollNextBlockEnvAttributes;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_scroll_rpc::{eth::ScrollEthApiBuilder, ScrollEthApiError};
+use reth_scroll_rpc::{
+    eth::{ScrollEthApiBuilder, DEFAULT_MIN_SUGGESTED_PRIORITY_FEE},
+    ScrollEthApiError,
+};
 use revm::context::TxEnv;
 use scroll_alloy_evm::ScrollTransactionIntoTxEnv;
 use scroll_alloy_network::Scroll;
@@ -137,6 +140,8 @@ pub struct ScrollAddOnsBuilder<NetworkT, RpcMiddleware = Identity> {
     min_suggested_priority_fee: u64,
     /// Maximum payload size
     payload_size_limit: u64,
+    /// whether local transactions should be propagated.
+    propagate_local_transactions: bool,
     /// Marker for network types.
     _nt: PhantomData<NetworkT>,
     /// RPC middleware to use
@@ -147,9 +152,9 @@ impl<NetworkT> Default for ScrollAddOnsBuilder<NetworkT> {
     fn default() -> Self {
         Self {
             sequencer_url: None,
+            min_suggested_priority_fee: DEFAULT_MIN_SUGGESTED_PRIORITY_FEE,
             payload_size_limit: SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT,
-            // TODO (scroll): update with default values.
-            min_suggested_priority_fee: 1_000_000,
+            propagate_local_transactions: true,
             _nt: PhantomData,
             rpc_middleware: Identity::new(),
         }
@@ -178,13 +183,30 @@ impl<NetworkT, RpcMiddleWare> ScrollAddOnsBuilder<NetworkT, RpcMiddleWare> {
         self
     }
 
+    /// With whether local transactions should be propagated.
+    pub const fn with_propagate_local_transactions(
+        mut self,
+        propagate_local_transactions: bool,
+    ) -> Self {
+        self.propagate_local_transactions = propagate_local_transactions;
+        self
+    }
+
     /// Configure the RPC middleware to use
     pub fn with_rpc_middleware<T>(self, rpc_middleware: T) -> ScrollAddOnsBuilder<NetworkT, T> {
-        let Self { sequencer_url, min_suggested_priority_fee, payload_size_limit, _nt, .. } = self;
+        let Self {
+            sequencer_url,
+            min_suggested_priority_fee,
+            payload_size_limit,
+            propagate_local_transactions,
+            _nt,
+            ..
+        } = self;
         ScrollAddOnsBuilder {
             sequencer_url,
             payload_size_limit,
             min_suggested_priority_fee,
+            propagate_local_transactions,
             _nt,
             rpc_middleware,
         }
