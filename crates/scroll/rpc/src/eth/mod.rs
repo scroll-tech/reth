@@ -65,12 +65,14 @@ impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApi<N, Rpc> {
         sequencer_client: Option<SequencerClient>,
         min_suggested_priority_fee: U256,
         payload_size_limit: u64,
+        propagate_local_transactions: bool,
     ) -> Self {
         let inner = Arc::new(ScrollEthApiInner {
             eth_api,
             min_suggested_priority_fee,
             payload_size_limit,
             sequencer_client,
+            propagate_local_transactions,
         });
         Self { inner }
     }
@@ -277,6 +279,8 @@ pub struct ScrollEthApiInner<N: ScrollNodeCore, Rpc: RpcConvert> {
     min_suggested_priority_fee: U256,
     /// Maximum payload size
     payload_size_limit: u64,
+    /// whether local transactions should be propagated.
+    propagate_local_transactions: bool,
 }
 
 impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApiInner<N, Rpc> {
@@ -379,7 +383,13 @@ where
     type EthApi = ScrollEthApi<N, ScrollRpcConvert<N, NetworkT>>;
 
     async fn build_eth_api(self, ctx: EthApiCtx<'_, N>) -> eyre::Result<Self::EthApi> {
-        let Self { min_suggested_priority_fee, payload_size_limit, sequencer_url, .. } = self;
+        let Self {
+            min_suggested_priority_fee,
+            payload_size_limit,
+            sequencer_url,
+            propagate_local_transactions,
+            ..
+        } = self;
         let rpc_converter = RpcConverter::new(ScrollReceiptConverter::default())
             .with_mapper(ScrollTxInfoMapper::new(ctx.components.provider().clone()));
 
@@ -400,6 +410,7 @@ where
             sequencer_client,
             U256::from(min_suggested_priority_fee),
             payload_size_limit,
+            propagate_local_transactions,
         ))
     }
 }
