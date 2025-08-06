@@ -3156,7 +3156,7 @@ checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 [[package]]
 name = "encoder-standard"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/da-codec?branch=add-license-for-libzstd#2ed98a7b7c26555a73c3f39a30c5de198f8c63b2"
+source = "git+https://github.com/scroll-tech/da-codec#2cfec8c99547b68dc64e2b020fa2b83cfb9c0e99"
 dependencies = [
  "zstd",
 ]
