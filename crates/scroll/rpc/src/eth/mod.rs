@@ -316,6 +316,8 @@ pub struct ScrollEthApiBuilder<NetworkT = Scroll> {
     min_suggested_priority_fee: u64,
     /// Maximum payload size
     payload_size_limit: u64,
+    /// whether local transactions should be propagated.
+    propagate_local_transactions: bool,
     /// Marker for network types.
     _nt: PhantomData<NetworkT>,
 }
@@ -326,6 +328,7 @@ impl<NetworkT> Default for ScrollEthApiBuilder<NetworkT> {
             sequencer_url: None,
             min_suggested_priority_fee: DEFAULT_MIN_SUGGESTED_PRIORITY_FEE,
             payload_size_limit: DEFAULT_PAYLOAD_SIZE_LIMIT,
+            propagate_local_transactions: true,
             _nt: PhantomData,
         }
     }
@@ -352,6 +355,12 @@ impl<NetworkT> ScrollEthApiBuilder<NetworkT> {
     /// With payload size limit
     pub const fn with_payload_size_limit(mut self, limit: u64) -> Self {
         self.payload_size_limit = limit;
+        self
+    }
+
+    /// With whether local transactions should be propagated.
+    pub const fn with_propagate_local_transactions(mut self, propagate_local_transactions: bool) -> Self {
+        self.propagate_local_transactions = propagate_local_transactions;
         self
     }
 }
