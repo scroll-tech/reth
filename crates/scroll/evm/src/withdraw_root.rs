@@ -4,7 +4,7 @@ use revm::{database::State, Database};
 const L2_MESSAGE_QUEUE_ADDRESS: Address = address!("0x5300000000000000000000000000000000000000");
 const WITHDRAW_TRIE_ROOT_SLOT: U256 = U256::ZERO;
 
-/// Instance that implements the trait can load the L2MessageQueue withdraw root in state.
+/// Instance that implements the trait can load the `L2MessageQueue` withdraw root in state.
 pub trait LoadWithdrawRoot<DB: Database> {
     /// Load the withdrawal root.
     fn load_withdraw_root(&mut self) -> Result<(), DB::Error>;

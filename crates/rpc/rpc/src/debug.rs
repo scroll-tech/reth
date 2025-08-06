@@ -640,7 +640,7 @@ where
 
                 let mut witness_record = ExecutionWitnessRecord::default();
 
-                let mut withdraw_root_res = Ok(());
+                let mut withdraw_root_res: Result<_, reth_errors::ProviderError> = Ok(());
                 let _ = block_executor
                     .execute_with_state_closure(&(*block).clone(), |statedb: &mut State<_>| {
                         #[cfg(feature = "scroll")]
