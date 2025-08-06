@@ -17,7 +17,10 @@ use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
 use reth_scroll_evm::ScrollNextBlockEnvAttributes;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_scroll_rpc::{eth::{ScrollEthApiBuilder, DEFAULT_MIN_SUGGESTED_PRIORITY_FEE}, ScrollEthApiError};
+use reth_scroll_rpc::{
+    eth::{ScrollEthApiBuilder, DEFAULT_MIN_SUGGESTED_PRIORITY_FEE},
+    ScrollEthApiError,
+};
 use revm::context::TxEnv;
 use scroll_alloy_evm::ScrollTransactionIntoTxEnv;
 use scroll_alloy_network::Scroll;

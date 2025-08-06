@@ -442,7 +442,7 @@ pub struct RpcAddOns<
     /// Additional RPC add-ons.
     pub hooks: RpcHooks<Node, EthB::EthApi>,
     /// Builder for `EthApi`
-    eth_api_builder: EthB,
+    pub eth_api_builder: EthB,
     /// Engine validator
     engine_validator_builder: EV,
     /// Builder for `EngineApi`
@@ -491,11 +491,6 @@ where
             engine_api_builder,
             rpc_middleware,
         }
-    }
-
-    /// Returns a mutable reference to the eth API builder.
-    pub fn eth_api_builder(&mut self) -> &mut EthB {
-        &mut self.eth_api_builder
     }
 
     /// Maps the [`EngineApiBuilder`] builder type.

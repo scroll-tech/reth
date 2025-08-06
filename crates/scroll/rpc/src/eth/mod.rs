@@ -307,7 +307,7 @@ pub const DEFAULT_MIN_SUGGESTED_PRIORITY_FEE: u64 = 100;
 pub const DEFAULT_PAYLOAD_SIZE_LIMIT: u64 = 122_880;
 
 /// A type that knows how to build a [`ScrollEthApi`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ScrollEthApiBuilder<NetworkT = Scroll> {
     /// Sequencer client, configured to forward submitted transactions to sequencer of given Scroll
     /// network.
@@ -359,7 +359,10 @@ impl<NetworkT> ScrollEthApiBuilder<NetworkT> {
     }
 
     /// With whether local transactions should be propagated.
-    pub const fn with_propagate_local_transactions(mut self, propagate_local_transactions: bool) -> Self {
+    pub const fn with_propagate_local_transactions(
+        mut self,
+        propagate_local_transactions: bool,
+    ) -> Self {
         self.propagate_local_transactions = propagate_local_transactions;
         self
     }
