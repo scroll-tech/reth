@@ -1,52 +1,42 @@
 //! Scroll-Reth `eth_` endpoint implementation.
 
-use alloy_primitives::U256;
-use reth_chainspec::{EthChainSpec, EthereumHardforks};
-use reth_evm::ConfigureEvm;
-use reth_network_api::NetworkInfo;
-use reth_node_api::FullNodeComponents;
-use reth_provider::{
-    BlockNumReader, BlockReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider,
-    ProviderBlock, ProviderHeader, ProviderReceipt, ProviderTx, StageCheckpointReader,
-    StateProviderFactory,
+use crate::{
+    eth::{receipt::ScrollReceiptConverter, transaction::ScrollTxInfoMapper},
+    ScrollEthApiError, SequencerClient,
 };
+use alloy_primitives::U256;
+use eyre::WrapErr;
+pub use receipt::ScrollReceiptBuilder;
+use reth_evm::ConfigureEvm;
+use reth_node_api::{FullNodeComponents, FullNodeTypes, HeaderTy};
+use reth_node_builder::rpc::{EthApiBuilder, EthApiCtx};
+use reth_provider::{BlockReader, ProviderHeader, ProviderTx};
 use reth_rpc::eth::{core::EthApiInner, DevSigner};
+use reth_rpc_convert::{RpcConvert, RpcConverter, RpcTypes, SignableTxRequest};
 use reth_rpc_eth_api::{
     helpers::{
-        AddDevSigners, EthApiSpec, EthFees, EthSigner, EthState, LoadBlock, LoadFee, LoadState,
-        SpawnBlocking, Trace,
+        pending_block::BuildPendingEnv, spec::SignersForApi, AddDevSigners, EthApiSpec, EthState,
+        LoadFee, LoadState, SpawnBlocking, Trace,
     },
-    EthApiTypes, FullEthApiServer, RpcConverter, RpcNodeCore, RpcNodeCoreExt,
+    EthApiTypes, FullEthApiServer, RpcNodeCore, RpcNodeCoreExt,
 };
-use reth_rpc_eth_types::{EthStateCache, FeeHistoryCache, GasPriceOracle};
+use reth_rpc_eth_types::{error::FromEvmError, EthStateCache, FeeHistoryCache, GasPriceOracle};
 use reth_tasks::{
     pool::{BlockingTaskGuard, BlockingTaskPool},
     TaskSpawner,
 };
-use reth_transaction_pool::TransactionPool;
+use scroll_alloy_network::Scroll;
 use std::{fmt, marker::PhantomData, sync::Arc};
-
-use crate::{eth::transaction::ScrollTxInfoMapper, ScrollEthApiError};
-pub use receipt::ScrollReceiptBuilder;
-use reth_node_builder::rpc::{EthApiBuilder, EthApiCtx};
-use reth_primitives_traits::NodePrimitives;
-use reth_rpc_eth_types::error::FromEvmError;
-use reth_scroll_primitives::ScrollPrimitives;
-use scroll_alloy_network::{Network, Scroll};
 
 mod block;
 mod call;
+mod fee;
 mod pending_block;
 pub mod receipt;
 pub mod transaction;
 
 /// Adapter for [`EthApiInner`], which holds all the data required to serve core `eth_` API.
-pub type EthApiNodeBackend<N> = EthApiInner<
-    <N as RpcNodeCore>::Provider,
-    <N as RpcNodeCore>::Pool,
-    <N as RpcNodeCore>::Network,
-    <N as RpcNodeCore>::Evm,
->;
+pub type EthApiNodeBackend<N, Rpc> = EthApiInner<N, Rpc>;
 
 /// A helper trait with requirements for [`RpcNodeCore`] to be used in [`ScrollEthApi`].
 pub trait ScrollNodeCore: RpcNodeCore<Provider: BlockReader> {}
@@ -63,75 +53,74 @@ impl<T> ScrollNodeCore for T where T: RpcNodeCore<Provider: BlockReader> {}
 /// This type implements the [`FullEthApi`](reth_rpc_eth_api::helpers::FullEthApi) by implemented
 /// all the `Eth` helper traits and prerequisite traits.
 #[derive(Clone)]
-pub struct ScrollEthApi<N: ScrollNodeCore, NetworkT = Scroll> {
+pub struct ScrollEthApi<N: RpcNodeCore, Rpc: RpcConvert> {
     /// Gateway to node's core components.
-    inner: Arc<ScrollEthApiInner<N>>,
-    /// Marker for the network types.
-    _nt: PhantomData<NetworkT>,
-    tx_resp_builder: RpcConverter<NetworkT, N::Evm, ScrollEthApiError, ScrollTxInfoMapper<N>>,
+    inner: Arc<ScrollEthApiInner<N, Rpc>>,
 }
 
-impl<N: ScrollNodeCore, NetworkT> ScrollEthApi<N, NetworkT> {
+impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApi<N, Rpc> {
     /// Creates a new [`ScrollEthApi`].
-    pub fn new(eth_api: EthApiNodeBackend<N>) -> Self {
-        let inner = Arc::new(ScrollEthApiInner { eth_api });
-        Self {
-            inner: inner.clone(),
-            _nt: PhantomData,
-            tx_resp_builder: RpcConverter::with_mapper(ScrollTxInfoMapper::new(inner)),
-        }
+    pub fn new(
+        eth_api: EthApiNodeBackend<N, Rpc>,
+        sequencer_client: Option<SequencerClient>,
+        min_suggested_priority_fee: U256,
+        payload_size_limit: u64,
+    ) -> Self {
+        let inner = Arc::new(ScrollEthApiInner {
+            eth_api,
+            min_suggested_priority_fee,
+            payload_size_limit,
+            sequencer_client,
+        });
+        Self { inner }
     }
 }
 
-impl<N> ScrollEthApi<N>
+impl<N, Rpc> ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore<
-        Provider: BlockReaderIdExt
-                      + ChainSpecProvider
-                      + CanonStateSubscriptions<Primitives = ScrollPrimitives>
-                      + Clone
-                      + 'static,
-    >,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     /// Returns a reference to the [`EthApiNodeBackend`].
-    pub fn eth_api(&self) -> &EthApiNodeBackend<N> {
+    pub fn eth_api(&self) -> &EthApiNodeBackend<N, Rpc> {
         self.inner.eth_api()
     }
 
+    /// Returns the configured sequencer client, if any.
+    pub fn sequencer_client(&self) -> Option<&SequencerClient> {
+        self.inner.sequencer_client()
+    }
+
     /// Return a builder for the [`ScrollEthApi`].
-    pub const fn builder() -> ScrollEthApiBuilder {
+    pub fn builder() -> ScrollEthApiBuilder {
         ScrollEthApiBuilder::new()
     }
 }
 
-impl<N, NetworkT> EthApiTypes for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> EthApiTypes for ScrollEthApi<N, Rpc>
 where
-    Self: Send + Sync + fmt::Debug,
-    N: ScrollNodeCore,
-    NetworkT: Network + Clone + fmt::Debug,
-    <N as RpcNodeCore>::Evm: fmt::Debug,
-    <N as RpcNodeCore>::Primitives: fmt::Debug,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     type Error = ScrollEthApiError;
-    type NetworkTypes = Scroll;
-    type RpcConvert = RpcConverter<NetworkT, N::Evm, ScrollEthApiError, ScrollTxInfoMapper<N>>;
+    type NetworkTypes = Rpc::Network;
+    type RpcConvert = Rpc;
 
     fn tx_resp_builder(&self) -> &Self::RpcConvert {
-        &self.tx_resp_builder
+        self.inner.eth_api.tx_resp_builder()
     }
 }
 
-impl<N, NetworkT> RpcNodeCore for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> RpcNodeCore for ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore,
-    NetworkT: Network,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     type Primitives = N::Primitives;
     type Provider = N::Provider;
     type Pool = N::Pool;
     type Evm = <N as RpcNodeCore>::Evm;
     type Network = <N as RpcNodeCore>::Network;
-    type PayloadBuilder = ();
 
     #[inline]
     fn pool(&self) -> &Self::Pool {
@@ -149,38 +138,29 @@ where
     }
 
     #[inline]
-    fn payload_builder(&self) -> &Self::PayloadBuilder {
-        &()
-    }
-
-    #[inline]
     fn provider(&self) -> &Self::Provider {
         self.inner.eth_api.provider()
     }
 }
 
-impl<N, NetworkT> RpcNodeCoreExt for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> RpcNodeCoreExt for ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore,
-    NetworkT: Network,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     #[inline]
-    fn cache(&self) -> &EthStateCache<ProviderBlock<N::Provider>, ProviderReceipt<N::Provider>> {
+    fn cache(&self) -> &EthStateCache<N::Primitives> {
         self.inner.eth_api.cache()
     }
 }
 
-impl<N, NetworkT> EthApiSpec for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> EthApiSpec for ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore<
-        Provider: ChainSpecProvider<ChainSpec: EthereumHardforks>
-                      + BlockNumReader
-                      + StageCheckpointReader,
-        Network: NetworkInfo,
-    >,
-    NetworkT: Network,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     type Transaction = ProviderTx<Self::Provider>;
+    type Rpc = Rpc::Network;
 
     #[inline]
     fn starting_block(&self) -> U256 {
@@ -188,18 +168,15 @@ where
     }
 
     #[inline]
-    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner<ProviderTx<Self::Provider>>>>> {
+    fn signers(&self) -> &SignersForApi<Self> {
         self.inner.eth_api.signers()
     }
 }
 
-impl<N, NetworkT> SpawnBlocking for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> SpawnBlocking for ScrollEthApi<N, Rpc>
 where
-    Self: Send + Sync + Clone + 'static,
-    N: ScrollNodeCore,
-    NetworkT: Network,
-    <N as RpcNodeCore>::Evm: fmt::Debug,
-    <N as RpcNodeCore>::Primitives: fmt::Debug,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     #[inline]
     fn io_task_spawner(&self) -> impl TaskSpawner {
@@ -217,14 +194,11 @@ where
     }
 }
 
-impl<N, NetworkT> LoadFee for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> LoadFee for ScrollEthApi<N, Rpc>
 where
-    Self: LoadBlock<Provider = N::Provider>,
-    N: ScrollNodeCore<
-        Provider: BlockReaderIdExt
-                      + ChainSpecProvider<ChainSpec: EthChainSpec + EthereumHardforks>
-                      + StateProviderFactory,
-    >,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
     #[inline]
     fn gas_oracle(&self) -> &GasPriceOracle<Self::Provider> {
@@ -235,24 +209,29 @@ where
     fn fee_history_cache(&self) -> &FeeHistoryCache<ProviderHeader<N::Provider>> {
         self.inner.eth_api.fee_history_cache()
     }
+
+    async fn suggested_priority_fee(&self) -> Result<U256, Self::Error> {
+        let min_tip = U256::from(self.inner.min_suggested_priority_fee);
+        self.inner
+            .eth_api
+            .gas_oracle()
+            .scroll_suggest_tip_cap(min_tip, self.inner.payload_size_limit)
+            .await
+            .map_err(Into::into)
+    }
 }
 
-impl<N, NetworkT> LoadState for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> LoadState for ScrollEthApi<N, Rpc>
 where
-    N: ScrollNodeCore<
-        Provider: StateProviderFactory + ChainSpecProvider<ChainSpec: EthereumHardforks>,
-        Pool: TransactionPool,
-    >,
-    NetworkT: Network,
-    <N as RpcNodeCore>::Evm: fmt::Debug,
-    <N as RpcNodeCore>::Primitives: fmt::Debug,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
 }
 
-impl<N, NetworkT> EthState for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> EthState for ScrollEthApi<N, Rpc>
 where
-    Self: LoadState + SpawnBlocking,
-    N: ScrollNodeCore,
+    N: RpcNodeCore,
+    Rpc: RpcConvert<Primitives = N::Primitives>,
 {
     #[inline]
     fn max_proof_window(&self) -> u64 {
@@ -260,43 +239,27 @@ where
     }
 }
 
-impl<N, NetworkT> EthFees for ScrollEthApi<N, NetworkT>
+impl<N, Rpc> Trace for ScrollEthApi<N, Rpc>
 where
-    Self: LoadFee<
-        Provider: ChainSpecProvider<
-            ChainSpec: EthChainSpec<Header = ProviderHeader<Self::Provider>>,
-        >,
+    N: RpcNodeCore,
+    ScrollEthApiError: FromEvmError<N::Evm>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
+{
+}
+
+impl<N, Rpc> AddDevSigners for ScrollEthApi<N, Rpc>
+where
+    N: RpcNodeCore,
+    Rpc: RpcConvert<
+        Network: RpcTypes<TransactionRequest: SignableTxRequest<ProviderTx<N::Provider>>>,
     >,
-    N: ScrollNodeCore,
-{
-}
-
-impl<N, NetworkT> Trace for ScrollEthApi<N, NetworkT>
-where
-    Self: RpcNodeCore<Provider: BlockReader>
-        + LoadState<
-            Evm: ConfigureEvm<
-                Primitives: NodePrimitives<
-                    BlockHeader = ProviderHeader<Self::Provider>,
-                    SignedTx = ProviderTx<Self::Provider>,
-                >,
-            >,
-            Error: FromEvmError<Self::Evm>,
-        >,
-    N: ScrollNodeCore,
-{
-}
-
-impl<N, NetworkT> AddDevSigners for ScrollEthApi<N, NetworkT>
-where
-    N: ScrollNodeCore,
 {
     fn with_dev_accounts(&self) {
         *self.inner.eth_api.signers().write() = DevSigner::random_signers(20)
     }
 }
 
-impl<N: ScrollNodeCore, NetworkT> fmt::Debug for ScrollEthApi<N, NetworkT> {
+impl<N: ScrollNodeCore, Rpc: RpcConvert> fmt::Debug for ScrollEthApi<N, Rpc> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ScrollEthApi").finish_non_exhaustive()
     }
@@ -304,52 +267,127 @@ impl<N: ScrollNodeCore, NetworkT> fmt::Debug for ScrollEthApi<N, NetworkT> {
 
 /// Container type `ScrollEthApi`
 #[allow(missing_debug_implementations)]
-pub struct ScrollEthApiInner<N: ScrollNodeCore> {
+pub struct ScrollEthApiInner<N: ScrollNodeCore, Rpc: RpcConvert> {
     /// Gateway to node's core components.
-    pub eth_api: EthApiNodeBackend<N>,
+    pub eth_api: EthApiNodeBackend<N, Rpc>,
+    /// Sequencer client, configured to forward submitted transactions to sequencer of given Scroll
+    /// network.
+    sequencer_client: Option<SequencerClient>,
+    /// Minimum priority fee
+    min_suggested_priority_fee: U256,
+    /// Maximum payload size
+    payload_size_limit: u64,
 }
 
-impl<N: ScrollNodeCore> ScrollEthApiInner<N> {
+impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApiInner<N, Rpc> {
     /// Returns a reference to the [`EthApiNodeBackend`].
-    const fn eth_api(&self) -> &EthApiNodeBackend<N> {
+    const fn eth_api(&self) -> &EthApiNodeBackend<N, Rpc> {
         &self.eth_api
     }
-}
 
-/// A type that knows how to build a [`ScrollEthApi`].
-#[derive(Debug, Default)]
-pub struct ScrollEthApiBuilder {}
-
-impl ScrollEthApiBuilder {
-    /// Creates a [`ScrollEthApiBuilder`] instance.
-    pub const fn new() -> Self {
-        Self {}
+    /// Returns the configured sequencer client, if any.
+    const fn sequencer_client(&self) -> Option<&SequencerClient> {
+        self.sequencer_client.as_ref()
     }
 }
 
-impl<N> EthApiBuilder<N> for ScrollEthApiBuilder
+/// Converter for Scroll RPC types.
+pub type ScrollRpcConvert<N, NetworkT> = RpcConverter<
+    NetworkT,
+    <N as FullNodeComponents>::Evm,
+    ScrollReceiptConverter,
+    (),
+    ScrollTxInfoMapper<<N as FullNodeTypes>::Provider>,
+>;
+
+/// The default suggested priority fee for the gas price oracle.
+pub const DEFAULT_MIN_SUGGESTED_PRIORITY_FEE: u64 = 100;
+
+/// The default payload size limit in bytes for the sequencer.
+pub const DEFAULT_PAYLOAD_SIZE_LIMIT: u64 = 122_880;
+
+/// A type that knows how to build a [`ScrollEthApi`].
+#[derive(Debug)]
+pub struct ScrollEthApiBuilder<NetworkT = Scroll> {
+    /// Sequencer client, configured to forward submitted transactions to sequencer of given Scroll
+    /// network.
+    sequencer_url: Option<String>,
+    /// Minimum suggested priority fee (tip)
+    min_suggested_priority_fee: u64,
+    /// Maximum payload size
+    payload_size_limit: u64,
+    /// Marker for network types.
+    _nt: PhantomData<NetworkT>,
+}
+
+impl<NetworkT> Default for ScrollEthApiBuilder<NetworkT> {
+    fn default() -> Self {
+        Self {
+            sequencer_url: None,
+            min_suggested_priority_fee: DEFAULT_MIN_SUGGESTED_PRIORITY_FEE,
+            payload_size_limit: DEFAULT_PAYLOAD_SIZE_LIMIT,
+            _nt: PhantomData,
+        }
+    }
+}
+
+impl<NetworkT> ScrollEthApiBuilder<NetworkT> {
+    /// Creates a [`ScrollEthApiBuilder`] instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// With a [`SequencerClient`].
+    pub fn with_sequencer(mut self, sequencer_url: Option<String>) -> Self {
+        self.sequencer_url = sequencer_url;
+        self
+    }
+
+    /// With minimum suggested priority fee (tip)
+    pub const fn with_min_suggested_priority_fee(mut self, min: u64) -> Self {
+        self.min_suggested_priority_fee = min;
+        self
+    }
+
+    /// With payload size limit
+    pub const fn with_payload_size_limit(mut self, limit: u64) -> Self {
+        self.payload_size_limit = limit;
+        self
+    }
+}
+
+impl<N, NetworkT> EthApiBuilder<N> for ScrollEthApiBuilder<NetworkT>
 where
-    N: FullNodeComponents,
-    ScrollEthApi<N>: FullEthApiServer<Provider = N::Provider, Pool = N::Pool>,
+    N: FullNodeComponents<Evm: ConfigureEvm<NextBlockEnvCtx: BuildPendingEnv<HeaderTy<N::Types>>>>,
+    NetworkT: RpcTypes,
+    ScrollRpcConvert<N, NetworkT>: RpcConvert<Network = NetworkT>,
+    ScrollEthApi<N, ScrollRpcConvert<N, NetworkT>>:
+        FullEthApiServer<Provider = N::Provider, Pool = N::Pool> + AddDevSigners,
 {
-    type EthApi = ScrollEthApi<N>;
+    type EthApi = ScrollEthApi<N, ScrollRpcConvert<N, NetworkT>>;
 
     async fn build_eth_api(self, ctx: EthApiCtx<'_, N>) -> eyre::Result<Self::EthApi> {
-        let eth_api = reth_rpc::EthApiBuilder::new(
-            ctx.components.provider().clone(),
-            ctx.components.pool().clone(),
-            ctx.components.network().clone(),
-            ctx.components.evm_config().clone(),
-        )
-        .eth_cache(ctx.cache)
-        .task_spawner(ctx.components.task_executor().clone())
-        .gas_cap(ctx.config.rpc_gas_cap.into())
-        .max_simulate_blocks(ctx.config.rpc_max_simulate_blocks)
-        .eth_proof_window(ctx.config.eth_proof_window)
-        .fee_history_cache_config(ctx.config.fee_history_cache)
-        .proof_permits(ctx.config.proof_permits)
-        .build_inner();
+        let Self { min_suggested_priority_fee, payload_size_limit, sequencer_url, .. } = self;
+        let rpc_converter = RpcConverter::new(ScrollReceiptConverter::default())
+            .with_mapper(ScrollTxInfoMapper::new(ctx.components.provider().clone()));
 
-        Ok(ScrollEthApi::new(eth_api))
+        let eth_api = ctx.eth_api_builder().with_rpc_converter(rpc_converter).build_inner();
+
+        let sequencer_client = if let Some(url) = sequencer_url {
+            Some(
+                SequencerClient::new(&url)
+                    .await
+                    .wrap_err_with(|| "Failed to init sequencer client with: {url}")?,
+            )
+        } else {
+            None
+        };
+
+        Ok(ScrollEthApi::new(
+            eth_api,
+            sequencer_client,
+            U256::from(min_suggested_priority_fee),
+            payload_size_limit,
+        ))
     }
 }

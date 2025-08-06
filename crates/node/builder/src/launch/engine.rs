@@ -12,11 +12,10 @@ use alloy_consensus::BlockHeader;
 use futures::{stream_select, StreamExt};
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
 use reth_db_api::{database_metrics::DatabaseMetrics, Database};
-use reth_engine_local::{LocalMiner, LocalPayloadAttributesBuilder};
 use reth_engine_service::service::{ChainEvent, EngineService};
 use reth_engine_tree::{
     engine::{EngineApiRequest, EngineRequestHandler},
-    tree::TreeConfig,
+    tree::{BasicEngineValidator, TreeConfig},
 };
 use reth_engine_util::EngineMessageStreamExt;
 use reth_exex::ExExManagerHandle;
@@ -24,7 +23,6 @@ use reth_network::{types::BlockRangeUpdate, NetworkSyncUpdater, SyncState};
 use reth_network_api::BlockDownloaderProvider;
 use reth_node_api::{
     BeaconConsensusEngineHandle, BuiltPayload, FullNodeTypes, NodeTypes, NodeTypesWithDBAdapter,
-    PayloadAttributesBuilder, PayloadTypes,
 };
 use reth_node_core::{
     dirs::{ChainPath, DataDirPath},
@@ -77,9 +75,6 @@ where
     CB: NodeComponentsBuilder<T>,
     AO: RethRpcAddOns<NodeAdapter<T, CB::Components>>
         + EngineValidatorAddOn<NodeAdapter<T, CB::Components>>,
-    LocalPayloadAttributesBuilder<Types::ChainSpec>: PayloadAttributesBuilder<
-        <<Types as NodeTypes>::Payload as PayloadTypes>::PayloadAttributes,
-    >,
     <AO as reth_node_api::NodeAddOns<
         NodeAdapter<T, <CB as NodeComponentsBuilder<T>>::Components>,
     >>::Handle: RpcHandleProvider<
@@ -218,6 +213,15 @@ where
             // during this run.
             .maybe_store_messages(node_config.debug.engine_api_store.clone());
 
+        let engine_validator = BasicEngineValidator::new(
+            ctx.blockchain_db().clone(),
+            consensus.clone(),
+            ctx.components().evm_config().clone(),
+            engine_payload_validator,
+            engine_tree_config.clone(),
+            ctx.invalid_block_hook().await?,
+        );
+
         let mut engine_service = EngineService::new(
             consensus.clone(),
             ctx.chain_spec(),
@@ -229,26 +233,11 @@ where
             ctx.blockchain_db().clone(),
             pruner,
             ctx.components().payload_builder_handle().clone(),
-            engine_payload_validator,
+            engine_validator,
             engine_tree_config,
-            ctx.invalid_block_hook().await?,
             ctx.sync_metrics_tx(),
             ctx.components().evm_config().clone(),
         );
-
-        if ctx.is_dev() {
-            ctx.task_executor().spawn_critical(
-                "local engine",
-                LocalMiner::new(
-                    ctx.blockchain_db().clone(),
-                    LocalPayloadAttributesBuilder::new(ctx.chain_spec()),
-                    beacon_engine_handle.clone(),
-                    ctx.dev_mining_mode(ctx.components().pool()),
-                    ctx.components().payload_builder_handle().clone(),
-                )
-                .run(),
-            );
-        }
 
         info!(target: "reth::cli", "Consensus engine initialized");
 
@@ -366,6 +355,8 @@ where
         };
         // Notify on node started
         on_node_started.on_event(FullNode::clone(&full_node))?;
+
+        ctx.spawn_ethstats().await?;
 
         let handle = NodeHandle {
             node_exit_future: NodeExitFuture::new(

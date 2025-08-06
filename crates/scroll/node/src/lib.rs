@@ -1,4 +1,8 @@
 //! Node specific implementations for Scroll.
+
+mod args;
+pub use args::ScrollRollupArgs;
+
 mod builder;
 pub use builder::{
     consensus::ScrollConsensusBuilder,
