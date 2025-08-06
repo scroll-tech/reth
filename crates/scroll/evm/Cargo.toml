@@ -47,7 +47,7 @@ thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-alloy-primitives = { workspace = true, features = ["getrandom"] }
+alloy-primitives = { workspace = true, features = ["getrandom", "rand"] }
 eyre.workspace = true
 
 [features]

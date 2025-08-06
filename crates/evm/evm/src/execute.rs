@@ -100,11 +100,11 @@ pub trait Executor<DB: Database>: Sized {
         mut f: F,
     ) -> Result<BlockExecutionOutput<<Self::Primitives as NodePrimitives>::Receipt>, Self::Error>
     where
-        F: FnMut(&State<DB>),
+        F: FnMut(&mut State<DB>),
     {
         let result = self.execute_one(block)?;
         let mut state = self.into_state();
-        f(&state);
+        f(&mut state);
         Ok(BlockExecutionOutput { state: state.take_bundle(), result })
     }
 

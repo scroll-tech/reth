@@ -64,6 +64,9 @@ alloy-serde.workspace = true
 revm = { workspace = true, features = ["optional_block_gas_limit", "optional_eip3607", "optional_no_base_fee"] }
 revm-primitives = { workspace = true, features = ["serde"] }
 
+# scroll
+reth-scroll-evm = { workspace = true, optional = true }
+
 # rpc
 jsonrpsee.workspace = true
 http.workspace = true
@@ -104,3 +107,4 @@ jsonrpsee = { workspace = true, features = ["client"] }
 
 [features]
 js-tracer = ["revm-inspectors/js-tracer", "reth-rpc-eth-types/js-tracer"]
+scroll = ["reth-scroll-evm"]
