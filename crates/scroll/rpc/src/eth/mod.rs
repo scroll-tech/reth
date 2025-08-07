@@ -311,7 +311,7 @@ pub const DEFAULT_MIN_SUGGESTED_PRIORITY_FEE: u64 = 100;
 pub const DEFAULT_PAYLOAD_SIZE_LIMIT: u64 = 122_880;
 
 /// A type that knows how to build a [`ScrollEthApi`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ScrollEthApiBuilder<NetworkT = Scroll> {
     /// Sequencer client, configured to forward submitted transactions to sequencer of given Scroll
     /// network.
