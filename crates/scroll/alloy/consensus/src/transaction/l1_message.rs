@@ -17,14 +17,6 @@ use {reth_codecs::Compact, reth_codecs_derive::add_arbitrary_tests};
 /// L1 message transaction type id, 0x7e in hex.
 pub const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 
-/// A Scroll chain transaction.
-pub trait ScrollTransaction {
-    /// Returns true if the transaction is a L1 message.
-    fn is_l1_message(&self) -> bool;
-    /// Returns the queue index if the transaction is a L1 message, None otherwise.
-    fn queue_index(&self) -> Option<u64>;
-}
-
 /// A message transaction sent from the settlement layer to the L2 for execution.
 ///
 /// The signature of the L1 message is already verified on the L1 and as such doesn't contain

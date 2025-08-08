@@ -4,12 +4,10 @@ mod tx_type;
 pub use tx_type::{ScrollTxType, L1_MESSAGE_TX_TYPE_ID};
 
 mod envelope;
-pub use envelope::ScrollTxEnvelope;
+pub use envelope::{ScrollTransaction, ScrollTxEnvelope};
 
 mod l1_message;
-pub use l1_message::{
-    ScrollL1MessageTransactionFields, ScrollTransaction, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE,
-};
+pub use l1_message::{ScrollL1MessageTransactionFields, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE};
 
 mod meta;
 pub use meta::{ScrollAdditionalInfo, ScrollTransactionInfo};
