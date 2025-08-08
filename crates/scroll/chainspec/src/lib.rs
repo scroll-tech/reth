@@ -34,10 +34,10 @@ extern crate alloc;
 
 mod constants;
 pub use constants::{
-    SCROLL_BASE_FEE_PARAMS_FEYNMAN, SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS,
-    SCROLL_DEV_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
-    SCROLL_DEV_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS, SCROLL_DEV_MAX_L1_MESSAGES,
-    SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
+    MAX_TX_PAYLOAD_BYTES_PER_BLOCK, SCROLL_BASE_FEE_PARAMS_FEYNMAN, SCROLL_DEV_L1_CONFIG,
+    SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_DEV_L1_MESSAGE_QUEUE_V2_ADDRESS,
+    SCROLL_DEV_L1_PROXY_ADDRESS, SCROLL_DEV_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS,
+    SCROLL_DEV_MAX_L1_MESSAGES, SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
     SCROLL_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER_FEYNMAN, SCROLL_FEE_VAULT_ADDRESS,
     SCROLL_MAINNET_GENESIS_HASH, SCROLL_MAINNET_L1_CONFIG, SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
     SCROLL_MAINNET_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_MAINNET_L1_PROXY_ADDRESS,
@@ -624,26 +624,26 @@ mod tests {
     #[test]
     fn parse_scroll_hardforks() {
         let geth_genesis = r#"
-    {
-      "config": {
-        "bernoulliBlock": 10,
-        "curieBlock": 20,
-        "darwinTime": 30,
-        "darwinV2Time": 31,
-        "scroll": {
-            "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-            "l1Config": {
-                "l1ChainId": 1,
-                "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
-                "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
-                "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
-                "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
-                "numL1MessagesPerBlock": 10
+        {
+            "config": {
+              "bernoulliBlock": 10,
+              "curieBlock": 20,
+              "darwinTime": 30,
+              "darwinV2Time": 31,
+              "scroll": {
+                  "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                  "maxTxPayloadBytesPerBlock": 122880,
+                  "l1Config": {
+                      "l1ChainId": 1,
+                      "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                      "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+                      "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
+                      "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                      "numL1MessagesPerBlock": 10
+                  }
+              }
             }
-        }
-      }
-    }
-    "#;
+        }"#;
         let genesis: Genesis = serde_json::from_str(geth_genesis).unwrap();
 
         let actual_bernoulli_block = genesis.config.extra_fields.get("bernoulliBlock");
@@ -659,6 +659,7 @@ mod tests {
             scroll_object,
             &serde_json::json!({
                 "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                "maxTxPayloadBytesPerBlock": 122880,
                 "l1Config": {
                     "l1ChainId": 1,
                     "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -712,6 +713,7 @@ mod tests {
                         String::from("scroll"),
                         serde_json::json!({
                             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                            "maxTxPayloadBytesPerBlock": 122880,
                             "l1Config": {
                                 "l1ChainId": 1,
                                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
