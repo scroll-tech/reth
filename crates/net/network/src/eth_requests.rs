@@ -25,6 +25,7 @@ use std::{
 };
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tokio_stream::wrappers::ReceiverStream;
+use tracing::{debug, info, warn};
 
 // Limits: <https://github.com/ethereum/go-ethereum/blob/b0d44338bbcefee044f1f635a84487cbbd8f0538/eth/protocols/eth/handler.go#L34-L56>
 
@@ -87,14 +88,25 @@ where
     fn get_headers_response(&self, request: GetBlockHeaders) -> Vec<C::Header> {
         let GetBlockHeaders { start_block, limit, skip, direction } = request;
 
+        info!(
+            "get_headers_response: start_block={:?}, limit={}, skip={}, direction={:?}",
+            start_block, limit, skip, direction
+        );
+
         let mut headers = Vec::new();
 
         let mut block: BlockHashOrNumber = match start_block {
-            BlockHashOrNumber::Hash(start) => start.into(),
+            BlockHashOrNumber::Hash(start) => {
+                info!("Starting header fetch with hash={:?}", start);
+                start.into()
+            }
             BlockHashOrNumber::Number(num) => {
+                info!("Starting header fetch with number={}", num);
                 let Some(hash) = self.client.block_hash(num).unwrap_or_default() else {
+                    warn!("Block number {} not found in chain, returning empty headers", num);
                     return headers
                 };
+                info!("Resolved block number {} to hash={:?}", num, hash);
                 hash.into()
             }
         };
@@ -102,43 +114,96 @@ where
         let skip = skip as u64;
         let mut total_bytes = 0;
 
-        for _ in 0..limit {
+        for i in 0..limit {
+            debug!("Iteration {}: querying header for block={:?}", i, block);
             if let Some(header) = self.client.header_by_hash_or_number(block).unwrap_or_default() {
+                info!(
+                    "Found header: number={}, parent={:?}",
+                    header.number(),
+                    header.parent_hash()
+                );
                 match direction {
                     HeadersDirection::Rising => {
                         if let Some(next) = (header.number() + 1).checked_add(skip) {
+                            debug!(
+                                "Rising: Next block number will be {} (prev={} +1+ skip={})",
+                                next,
+                                header.number(),
+                                skip
+                            );
                             block = next.into()
                         } else {
+                            warn!(
+                            "Rising: Overflow/limit reached when computing next block ({} + 1 + {})",
+                            header.number(), skip
+                        );
                             break
                         }
                     }
                     HeadersDirection::Falling => {
                         if skip > 0 {
-                            // prevent under flows for block.number == 0 and `block.number - skip <
-                            // 0`
                             if let Some(next) =
                                 header.number().checked_sub(1).and_then(|num| num.checked_sub(skip))
                             {
+                                debug!(
+                                    "Falling: Next block number will be {} (prev={} -1- skip={})",
+                                    next,
+                                    header.number(),
+                                    skip
+                                );
                                 block = next.into()
                             } else {
+                                warn!(
+                                "Falling: Underflow/limit reached when computing next block ({} - 1 - {})",
+                                header.number(), skip
+                            );
                                 break
                             }
                         } else {
+                            debug!(
+                                "Falling: Using parent_hash={:?} as next block",
+                                header.parent_hash()
+                            );
                             block = header.parent_hash().into()
                         }
                     }
                 }
 
                 total_bytes += header.length();
+                debug!(
+                    "Pushing header: number={}, total_bytes={}, headers_len={}",
+                    header.number(),
+                    total_bytes,
+                    headers.len() + 1
+                );
                 headers.push(header);
 
-                if headers.len() >= MAX_HEADERS_SERVE || total_bytes > SOFT_RESPONSE_LIMIT {
+                if headers.len() >= MAX_HEADERS_SERVE {
+                    warn!(
+                        "headers.len() {} reached MAX_HEADERS_SERVE ({}), breaking",
+                        headers.len(),
+                        MAX_HEADERS_SERVE
+                    );
+                    break
+                }
+                if total_bytes > SOFT_RESPONSE_LIMIT {
+                    warn!(
+                        "total_bytes {} exceeded SOFT_RESPONSE_LIMIT ({}), breaking",
+                        total_bytes, SOFT_RESPONSE_LIMIT
+                    );
                     break
                 }
             } else {
+                warn!("Header for block {:?} not found, breaking", block);
                 break
             }
         }
+
+        info!(
+            "get_headers_response: finished, returned {} headers, total_bytes={}",
+            headers.len(),
+            total_bytes
+        );
 
         headers
     }
@@ -149,8 +214,10 @@ where
         request: GetBlockHeaders,
         response: oneshot::Sender<RequestResult<BlockHeaders<C::Header>>>,
     ) {
+        info!("on_headers_request: received request: {:?}", request);
         self.metrics.eth_headers_requests_received_total.increment(1);
         let headers = self.get_headers_response(request);
+        info!("on_headers_request: sending {} headers", headers.len());
         let _ = response.send(Ok(BlockHeaders(headers)));
     }
 
