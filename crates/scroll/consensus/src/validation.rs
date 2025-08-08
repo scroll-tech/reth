@@ -1,7 +1,9 @@
-use crate::error::ScrollConsensusError;
+use crate::{
+    constants::SCROLL_MAXIMUM_BASE_FEE, error::ScrollConsensusError, CLIQUE_IN_TURN_DIFFICULTY,
+    CLIQUE_NO_TURN_DIFFICULTY,
+};
 use alloc::sync::Arc;
 
-use crate::{CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY};
 use alloy_consensus::{BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH};
 use alloy_primitives::{b64, Address, B256, B64, U256};
 use core::fmt::Debug;
@@ -14,12 +16,14 @@ use reth_consensus_common::validation::{
 };
 use reth_execution_types::BlockExecutionResult;
 use reth_primitives_traits::{
-    receipt::gas_spent_by_transactions, Block, BlockBody, BlockHeader, GotExpected, NodePrimitives,
-    RecoveredBlock, SealedBlock, SealedHeader, SignedTransaction,
+    constants::{GAS_LIMIT_BOUND_DIVISOR, MINIMUM_GAS_LIMIT},
+    receipt::gas_spent_by_transactions,
+    Block, BlockBody, BlockHeader, GotExpected, NodePrimitives, RecoveredBlock, SealedBlock,
+    SealedHeader, SignedTransaction,
 };
 use reth_scroll_primitives::ScrollReceipt;
 use scroll_alloy_consensus::ScrollTransaction;
-use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
+use scroll_alloy_hardforks::ScrollHardforks;
 
 /// Scroll consensus implementation.
 ///
@@ -143,7 +147,8 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
         validate_header_timestamp(header.header())?;
         validate_header_fields(header.header(), &self.chain_spec)?;
         validate_header_gas(header.header())?;
-        validate_header_base_fee(header.header(), &self.chain_spec)
+        validate_header_base_fee(header.header(), &self.chain_spec)?;
+        Ok(())
     }
 
     fn validate_header_against_parent(
@@ -153,10 +158,7 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
     ) -> Result<(), ConsensusError> {
         validate_against_parent_hash_number(header.header(), parent)?;
         validate_against_parent_timestamp(header.header(), parent.header())?;
-
-        // TODO(scroll): we should have a way to validate the base fee from the header
-        // against the parent header using
-        // <https://github.com/scroll-tech/go-ethereum/blob/develop/consensus/misc/eip1559.go#L53>
+        validate_against_parent_gas_limit(header.header(), parent.header())?;
 
         // ensure that the blob gas fields for this block
         if self.chain_spec.blob_params_at_timestamp(header.timestamp()).is_some() {
@@ -233,7 +235,7 @@ fn verify_header_fields_pre_euclid_v2<H: BlockHeader>(
     if is_checkpoint && header.beneficiary() != Address::ZERO {
         return Err(ScrollConsensusError::CoinbaseNotZero(header.beneficiary()))
     }
-    if header.nonce() != Some(B64::ZERO) || header.nonce() != Some(b64!("ffffffffffffffff")) {
+    if header.nonce() != Some(B64::ZERO) && header.nonce() != Some(b64!("ffffffffffffffff")) {
         return Err(ScrollConsensusError::InvalidCliqueNonce(header.nonce()))
     }
     if is_checkpoint && header.nonce() != Some(B64::ZERO) {
@@ -250,7 +252,7 @@ fn verify_header_fields_pre_euclid_v2<H: BlockHeader>(
         return Err(ScrollConsensusError::InvalidCheckpointSigners)
     }
     let difficulty = header.difficulty();
-    if difficulty != CLIQUE_IN_TURN_DIFFICULTY || difficulty != CLIQUE_NO_TURN_DIFFICULTY {
+    if difficulty != CLIQUE_IN_TURN_DIFFICULTY && difficulty != CLIQUE_NO_TURN_DIFFICULTY {
         return Err(ScrollConsensusError::InvalidCliqueDifficulty(difficulty))
     }
 
@@ -276,11 +278,21 @@ fn validate_header_timestamp<H: BlockHeader>(header: &H) -> Result<(), Consensus
 fn validate_header_base_fee<H: BlockHeader, ChainSpec: ScrollHardforks>(
     header: &H,
     chain_spec: &ChainSpec,
-) -> Result<(), ConsensusError> {
-    if chain_spec.scroll_fork_activation(ScrollHardfork::Curie).active_at_block(header.number()) &&
-        header.base_fee_per_gas().is_none()
+) -> Result<(), ScrollConsensusError> {
+    if chain_spec.is_curie_active_at_block(header.number()) {
+        if header.base_fee_per_gas().is_none() {
+            return Err(ConsensusError::BaseFeeMissing.into())
+        }
+        // note: we do not verify L2 base fee, the sequencer has the
+        // right to set any base fee below the maximum. L2 base fee
+        // is not subject to L2 consensus or zk verification.
+        if header.base_fee_per_gas().expect("checked") > SCROLL_MAXIMUM_BASE_FEE {
+            return Err(ScrollConsensusError::BaseFeeOverLimit)
+        }
+    }
+    if !chain_spec.is_curie_active_at_block(header.number()) && header.base_fee_per_gas().is_some()
     {
-        return Err(ConsensusError::BaseFeeMissing)
+        return Err(ScrollConsensusError::UnexpectedBaseFee)
     }
     Ok(())
 }
@@ -299,6 +311,34 @@ fn validate_against_parent_timestamp<H: BlockHeader>(
             parent_timestamp: parent.timestamp(),
             timestamp: header.timestamp(),
         })
+    }
+    Ok(())
+}
+
+/// Validates the gas limit of the block against the parent.
+#[inline]
+fn validate_against_parent_gas_limit<H: BlockHeader>(
+    header: &H,
+    parent: &H,
+) -> Result<(), ConsensusError> {
+    let diff = header.gas_limit().abs_diff(parent.gas_limit());
+    let limit = parent.gas_limit().saturating_div(GAS_LIMIT_BOUND_DIVISOR);
+    if diff > limit {
+        return if header.gas_limit() > parent.gas_limit() {
+            Err(ConsensusError::GasLimitInvalidIncrease {
+                parent_gas_limit: parent.gas_limit(),
+                child_gas_limit: parent.gas_limit(),
+            })
+        } else {
+            Err(ConsensusError::GasLimitInvalidDecrease {
+                parent_gas_limit: parent.gas_limit(),
+                child_gas_limit: parent.gas_limit(),
+            })
+        }
+    }
+    // Check that the gas limit is above the minimum allowed gas limit.
+    if header.gas_limit() < MINIMUM_GAS_LIMIT {
+        return Err(ConsensusError::GasLimitInvalidMinimum { child_gas_limit: header.gas_limit() })
     }
     Ok(())
 }

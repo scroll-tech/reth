@@ -3,7 +3,9 @@
 extern crate alloc;
 
 mod constants;
-pub use constants::{CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY};
+pub use constants::{
+    CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY, SCROLL_MAXIMUM_BASE_FEE,
+};
 
 mod error;
 pub use error::ScrollConsensusError;

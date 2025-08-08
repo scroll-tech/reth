@@ -1,3 +1,5 @@
+use crate::constants::SCROLL_MAXIMUM_BASE_FEE;
+
 use alloy_primitives::{Address, B256, B64, U256};
 use reth_consensus::ConsensusError;
 
@@ -37,6 +39,12 @@ pub enum ScrollConsensusError {
     /// Block extra data with invalid checkpoint signers.
     #[error("block extra data contains invalid checkpoint signers")]
     InvalidCheckpointSigners,
+    /// Block base fee present before Curie.
+    #[error("block base fee is set before Curie fork activation")]
+    UnexpectedBaseFee,
+    /// Block base fee over limit.
+    #[error("block base fee is over limit of {SCROLL_MAXIMUM_BASE_FEE}")]
+    BaseFeeOverLimit,
     /// Block body has non-empty withdrawals list.
     #[error("non-empty block body withdrawals list")]
     WithdrawalsNonEmpty,
