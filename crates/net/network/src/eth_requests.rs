@@ -122,54 +122,10 @@ where
                     header.number(),
                     header.parent_hash()
                 );
-                match direction {
-                    HeadersDirection::Rising => {
-                        if let Some(next) = (header.number() + 1).checked_add(skip) {
-                            debug!(
-                                "Rising: Next block number will be {} (prev={} +1+ skip={})",
-                                next,
-                                header.number(),
-                                skip
-                            );
-                            block = next.into()
-                        } else {
-                            warn!(
-                            "Rising: Overflow/limit reached when computing next block ({} + 1 + {})",
-                            header.number(), skip
-                        );
-                            break
-                        }
-                    }
-                    HeadersDirection::Falling => {
-                        if skip > 0 {
-                            if let Some(next) =
-                                header.number().checked_sub(1).and_then(|num| num.checked_sub(skip))
-                            {
-                                debug!(
-                                    "Falling: Next block number will be {} (prev={} -1- skip={})",
-                                    next,
-                                    header.number(),
-                                    skip
-                                );
-                                block = next.into()
-                            } else {
-                                warn!(
-                                "Falling: Underflow/limit reached when computing next block ({} - 1 - {})",
-                                header.number(), skip
-                            );
-                                break
-                            }
-                        } else {
-                            debug!(
-                                "Falling: Using parent_hash={:?} as next block",
-                                header.parent_hash()
-                            );
-                            block = header.parent_hash().into()
-                        }
-                    }
-                }
 
                 total_bytes += header.length();
+                let number = header.number();
+                let parent_hash = header.parent_hash();
                 debug!(
                     "Pushing header: number={}, total_bytes={}, headers_len={}",
                     header.number(),
@@ -192,6 +148,46 @@ where
                         total_bytes, SOFT_RESPONSE_LIMIT
                     );
                     break
+                }
+
+                match direction {
+                    HeadersDirection::Rising => {
+                        if let Some(next) = (number + 1).checked_add(skip) {
+                            debug!(
+                                "Rising: Next block number will be {} (prev={} +1+ skip={})",
+                                next, number, skip
+                            );
+                            block = next.into()
+                        } else {
+                            warn!(
+                            "Rising: Overflow/limit reached when computing next block ({} + 1 + {})",
+                            number, skip
+                        );
+                            break
+                        }
+                    }
+                    HeadersDirection::Falling => {
+                        if skip > 0 {
+                            if let Some(next) =
+                                number.checked_sub(1).and_then(|num| num.checked_sub(skip))
+                            {
+                                debug!(
+                                    "Falling: Next block number will be {} (prev={} -1- skip={})",
+                                    next, number, skip
+                                );
+                                block = next.into()
+                            } else {
+                                warn!(
+                                "Falling: Underflow/limit reached when computing next block ({} - 1 - {})",
+                                number, skip
+                            );
+                                break
+                            }
+                        } else {
+                            debug!("Falling: Using parent_hash={:?} as next block", parent_hash);
+                            block = parent_hash.into()
+                        }
+                    }
                 }
             } else {
                 warn!("Header for block {:?} not found, breaking", block);
