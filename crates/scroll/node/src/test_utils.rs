@@ -9,7 +9,7 @@ use reth_node_api::NodeTypesWithDBAdapter;
 
 use reth_payload_builder::EthPayloadBuilderAttributes;
 use reth_provider::providers::BlockchainProvider;
-use reth_scroll_chainspec::ScrollChainSpecBuilder;
+use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpecBuilder};
 use reth_tasks::TaskManager;
 use scroll_alloy_rpc_types_engine::BlockDataHint;
 use std::sync::Arc;
@@ -31,10 +31,12 @@ pub async fn setup(
     reth_e2e_test_utils::setup_engine(
         num_nodes,
         Arc::new(
-            ScrollChainSpecBuilder::scroll_mainnet()
-                .genesis(genesis)
-                .euclid_v2_activated()
-                .build(Default::default()),
+            ScrollChainSpecBuilder::scroll_mainnet().genesis(genesis).euclid_v2_activated().build(
+                ScrollChainConfig {
+                    max_tx_payload_bytes_per_block: 120 * 1024,
+                    ..Default::default()
+                },
+            ),
         ),
         is_dev,
         Default::default(),
