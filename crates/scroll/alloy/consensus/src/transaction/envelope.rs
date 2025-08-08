@@ -1,4 +1,6 @@
-use crate::{ScrollPooledTransaction, ScrollTxType, ScrollTypedTransaction, TxL1Message};
+use crate::{
+    ScrollPooledTransaction, ScrollTransaction, ScrollTxType, ScrollTypedTransaction, TxL1Message,
+};
 use core::hash::Hash;
 
 use alloy_consensus::{
@@ -420,6 +422,22 @@ impl ScrollTxEnvelope {
             Self::Eip1559(tx) => Ok(tx.into()),
             Self::Eip7702(tx) => Ok(tx.into()),
             Self::L1Message(tx) => Err(ValueError::new(tx.into(), "L1 messages cannot be pooled")),
+        }
+    }
+}
+
+impl ScrollTransaction for ScrollTxEnvelope {
+    fn is_l1_message(&self) -> bool {
+        match self {
+            Self::Legacy(_) | Self::Eip2930(_) | Self::Eip1559(_) | Self::Eip7702(_) => false,
+            Self::L1Message(_) => true,
+        }
+    }
+
+    fn queue_index(&self) -> Option<u64> {
+        match self {
+            Self::Legacy(_) | Self::Eip2930(_) | Self::Eip1559(_) | Self::Eip7702(_) => None,
+            Self::L1Message(tx) => Some(tx.queue_index),
         }
     }
 }

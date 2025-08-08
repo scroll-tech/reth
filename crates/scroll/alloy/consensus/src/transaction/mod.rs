@@ -7,7 +7,9 @@ mod envelope;
 pub use envelope::ScrollTxEnvelope;
 
 mod l1_message;
-pub use l1_message::{ScrollL1MessageTransactionFields, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE};
+pub use l1_message::{
+    ScrollL1MessageTransactionFields, ScrollTransaction, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE,
+};
 
 mod meta;
 pub use meta::{ScrollAdditionalInfo, ScrollTransactionInfo};

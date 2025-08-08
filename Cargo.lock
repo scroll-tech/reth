@@ -10384,6 +10384,7 @@ dependencies = [
  "reth-execution-types",
  "reth-primitives-traits",
  "reth-scroll-primitives",
+ "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
  "thiserror 2.0.12",
  "tracing",

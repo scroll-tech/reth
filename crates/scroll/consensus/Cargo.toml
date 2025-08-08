@@ -26,6 +26,7 @@ reth-primitives-traits.workspace = true
 
 # scroll
 reth-scroll-primitives = { workspace = true, default-features = false }
+scroll-alloy-consensus.workspace = true
 scroll-alloy-hardforks.workspace = true
 
 # misc
