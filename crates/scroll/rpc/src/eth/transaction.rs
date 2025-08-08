@@ -49,7 +49,6 @@ where
             if self.inner.propagate_local_transactions {
                 // Forward to remote sequencer RPC asynchronously (fire and forget)
                 let client = client.clone();
-                let tx = tx.clone();
                 tokio::spawn(async move {
                     match client.forward_raw_transaction(&tx).await {
                         Ok(sequencer_hash) => {
