@@ -6,7 +6,7 @@ use alloy_primitives::{address, b256, Address, B256};
 pub const SCROLL_FEE_VAULT_ADDRESS: Address = address!("5300000000000000000000000000000000000005");
 
 /// The maximum size in bytes of the payload for a block.
-pub const MAX_TX_PAYLOAD_BYTES_PER_BLOCK: u64 = 120 * 1024;
+pub const MAX_TX_PAYLOAD_BYTES_PER_BLOCK: usize = 120 * 1024;
 
 /// The system contract on L2 mainnet.
 pub const SCROLL_MAINNET_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS: Address =

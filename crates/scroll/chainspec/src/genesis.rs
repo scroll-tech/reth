@@ -118,7 +118,7 @@ pub struct ScrollChainConfig {
     /// will be sent or stored.
     pub fee_vault_address: Option<Address>,
     /// The maximum tx payload size of blocks that we produce.
-    pub max_tx_payload_bytes_per_block: u64,
+    pub max_tx_payload_bytes_per_block: usize,
     /// The L1 configuration.
     /// This field encapsulates specific settings and parameters required for L1
     pub l1_config: L1Config,

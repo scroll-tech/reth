@@ -68,6 +68,7 @@ where
             .with_local_transactions_config(
                 pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config,
             )
+            .with_max_tx_input_bytes(ctx.chain_spec().chain_config().max_tx_payload_bytes_per_block)
             .with_additional_tasks(
                 pool_config_overrides
                     .additional_validation_tasks
