@@ -640,11 +640,18 @@ where
 
                 let mut witness_record = ExecutionWitnessRecord::default();
 
+                let mut withdraw_root_res: Result<_, reth_errors::ProviderError> = Ok(());
                 let _ = block_executor
-                    .execute_with_state_closure(&(*block).clone(), |statedb: &State<_>| {
+                    .execute_with_state_closure(&(*block).clone(), |statedb: &mut State<_>| {
+                        #[cfg(feature = "scroll")]
+                        {
+                            use reth_scroll_evm::LoadWithdrawRoot;
+                            withdraw_root_res = statedb.load_withdraw_root();
+                        }
                         witness_record.record_executed_state(statedb);
                     })
                     .map_err(|err| EthApiError::Internal(err.into()))?;
+                withdraw_root_res?;
 
                 let ExecutionWitnessRecord { hashed_state, codes, keys, lowest_block_number } =
                     witness_record;

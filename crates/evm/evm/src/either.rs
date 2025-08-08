@@ -58,7 +58,7 @@ where
         state: F,
     ) -> Result<BlockExecutionOutput<<Self::Primitives as NodePrimitives>::Receipt>, Self::Error>
     where
-        F: FnMut(&revm::database::State<DB>),
+        F: FnMut(&mut revm::database::State<DB>),
     {
         match self {
             Self::Left(a) => a.execute_with_state_closure(block, state),
