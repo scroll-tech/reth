@@ -140,10 +140,8 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
     for ScrollBeaconConsensus<ChainSpec>
 {
     fn validate_header(&self, header: &SealedHeader<H>) -> Result<(), ConsensusError> {
-        if header.ommers_hash() != EMPTY_OMMER_ROOT_HASH {
-            return Err(ConsensusError::TheMergeOmmerRootIsNotEmpty)
-        }
-
+        validate_header_timestamp(header.header())?;
+        validate_header_fields(header.header(), &self.chain_spec)?;
         validate_header_gas(header.header())?;
         validate_header_base_fee(header.header(), &self.chain_spec)
     }
@@ -177,6 +175,86 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
 
         Ok(())
     }
+}
+
+#[inline]
+fn validate_header_fields<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks>(
+    header: &H,
+    chain_spec: ChainSpec,
+) -> Result<(), ScrollConsensusError> {
+    // Common checks to pre and post Euclid v2.
+    if header.ommers_hash() != EMPTY_OMMER_ROOT_HASH {
+        return Err(ConsensusError::TheMergeOmmerRootIsNotEmpty.into())
+    }
+    if header.mix_hash() != Some(B256::ZERO) {
+        return Err(ScrollConsensusError::MixHashNotZero(header.mix_hash()))
+    }
+
+    if chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
+        verify_header_fields_post_euclid_v2(header)?;
+    } else {
+        let clique_config =
+            chain_spec.genesis().config.clique.expect("clique config required pre euclid v2");
+        let epoch = clique_config.epoch.expect("epoch required pre euclid v2");
+        verify_header_fields_pre_euclid_v2(header, epoch)?;
+    }
+
+    Ok(())
+}
+
+/// Verify the header's field for post Euclid v2 blocks.
+#[inline]
+fn verify_header_fields_post_euclid_v2<H: BlockHeader>(
+    header: &H,
+) -> Result<(), ScrollConsensusError> {
+    if header.beneficiary() != Address::ZERO {
+        return Err(ScrollConsensusError::CoinbaseNotZero(header.beneficiary()))
+    }
+    if header.nonce() != Some(B64::ZERO) {
+        return Err(ScrollConsensusError::NonceNotZero(header.nonce()))
+    }
+    if header.difficulty() != U256::ONE {
+        return Err(ScrollConsensusError::DifficultyNotOne(header.difficulty()))
+    }
+    if !header.extra_data().is_empty() {
+        return Err(ConsensusError::ExtraDataExceedsMax { len: header.extra_data().len() }.into())
+    }
+
+    Ok(())
+}
+
+/// Verify the header's field for pre Euclid v2 blocks.
+#[inline]
+fn verify_header_fields_pre_euclid_v2<H: BlockHeader>(
+    header: &H,
+    epoch: u64,
+) -> Result<(), ScrollConsensusError> {
+    let is_checkpoint = (header.number() % epoch) == 0;
+    if is_checkpoint && header.beneficiary() != Address::ZERO {
+        return Err(ScrollConsensusError::CoinbaseNotZero(header.beneficiary()))
+    }
+    if header.nonce() != Some(B64::ZERO) || header.nonce() != Some(b64!("ffffffffffffffff")) {
+        return Err(ScrollConsensusError::InvalidCliqueNonce(header.nonce()))
+    }
+    if is_checkpoint && header.nonce() != Some(B64::ZERO) {
+        return Err(ScrollConsensusError::NonceNotZero(header.nonce()))
+    }
+    if header.extra_data().len() < 32 {
+        return Err(ScrollConsensusError::MissingVanity)
+    }
+    if header.extra_data().len() < 32 + 65 {
+        return Err(ScrollConsensusError::MissingSignature)
+    }
+    let signer_bytes = header.extra_data().len() - 32 - 65;
+    if !is_checkpoint && signer_bytes > 0 {
+        return Err(ScrollConsensusError::InvalidCheckpointSigners)
+    }
+    let difficulty = header.difficulty();
+    if difficulty != CLIQUE_IN_TURN_DIFFICULTY || difficulty != CLIQUE_NO_TURN_DIFFICULTY {
+        return Err(ScrollConsensusError::InvalidCliqueDifficulty(difficulty))
+    }
+
+    Ok(())
 }
 
 /// Validates the timestamp of the header, which should not be in the future.
