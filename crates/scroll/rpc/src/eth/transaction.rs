@@ -49,15 +49,14 @@ where
             if self.inner.propagate_local_transactions {
                 // Forward to remote sequencer RPC asynchronously (fire and forget)
                 let client = client.clone();
-                let tx_clone = tx.clone();
-                let hash_clone = hash;
+                let tx = tx.clone();
                 tokio::spawn(async move {
-                    match client.forward_raw_transaction(&tx_clone).await {
+                    match client.forward_raw_transaction(&tx).await {
                         Ok(sequencer_hash) => {
-                            tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash_clone, sequencer_hash=%sequencer_hash, "successfully forwarded transaction to sequencer");
+                            tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, %sequencer_hash, "successfully forwarded transaction to sequencer");
                         }
                         Err(err) => {
-                            tracing::warn!(target: "scroll::rpc::eth", %err, %hash_clone, "failed to forward transaction to sequencer, but transaction is in local pool and will be propagated");
+                            tracing::warn!(target: "scroll::rpc::eth", %err, local_hash=%hash, "failed to forward transaction to sequencer, but transaction is in local pool and will be propagated");
                         }
                     }
                 });
@@ -65,10 +64,10 @@ where
                 // Forward to remote sequencer RPC synchronously
                 match client.forward_raw_transaction(&tx).await {
                     Ok(sequencer_hash) => {
-                        tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, sequencer_hash=%sequencer_hash, "successfully forwarded transaction to sequencer");
+                        tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, %sequencer_hash, "successfully forwarded transaction to sequencer");
                     }
                     Err(err) => {
-                        tracing::warn!(target: "scroll::rpc::eth", %err, %hash, "failed to forward transaction to sequencer");
+                        tracing::warn!(target: "scroll::rpc::eth", %err, local_hash=%hash, "failed to forward transaction to sequencer");
                         return Err(ScrollEthApiError::Sequencer(err));
                     }
                 }
