@@ -349,11 +349,6 @@ fn validate_against_parent_gas_limit<H: BlockHeader>(
 fn validate_l1_messages<Tx: SignedTransaction + ScrollTransaction>(
     txs: &[Tx],
 ) -> Result<(), ScrollConsensusError> {
-    // Check if the block contains L1 messages.
-    if !txs.iter().any(ScrollTransaction::is_l1_message) {
-        return Ok(())
-    }
-
     // Check L1 messages are only at the start of the block and correctly ordered.
     let mut saw_l2_transaction = false;
     let mut queue_index = 0;
@@ -376,4 +371,444 @@ fn validate_l1_messages<Tx: SignedTransaction + ScrollTransaction>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ScrollConsensusError;
+    use alloy_consensus::{Header, Signed, TxEip1559};
+    use alloy_primitives::{b64, Address, Bloom, Bytes, Signature, B256, U256};
+    use reth_consensus::ConsensusError;
+    use reth_primitives_traits::constants::{GAS_LIMIT_BOUND_DIVISOR, MINIMUM_GAS_LIMIT};
+    use reth_scroll_chainspec::SCROLL_MAINNET;
+    use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
+
+    fn create_test_header() -> Header {
+        Header {
+            parent_hash: B256::random(),
+            ommers_hash: EMPTY_OMMER_ROOT_HASH,
+            beneficiary: Address::ZERO,
+            state_root: B256::random(),
+            transactions_root: B256::random(),
+            receipts_root: B256::random(),
+            logs_bloom: Bloom::default(),
+            difficulty: U256::ONE,
+            number: 1,
+            gas_limit: 30000000,
+            gas_used: 0,
+            timestamp: 1000,
+            extra_data: Bytes::new(),
+            mix_hash: B256::ZERO,
+            nonce: B64::ZERO,
+            base_fee_per_gas: None,
+            withdrawals_root: None,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+            parent_beacon_block_root: None,
+            requests_hash: None,
+        }
+    }
+
+    #[test]
+    fn test_validate_header_timestamp_success() {
+        let header = create_test_header();
+        assert!(validate_header_timestamp(&header).is_ok());
+    }
+
+    #[test]
+    fn test_validate_header_timestamp_future() {
+        let mut header = create_test_header();
+        // timestamp in the future.
+        header.timestamp = u64::MAX;
+
+        let result = validate_header_timestamp(&header);
+        assert!(matches!(result, Err(ConsensusError::TimestampIsInPast { .. })));
+    }
+
+    #[test]
+    fn test_verify_header_fields_post_euclid_v2_success() {
+        let header = create_test_header();
+        assert!(verify_header_fields_post_euclid_v2(&header).is_ok());
+    }
+
+    #[test]
+    fn test_verify_header_fields_post_euclid_v2_coinbase_not_zero() {
+        let mut header = create_test_header();
+        header.beneficiary = Address::random();
+
+        let result = verify_header_fields_post_euclid_v2(&header);
+        assert!(matches!(result, Err(ScrollConsensusError::CoinbaseNotZero(_))));
+    }
+
+    #[test]
+    fn test_verify_header_fields_post_euclid_v2_nonce_not_zero() {
+        let mut header = create_test_header();
+        header.nonce = b64!("0123456789abcdef");
+
+        let result = verify_header_fields_post_euclid_v2(&header);
+        assert!(matches!(result, Err(ScrollConsensusError::NonceNotZero(_))));
+    }
+
+    #[test]
+    fn test_verify_header_fields_post_euclid_v2_difficulty_not_one() {
+        let mut header = create_test_header();
+        header.difficulty = U256::from(2);
+
+        let result = verify_header_fields_post_euclid_v2(&header);
+        assert!(matches!(result, Err(ScrollConsensusError::DifficultyNotOne(_))));
+    }
+
+    #[test]
+    fn test_verify_header_fields_post_euclid_v2_extra_data_not_empty() {
+        let mut header = create_test_header();
+        header.extra_data = Bytes::from(vec![1, 2, 3]);
+
+        let result = verify_header_fields_post_euclid_v2(&header);
+        assert!(matches!(
+            result,
+            Err(ScrollConsensusError::Eth(ConsensusError::ExtraDataExceedsMax { .. }))
+        ));
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_success() {
+        let mut header = create_test_header();
+        // valid extra data (32 bytes vanity + 65 bytes signature).
+        let mut extra_data = vec![0u8; 32];
+        extra_data.extend_from_slice(&[0u8; 65]);
+        header.extra_data = Bytes::from(extra_data);
+
+        assert!(verify_header_fields_pre_euclid_v2(&header, 30000).is_ok());
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_checkpoint_coinbase_not_zero() {
+        let mut header = create_test_header();
+        // checkpoint block.
+        header.number = 0;
+        header.beneficiary = Address::random();
+        let mut extra_data = vec![0u8; 32];
+        extra_data.extend_from_slice(&[0u8; 65]);
+        header.extra_data = Bytes::from(extra_data);
+
+        let result = verify_header_fields_pre_euclid_v2(&header, 30000);
+        assert!(matches!(result, Err(ScrollConsensusError::CoinbaseNotZero(_))));
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_invalid_nonce() {
+        let mut header = create_test_header();
+        // invalid nonce.
+        header.nonce = b64!("1234567890abcdef");
+        let mut extra_data = vec![0u8; 32];
+        extra_data.extend_from_slice(&[0u8; 65]);
+        header.extra_data = Bytes::from(extra_data);
+
+        let result = verify_header_fields_pre_euclid_v2(&header, 30000);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidCliqueNonce(_))));
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_missing_vanity() {
+        let mut header = create_test_header();
+        // vanity too short.
+        header.extra_data = Bytes::from(vec![0u8; 31]);
+
+        let result = verify_header_fields_pre_euclid_v2(&header, 30000);
+        assert!(matches!(result, Err(ScrollConsensusError::MissingVanity)));
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_missing_signature() {
+        let mut header = create_test_header();
+        // signature too short.
+        header.extra_data = Bytes::from(vec![0u8; 32]);
+
+        let result = verify_header_fields_pre_euclid_v2(&header, 30000);
+        assert!(matches!(result, Err(ScrollConsensusError::MissingSignature)));
+    }
+
+    #[test]
+    fn test_verify_header_fields_pre_euclid_v2_invalid_difficulty() {
+        let mut header = create_test_header();
+        // invalid difficulty.
+        header.difficulty = U256::from(3);
+        let mut extra_data = vec![0u8; 32];
+        extra_data.extend_from_slice(&[0u8; 65]);
+        header.extra_data = Bytes::from(extra_data);
+
+        let result = verify_header_fields_pre_euclid_v2(&header, 30000);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidCliqueDifficulty(_))));
+    }
+
+    #[test]
+    fn test_validate_against_parent_timestamp_success() {
+        let parent = create_test_header();
+        let mut header = create_test_header();
+        header.timestamp = parent.timestamp + 1;
+
+        assert!(validate_against_parent_timestamp(&header, &parent).is_ok());
+    }
+
+    #[test]
+    fn test_validate_against_parent_timestamp_same_time() {
+        let parent = create_test_header();
+        let header = create_test_header();
+
+        assert!(validate_against_parent_timestamp(&header, &parent).is_ok());
+    }
+
+    #[test]
+    fn test_validate_against_parent_timestamp_in_past() {
+        let parent = create_test_header();
+        let mut header = create_test_header();
+        header.timestamp = parent.timestamp - 1;
+
+        let result = validate_against_parent_timestamp(&header, &parent);
+        assert!(matches!(result, Err(ConsensusError::TimestampIsInPast { .. })));
+    }
+
+    #[test]
+    fn test_validate_against_parent_gas_limit_success() {
+        let parent = create_test_header();
+        let mut header = create_test_header();
+        // small gas increase.
+        header.gas_limit = parent.gas_limit + 100;
+
+        assert!(validate_against_parent_gas_limit(&header, &parent).is_ok());
+    }
+
+    #[test]
+    fn test_validate_against_parent_gas_limit_too_high_increase() {
+        let parent = create_test_header();
+        let mut header = create_test_header();
+        header.gas_limit = parent.gas_limit + parent.gas_limit / GAS_LIMIT_BOUND_DIVISOR + 1;
+
+        let result = validate_against_parent_gas_limit(&header, &parent);
+        assert!(matches!(result, Err(ConsensusError::GasLimitInvalidIncrease { .. })));
+    }
+
+    #[test]
+    fn test_validate_against_parent_gas_limit_too_high_decrease() {
+        let parent = create_test_header();
+        let mut header = create_test_header();
+        header.gas_limit = parent.gas_limit - parent.gas_limit / GAS_LIMIT_BOUND_DIVISOR - 1;
+
+        let result = validate_against_parent_gas_limit(&header, &parent);
+        assert!(matches!(result, Err(ConsensusError::GasLimitInvalidDecrease { .. })));
+    }
+
+    #[test]
+    fn test_validate_against_parent_gas_limit_below_minimum() {
+        let mut parent = create_test_header();
+        let mut header = create_test_header();
+        parent.gas_limit = MINIMUM_GAS_LIMIT + 1;
+        header.gas_limit = MINIMUM_GAS_LIMIT - 1;
+
+        let result = validate_against_parent_gas_limit(&header, &parent);
+        dbg!(&result);
+        assert!(matches!(result, Err(ConsensusError::GasLimitInvalidMinimum { .. })));
+    }
+
+    #[test]
+    fn test_validate_l1_messages_success() {
+        let txs: Vec<ScrollTxEnvelope> = vec![
+            TxL1Message { queue_index: 0, ..Default::default() }.into(),
+            TxL1Message { queue_index: 1, ..Default::default() }.into(),
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+        ];
+
+        assert!(validate_l1_messages(&txs).is_ok());
+    }
+
+    #[test]
+    fn test_validate_l1_messages_empty() {
+        let txs: Vec<ScrollTxEnvelope> = vec![];
+        assert!(validate_l1_messages(&txs).is_ok());
+    }
+
+    #[test]
+    fn test_validate_l1_messages_only_l2() {
+        let txs: Vec<ScrollTxEnvelope> = vec![
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+        ];
+
+        assert!(validate_l1_messages(&txs).is_ok());
+    }
+
+    #[test]
+    fn test_validate_l1_messages_invalid_order() {
+        let txs: Vec<ScrollTxEnvelope> = vec![
+            Signed::new_unchecked(
+                TxEip1559::default(),
+                Signature::new(U256::ZERO, U256::ZERO, false),
+                B256::random(),
+            )
+            .into(),
+            TxL1Message { queue_index: 0, ..Default::default() }.into(),
+        ];
+
+        let result = validate_l1_messages(&txs);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
+    }
+
+    #[test]
+    fn test_validate_l1_messages_non_sequential_queue_index() {
+        let txs: Vec<ScrollTxEnvelope> = vec![
+            TxL1Message { queue_index: 0, ..Default::default() }.into(),
+            TxL1Message { queue_index: 2, ..Default::default() }.into(),
+        ];
+
+        // ok as it's not decreasing.
+        assert!(validate_l1_messages(&txs).is_ok());
+    }
+
+    #[test]
+    fn test_validate_l1_messages_decreasing_queue_index() {
+        let txs: Vec<ScrollTxEnvelope> = vec![
+            TxL1Message { queue_index: 1, ..Default::default() }.into(),
+            TxL1Message { queue_index: 0, ..Default::default() }.into(),
+        ];
+
+        let result = validate_l1_messages(&txs);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
+    }
+
+    #[test]
+    fn test_validate_header_base_fee_before_curie() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // pre Curie.
+        header.number = 500;
+        header.base_fee_per_gas = Some(1000000000);
+
+        let result = validate_header_base_fee(&header, &chain_spec);
+        assert!(matches!(result, Err(ScrollConsensusError::UnexpectedBaseFee)));
+    }
+
+    #[test]
+    fn test_validate_header_base_fee_after_curie_missing() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // post Curie.
+        header.number = 7096837;
+        header.base_fee_per_gas = None;
+
+        let result = validate_header_base_fee(&header, &chain_spec);
+        assert!(matches!(result, Err(ScrollConsensusError::Eth(ConsensusError::BaseFeeMissing))));
+    }
+
+    #[test]
+    fn test_validate_header_base_fee_after_curie_over_limit() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // post Curie.
+        header.number = 7096837;
+        header.base_fee_per_gas = Some(SCROLL_MAXIMUM_BASE_FEE + 1);
+
+        let result = validate_header_base_fee(&header, &chain_spec);
+        assert!(matches!(result, Err(ScrollConsensusError::BaseFeeOverLimit)));
+    }
+
+    #[test]
+    fn test_validate_header_base_fee_after_curie_valid() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // post Curie.
+        header.number = 7096837;
+        header.base_fee_per_gas = Some(1000000000);
+
+        let result = validate_header_base_fee(&header, &chain_spec);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_header_fields_pre_euclid_v2() {
+        let mut header = create_test_header();
+        // pre Euclid v2.
+        header.timestamp = 1745305199;
+        // valid extra data for pre-euclid v2.
+        let mut extra_data = vec![0u8; 32];
+        extra_data.extend_from_slice(&[0u8; 65]);
+        header.extra_data = Bytes::from(extra_data);
+
+        assert!(verify_header_fields_pre_euclid_v2(&header, 30000).is_ok());
+    }
+
+    #[test]
+    fn test_validate_header_fields_post_euclid_v2() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // post Euclid v2.
+        header.timestamp = 1745305201;
+
+        assert!(validate_header_fields(&header, &chain_spec).is_ok());
+    }
+
+    #[test]
+    fn test_validate_header_fields_mix_hash_not_zero() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // invalid mix hash.
+        header.mix_hash = B256::random();
+
+        let result = validate_header_fields(&header, &chain_spec);
+        assert!(matches!(result, Err(ScrollConsensusError::MixHashNotZero(_))));
+    }
+
+    #[test]
+    fn test_validate_header_fields_ommers_hash_not_empty() {
+        let chain_spec = SCROLL_MAINNET.clone();
+
+        let mut header = create_test_header();
+        // invalid ommer hash.
+        header.ommers_hash = B256::random();
+
+        let result = validate_header_fields(&header, &chain_spec);
+        assert!(matches!(
+            result,
+            Err(ScrollConsensusError::Eth(ConsensusError::TheMergeOmmerRootIsNotEmpty))
+        ));
+    }
 }
