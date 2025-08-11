@@ -238,14 +238,14 @@ mod tests {
         client.add_account(
             L1_GAS_PRICE_ORACLE_ADDRESS,
             ExtendedAccount::new(0, U256::from(400_000)).extend_storage(
-                (0u8..8).into_iter().map(|k| (B256::from(U256::from(k)), U256::from(u64::MAX))),
+                (0u8..8).map(|k| (B256::from(U256::from(k)), U256::from(u64::MAX))),
             ),
         );
 
         // create the validation task.
         let validator = TransactionValidationTaskExecutor::eth_builder(client)
             .no_eip4844()
-            .build_with_tasks(manager.executor(), blob_store.clone())
+            .build_with_tasks(manager.executor(), blob_store)
             .map(|validator| {
                 ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true)
             });
