@@ -183,7 +183,7 @@ where
                 }
             };
             // Check rollup fee is under u64::MAX.
-            if cost_addition > MAX_ROLLUP_FEE {
+            if cost_addition >= MAX_ROLLUP_FEE {
                 return TransactionValidationOutcome::Invalid(
                     valid_tx.into_transaction(),
                     InvalidTransactionError::GasUintOverflow.into(),
