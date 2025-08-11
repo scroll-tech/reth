@@ -10378,7 +10378,6 @@ version = "1.6.0"
 dependencies = [
  "alloy-consensus",
  "alloy-primitives",
- "critical-section",
  "reth-chainspec",
  "reth-consensus",
  "reth-consensus-common",

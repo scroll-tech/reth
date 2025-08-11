@@ -322,7 +322,7 @@ fn validate_against_parent_gas_limit<H: BlockHeader>(
     parent: &H,
 ) -> Result<(), ConsensusError> {
     let diff = header.gas_limit().abs_diff(parent.gas_limit());
-    let limit = parent.gas_limit().saturating_div(GAS_LIMIT_BOUND_DIVISOR);
+    let limit = parent.gas_limit() / GAS_LIMIT_BOUND_DIVISOR;
     if diff > limit {
         return if header.gas_limit() > parent.gas_limit() {
             Err(ConsensusError::GasLimitInvalidIncrease {
@@ -377,6 +377,7 @@ fn validate_l1_messages<Tx: SignedTransaction + ScrollTransaction>(
 mod tests {
     use super::*;
     use crate::ScrollConsensusError;
+
     use alloy_consensus::{Header, Signed, TxEip1559};
     use alloy_primitives::{b64, Address, Bloom, Bytes, Signature, B256, U256};
     use reth_consensus::ConsensusError;

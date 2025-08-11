@@ -38,4 +38,3 @@ normal = ["reth-primitives"]
 
 [dev-dependencies]
 reth-scroll-chainspec.workspace = true
-critical-section = { version = "1.0", features = ["std"] }
