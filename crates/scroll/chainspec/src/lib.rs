@@ -8,20 +8,21 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_chains::Chain;
 use alloy_consensus::Header;
 use alloy_genesis::Genesis;
 use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, From, Into};
 use reth_chainspec::{
-    BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec,
+    BaseFeeParams, BaseFeeParamsKind, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec,
     EthereumCapabilities, EthereumHardforks, ForkFilter, ForkId, Hardforks, Head,
 };
 use reth_ethereum_forks::{
     ChainHardforks, EthereumHardfork, ForkCondition, ForkFilterKey, ForkHash, Hardfork,
 };
 use reth_network_peers::NodeRecord;
+use reth_primitives_traits::SealedHeader;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 use alloy_eips::eip7840::BlobParams;
@@ -181,6 +182,39 @@ impl ScrollChainSpecBuilder {
     /// [`Self::genesis`])
     pub fn build(self, config: ScrollChainConfig) -> ScrollChainSpec {
         ScrollChainSpec { inner: self.inner.build(), config }
+    }
+}
+
+// Only used by the CLI when parsing a custom genesis file.
+impl ScrollChainSpec {
+    /// Builds a `ScrollChainSpec` from a custom genesis and applies base-fee related fixes:
+    /// - Injects a proper genesis header (fallback base fee = 0 if Feynman@genesis).
+    /// - Uses Scroll's EIP-1559 parameters starting from the Feynman hardfork.
+    pub fn from_genesis_patched(genesis: Genesis) -> Self {
+        // Build the base spec using the existing From<Genesis> impl.
+        let mut spec: Self = genesis.into();
+
+        // Determine whether Feynman is active at genesis.
+        let scroll_info = ScrollConfigInfo::extract_from(&spec.inner.genesis);
+        let feynman_at_genesis = scroll_info
+            .scroll_chain_info
+            .hard_fork_info
+            .and_then(|h| h.feynman_time)
+            .map(|t| t <= spec.inner.genesis.timestamp)
+            .unwrap_or(false);
+
+        // Construct the genesis header; fallback base fee to 0 if required to avoid panics.
+        let mut header = make_genesis_header(&spec.inner.genesis);
+        if header.base_fee_per_gas.is_none() && feynman_at_genesis {
+            header.base_fee_per_gas = Some(0);
+        }
+        spec.inner.genesis_header = SealedHeader::new_unhashed(header);
+
+        // Enable Scroll's EIP-1559 parameters starting at Feynman.
+        spec.inner.base_fee_params = BaseFeeParamsKind::Variable(
+            vec![(ScrollHardfork::Feynman.boxed(), SCROLL_BASE_FEE_PARAMS_FEYNMAN)].into(),
+        );
+        spec
     }
 }
 
