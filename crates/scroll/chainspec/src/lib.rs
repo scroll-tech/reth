@@ -195,13 +195,8 @@ impl ScrollChainSpec {
         let mut spec: Self = genesis.into();
 
         // Determine whether Feynman is active at genesis.
-        let scroll_info = ScrollConfigInfo::extract_from(&spec.inner.genesis);
-        let feynman_active_at_genesis = scroll_info
-            .scroll_chain_info
-            .hard_fork_info
-            .and_then(|h| h.feynman_time)
-            .map(|t| t <= spec.inner.genesis.timestamp)
-            .unwrap_or(false);
+        let feynman_active_at_genesis =
+            spec.is_feynman_active_at_timestamp(spec.inner.genesis.timestamp);
 
         // Ensure the genesis header has a base fee when required.
         let mut header = make_genesis_header(&spec.inner.genesis);
