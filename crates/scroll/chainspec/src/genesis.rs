@@ -1,9 +1,13 @@
 //! Scroll types for genesis data.
 
 use crate::{
-    constants::{SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG, SCROLL_SEPOLIA_L1_CONFIG},
+    constants::{
+        MAX_TX_PAYLOAD_BYTES_PER_BLOCK, SCROLL_FEE_VAULT_ADDRESS, SCROLL_MAINNET_L1_CONFIG,
+        SCROLL_SEPOLIA_L1_CONFIG,
+    },
     SCROLL_DEV_L1_CONFIG,
 };
+
 use alloy_primitives::Address;
 use alloy_serde::OtherFields;
 use serde::de::Error;
@@ -113,6 +117,8 @@ pub struct ScrollChainConfig {
     /// This is an optional field that, when set, specifies where L2 transaction fees
     /// will be sent or stored.
     pub fee_vault_address: Option<Address>,
+    /// The maximum tx payload size of blocks that we produce.
+    pub max_tx_payload_bytes_per_block: usize,
     /// The L1 configuration.
     /// This field encapsulates specific settings and parameters required for L1
     pub l1_config: L1Config,
@@ -129,6 +135,7 @@ impl ScrollChainConfig {
     pub const fn mainnet() -> Self {
         Self {
             fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            max_tx_payload_bytes_per_block: MAX_TX_PAYLOAD_BYTES_PER_BLOCK,
             l1_config: SCROLL_MAINNET_L1_CONFIG,
         }
     }
@@ -137,13 +144,18 @@ impl ScrollChainConfig {
     pub const fn sepolia() -> Self {
         Self {
             fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            max_tx_payload_bytes_per_block: MAX_TX_PAYLOAD_BYTES_PER_BLOCK,
             l1_config: SCROLL_SEPOLIA_L1_CONFIG,
         }
     }
 
     /// Returns the [`ScrollChainConfig`] for Scroll dev.
     pub const fn dev() -> Self {
-        Self { fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS), l1_config: SCROLL_DEV_L1_CONFIG }
+        Self {
+            fee_vault_address: Some(SCROLL_FEE_VAULT_ADDRESS),
+            max_tx_payload_bytes_per_block: MAX_TX_PAYLOAD_BYTES_PER_BLOCK,
+            l1_config: SCROLL_DEV_L1_CONFIG,
+        }
     }
 }
 
@@ -209,6 +221,7 @@ mod tests {
           "feynmanTime": 100,
           "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+            "maxTxPayloadBytesPerBlock": 122880,
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -237,6 +250,7 @@ mod tests {
             }),
             scroll_chain_config: ScrollChainConfig {
                 fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),
+                max_tx_payload_bytes_per_block: MAX_TX_PAYLOAD_BYTES_PER_BLOCK,
                 l1_config: L1Config {
                     l1_chain_id: 1,
                     l1_message_queue_address: address!("0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B"),
