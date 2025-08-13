@@ -17,7 +17,10 @@ use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
 use reth_scroll_evm::ScrollNextBlockEnvAttributes;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_scroll_rpc::{eth::ScrollEthApiBuilder, ScrollEthApiError};
+use reth_scroll_rpc::{
+    eth::{ScrollEthApiBuilder, DEFAULT_MIN_SUGGESTED_PRIORITY_FEE},
+    ScrollEthApiError,
+};
 use revm::context::TxEnv;
 use scroll_alloy_evm::ScrollTransactionIntoTxEnv;
 use scroll_alloy_network::Scroll;
@@ -148,8 +151,7 @@ impl<NetworkT> Default for ScrollAddOnsBuilder<NetworkT> {
         Self {
             sequencer_url: None,
             payload_size_limit: SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT,
-            // TODO (scroll): update with default values.
-            min_suggested_priority_fee: 1_000_000,
+            min_suggested_priority_fee: DEFAULT_MIN_SUGGESTED_PRIORITY_FEE,
             _nt: PhantomData,
             rpc_middleware: Identity::new(),
         }

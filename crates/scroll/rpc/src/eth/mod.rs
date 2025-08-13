@@ -65,12 +65,14 @@ impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApi<N, Rpc> {
         sequencer_client: Option<SequencerClient>,
         min_suggested_priority_fee: U256,
         payload_size_limit: u64,
+        propagate_local_transactions: bool,
     ) -> Self {
         let inner = Arc::new(ScrollEthApiInner {
             eth_api,
             min_suggested_priority_fee,
             payload_size_limit,
             sequencer_client,
+            propagate_local_transactions,
         });
         Self { inner }
     }
@@ -277,6 +279,8 @@ pub struct ScrollEthApiInner<N: ScrollNodeCore, Rpc: RpcConvert> {
     min_suggested_priority_fee: U256,
     /// Maximum payload size
     payload_size_limit: u64,
+    /// whether local transactions should be propagated.
+    propagate_local_transactions: bool,
 }
 
 impl<N: RpcNodeCore, Rpc: RpcConvert> ScrollEthApiInner<N, Rpc> {
@@ -316,6 +320,8 @@ pub struct ScrollEthApiBuilder<NetworkT = Scroll> {
     min_suggested_priority_fee: u64,
     /// Maximum payload size
     payload_size_limit: u64,
+    /// whether local transactions should be propagated.
+    propagate_local_transactions: bool,
     /// Marker for network types.
     _nt: PhantomData<NetworkT>,
 }
@@ -326,6 +332,7 @@ impl<NetworkT> Default for ScrollEthApiBuilder<NetworkT> {
             sequencer_url: None,
             min_suggested_priority_fee: DEFAULT_MIN_SUGGESTED_PRIORITY_FEE,
             payload_size_limit: DEFAULT_PAYLOAD_SIZE_LIMIT,
+            propagate_local_transactions: true,
             _nt: PhantomData,
         }
     }
@@ -354,6 +361,15 @@ impl<NetworkT> ScrollEthApiBuilder<NetworkT> {
         self.payload_size_limit = limit;
         self
     }
+
+    /// With whether local transactions should be propagated.
+    pub const fn with_propagate_local_transactions(
+        &mut self,
+        propagate_local_transactions: bool,
+    ) -> &mut Self {
+        self.propagate_local_transactions = propagate_local_transactions;
+        self
+    }
 }
 
 impl<N, NetworkT> EthApiBuilder<N> for ScrollEthApiBuilder<NetworkT>
@@ -367,7 +383,13 @@ where
     type EthApi = ScrollEthApi<N, ScrollRpcConvert<N, NetworkT>>;
 
     async fn build_eth_api(self, ctx: EthApiCtx<'_, N>) -> eyre::Result<Self::EthApi> {
-        let Self { min_suggested_priority_fee, payload_size_limit, sequencer_url, .. } = self;
+        let Self {
+            min_suggested_priority_fee,
+            payload_size_limit,
+            sequencer_url,
+            propagate_local_transactions,
+            ..
+        } = self;
         let rpc_converter = RpcConverter::new(ScrollReceiptConverter::default())
             .with_mapper(ScrollTxInfoMapper::new(ctx.components.provider().clone()));
 
@@ -388,6 +410,7 @@ where
             sequencer_client,
             U256::from(min_suggested_priority_fee),
             payload_size_limit,
+            propagate_local_transactions,
         ))
     }
 }
