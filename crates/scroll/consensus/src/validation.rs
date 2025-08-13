@@ -134,7 +134,11 @@ where
         }
 
         // Check L1 messages.
-        validate_l1_messages(block.body().transactions())?;
+        let ts = block.header().timestamp();
+        validate_l1_messages(
+            block.body().transactions(),
+            self.chain_spec.is_euclid_v2_active_at_timestamp(ts),
+        )?;
 
         Ok(())
     }
@@ -348,16 +352,28 @@ fn validate_against_parent_gas_limit<H: BlockHeader>(
 #[inline]
 fn validate_l1_messages<Tx: SignedTransaction + ScrollTransaction>(
     txs: &[Tx],
+    is_euclid_v2: bool,
 ) -> Result<(), ScrollConsensusError> {
     // Check L1 messages are only at the start of the block and correctly ordered.
     let mut saw_l2_transaction = false;
-    let mut queue_index = 0;
+    let mut queue_index = txs
+        .iter()
+        .find(|tx| tx.is_l1_message())
+        .and_then(|tx| tx.queue_index())
+        .unwrap_or_default();
+
+    // starting at EuclidV2, we don't skip L1 messages.
+    let l1_message_index_check: fn(u64, u64) -> bool = if is_euclid_v2 {
+        |tx_queue_index, queue_index| tx_queue_index != queue_index
+    } else {
+        |tx_queue_index, queue_index| tx_queue_index < queue_index
+    };
 
     for tx in txs {
-        // Check index is strictly increasing.
+        // Check index is strictly increasing pre EuclidV2 and sequential post EuclidV2.
         if tx.is_l1_message() {
             let tx_queue_index = tx.queue_index().expect("is_l1_message");
-            if tx_queue_index < queue_index {
+            if l1_message_index_check(tx_queue_index, queue_index) {
                 return Err(ScrollConsensusError::InvalidL1MessageOrder);
             }
             queue_index = tx_queue_index + 1;
@@ -631,13 +647,15 @@ mod tests {
             .into(),
         ];
 
-        assert!(validate_l1_messages(&txs).is_ok());
+        assert!(validate_l1_messages(&txs, true).is_ok());
+        assert!(validate_l1_messages(&txs, false).is_ok());
     }
 
     #[test]
     fn test_validate_l1_messages_empty() {
         let txs: Vec<ScrollTxEnvelope> = vec![];
-        assert!(validate_l1_messages(&txs).is_ok());
+        assert!(validate_l1_messages(&txs, true).is_ok());
+        assert!(validate_l1_messages(&txs, false).is_ok());
     }
 
     #[test]
@@ -669,7 +687,8 @@ mod tests {
             .into(),
         ];
 
-        assert!(validate_l1_messages(&txs).is_ok());
+        assert!(validate_l1_messages(&txs, true).is_ok());
+        assert!(validate_l1_messages(&txs, false).is_ok());
     }
 
     #[test]
@@ -684,7 +703,9 @@ mod tests {
             TxL1Message { queue_index: 0, ..Default::default() }.into(),
         ];
 
-        let result = validate_l1_messages(&txs);
+        let result = validate_l1_messages(&txs, true);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
+        let result = validate_l1_messages(&txs, false);
         assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
     }
 
@@ -696,7 +717,10 @@ mod tests {
         ];
 
         // ok as it's not decreasing.
-        assert!(validate_l1_messages(&txs).is_ok());
+        assert!(validate_l1_messages(&txs, false).is_ok());
+        // not ok as it's not sequential.
+        let result = validate_l1_messages(&txs, true);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
     }
 
     #[test]
@@ -706,7 +730,9 @@ mod tests {
             TxL1Message { queue_index: 0, ..Default::default() }.into(),
         ];
 
-        let result = validate_l1_messages(&txs);
+        let result = validate_l1_messages(&txs, true);
+        assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
+        let result = validate_l1_messages(&txs, false);
         assert!(matches!(result, Err(ScrollConsensusError::InvalidL1MessageOrder)));
     }
 
