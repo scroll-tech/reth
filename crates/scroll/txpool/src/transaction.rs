@@ -10,6 +10,7 @@ use reth_scroll_primitives::ScrollTransactionSigned;
 use reth_transaction_pool::{
     EthBlobTransactionSidecar, EthPoolTransaction, EthPooledTransaction, PoolTransaction,
 };
+use scroll_alloy_consensus::ScrollTransaction;
 use std::sync::{Arc, OnceLock};
 
 /// Pool transaction for Scroll.
@@ -206,6 +207,16 @@ where
         _settings: &KzgSettings,
     ) -> Result<(), BlobTransactionValidationError> {
         Err(BlobTransactionValidationError::NotBlobTransaction(self.ty()))
+    }
+}
+
+impl<Cons: ScrollTransaction, Pooled> ScrollTransaction for ScrollPooledTransaction<Cons, Pooled> {
+    fn is_l1_message(&self) -> bool {
+        self.transaction.is_l1_message()
+    }
+
+    fn queue_index(&self) -> Option<u64> {
+        self.transaction.queue_index()
     }
 }
 

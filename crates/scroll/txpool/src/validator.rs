@@ -17,6 +17,7 @@ use reth_transaction_pool::{
     TransactionValidator,
 };
 use revm_scroll::l1block::L1BlockInfo;
+use scroll_alloy_consensus::ScrollTransaction;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
@@ -85,7 +86,7 @@ impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
 impl<Client, Tx> ScrollTransactionValidator<Client, Tx>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
-    Tx: EthPoolTransaction,
+    Tx: EthPoolTransaction + ScrollTransaction,
 {
     /// Create a new [`ScrollTransactionValidator`].
     pub fn new(inner: EthTransactionValidator<Client, Tx>) -> Self {
@@ -139,6 +140,12 @@ where
         transaction: Tx,
     ) -> TransactionValidationOutcome<Tx> {
         if transaction.is_eip4844() {
+            return TransactionValidationOutcome::Invalid(
+                transaction,
+                InvalidTransactionError::Eip4844Disabled.into(),
+            )
+        }
+        if transaction.is_l1_message() {
             return TransactionValidationOutcome::Invalid(
                 transaction,
                 InvalidTransactionError::TxTypeNotSupported.into(),
@@ -232,7 +239,7 @@ where
 impl<Client, Tx> TransactionValidator for ScrollTransactionValidator<Client, Tx>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
-    Tx: EthPoolTransaction,
+    Tx: EthPoolTransaction + ScrollTransaction,
 {
     type Transaction = Tx;
 

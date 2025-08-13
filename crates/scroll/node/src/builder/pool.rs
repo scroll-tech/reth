@@ -13,6 +13,7 @@ use reth_transaction_pool::{
     blobstore::DiskFileBlobStore, CoinbaseTipOrdering, EthPoolTransaction,
     TransactionValidationTaskExecutor,
 };
+use scroll_alloy_consensus::ScrollTransaction;
 use scroll_alloy_hardforks::ScrollHardforks;
 
 /// A basic scroll transaction pool.
@@ -52,7 +53,7 @@ where
             ChainSpec: EthChainSpec + ScrollHardforks + ChainConfig<Config = ScrollChainConfig>,
         >,
     >,
-    T: EthPoolTransaction<Consensus = TxTy<Node::Types>>,
+    T: EthPoolTransaction<Consensus = TxTy<Node::Types>> + ScrollTransaction,
 {
     type Pool = ScrollTransactionPool<Node::Provider, DiskFileBlobStore, T>;
 

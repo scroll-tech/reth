@@ -424,6 +424,30 @@ impl ScrollTxEnvelope {
     }
 }
 
+/// A Scroll chain transaction.
+pub trait ScrollTransaction {
+    /// Returns true if the transaction is a L1 message.
+    fn is_l1_message(&self) -> bool;
+    /// Returns the queue index if the transaction is a L1 message, None otherwise.
+    fn queue_index(&self) -> Option<u64>;
+}
+
+impl ScrollTransaction for ScrollTxEnvelope {
+    fn is_l1_message(&self) -> bool {
+        match self {
+            Self::Legacy(_) | Self::Eip2930(_) | Self::Eip1559(_) | Self::Eip7702(_) => false,
+            Self::L1Message(_) => true,
+        }
+    }
+
+    fn queue_index(&self) -> Option<u64> {
+        match self {
+            Self::Legacy(_) | Self::Eip2930(_) | Self::Eip1559(_) | Self::Eip7702(_) => None,
+            Self::L1Message(tx) => Some(tx.queue_index),
+        }
+    }
+}
+
 #[cfg(feature = "reth-codec")]
 impl ToTxCompact for ScrollTxEnvelope {
     fn to_tx_compact(&self, buf: &mut (impl BufMut + AsMut<[u8]>)) {
