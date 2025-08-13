@@ -139,7 +139,7 @@ mod tests {
     use crate::ScrollNode;
 
     use alloy_consensus::{transaction::Recovered, Header, Signed, TxLegacy};
-    use alloy_primitives::{private::rand::random_iter, Bytes, Signature, B256, U256};
+    use alloy_primitives::{private::rand::random_iter, Bytes, Sealed, Signature, B256, U256};
     use reth_chainspec::Head;
     use reth_db::mock::DatabaseMock;
     use reth_node_api::FullNodeTypesAdapter;
@@ -161,7 +161,7 @@ mod tests {
         error::{InvalidPoolTransactionError, PoolErrorKind},
         PoolConfig, TransactionOrigin, TransactionPool,
     };
-    use scroll_alloy_consensus::ScrollTxEnvelope;
+    use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
     use scroll_alloy_evm::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
 
     async fn pool() -> (
@@ -346,6 +346,33 @@ mod tests {
             PoolErrorKind::InvalidTransaction(
                 InvalidPoolTransactionError::Consensus(InvalidTransactionError::InsufficientFunds(GotExpectedBoxed(expected)))
             ) if *expected == GotExpected{ got: U256::from(400000), expected: U256::from(4205858031847u64) }
+        ));
+
+        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
+        // drop all validation tasks.
+        drop(manager);
+    }
+
+    #[tokio::test]
+    async fn test_validate_one_disallow_l1_messages() {
+        // create the pool.
+        let (pool, manager) = pool().await;
+        let tx = ScrollTxEnvelope::L1Message(Sealed::new_unchecked(
+            TxL1Message::default(),
+            B256::default(),
+        ));
+
+        // Create a pool transaction with the L1 message.
+        let pool_tx =
+            ScrollPooledTransaction::new(Recovered::new_unchecked(tx, Default::default()), 0);
+
+        // add the transaction to the pool and expect an `OversizedData` error.
+        let err = pool.add_transaction(TransactionOrigin::Local, pool_tx).await.unwrap_err();
+        assert!(matches!(
+            err.kind,
+            PoolErrorKind::InvalidTransaction(InvalidPoolTransactionError::Consensus(
+                InvalidTransactionError::TxTypeNotSupported
+            ))
         ));
 
         // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
