@@ -8521,6 +8521,7 @@ dependencies = [
  "reth-trie-common",
  "revm",
  "scroll-alloy-evm",
+ "tracing",
 ]
 
 [[package]]
