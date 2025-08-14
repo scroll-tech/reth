@@ -46,7 +46,7 @@ use revm_scroll::{
 
 /// Re-export `TX_L1_FEE_PRECISION_U256` from `revm-scroll` for convenience.
 pub use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
-use log::info;
+use tracing::info;
 
 /// Scroll EVM implementation.
 #[allow(missing_debug_implementations)]

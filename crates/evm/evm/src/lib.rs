@@ -57,7 +57,7 @@ pub use alloy_evm::{
 };
 
 pub use alloy_evm::block::state_changes as state_change;
-use log::info;
+use tracing::info;
 
 /// A complete configuration of EVM for Reth.
 ///

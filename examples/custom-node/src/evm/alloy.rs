@@ -10,11 +10,13 @@ use reth_ethereum::evm::revm::{
     context::{result::ResultAndState, BlockEnv, CfgEnv},
     handler::PrecompileProvider,
     interpreter::InterpreterResult,
-    Context, Inspector, Journal,
+    Context, Journal,
 };
-use revm::{context_interface::result::EVMError, inspector::NoOpInspector, Inspector};
+use revm::{
+    context_interface::result::EVMError, inspector::NoOpInspector, Inspector as RevmInspector,
+};
 use std::error::Error;
-use jsonrpsee::tracing::info;
+use tracing::info;
 
 /// EVM context contains data that EVM needs for execution of [`CustomTxEnv`].
 pub type CustomContext<DB> =
