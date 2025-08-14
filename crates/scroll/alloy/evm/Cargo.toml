@@ -32,6 +32,7 @@ scroll-alloy-hardforks = { workspace = true, default-features = false }
 auto_impl = { workspace = true, default-features = false }
 serde = { workspace = true, default-features = false, features = ["derive"], optional = true }
 encoder-standard = { workspace = true, default-features = false, optional = true }
+log = "0.4.27"
 
 [dev-dependencies]
 alloy-hardforks.workspace = true

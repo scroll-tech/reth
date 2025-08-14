@@ -11830,6 +11830,7 @@ dependencies = [
  "auto_impl",
  "encoder-standard",
  "eyre",
+ "log",
  "reth-evm",
  "reth-scroll-chainspec",
  "reth-scroll-evm",

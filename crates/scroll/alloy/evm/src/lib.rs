@@ -46,6 +46,7 @@ use revm_scroll::{
 
 /// Re-export `TX_L1_FEE_PRECISION_U256` from `revm-scroll` for convenience.
 pub use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
+use log::info;
 
 /// Scroll EVM implementation.
 #[allow(missing_debug_implementations)]
@@ -127,8 +128,10 @@ where
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         if self.inspect {
+            info!("Inspecting inspect_tx: {:?}", tx);
             self.inner.inspect_tx(tx.into())
         } else {
+            info!("Executing transact: {:?}", tx);
             self.inner.transact(tx.into())
         }
     }
