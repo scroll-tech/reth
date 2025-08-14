@@ -236,6 +236,7 @@ impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
         input: EvmEnv<ScrollSpecId>,
         inspector: I,
     ) -> Self::Evm<DB, I> {
+        info!("hhf2 create_evm_with_inspector");
         let spec_id = input.cfg_env.spec;
         ScrollEvm {
             inner: Context::scroll()

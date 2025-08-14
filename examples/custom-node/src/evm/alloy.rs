@@ -12,8 +12,9 @@ use reth_ethereum::evm::revm::{
     interpreter::InterpreterResult,
     Context, Inspector, Journal,
 };
-use revm::{context_interface::result::EVMError, inspector::NoOpInspector};
+use revm::{context_interface::result::EVMError, inspector::NoOpInspector, Inspector};
 use std::error::Error;
+use jsonrpsee::tracing::info;
 
 /// EVM context contains data that EVM needs for execution of [`CustomTxEnv`].
 pub type CustomContext<DB> =
@@ -119,6 +120,7 @@ impl EvmFactory for CustomEvmFactory {
         input: EvmEnv<Self::Spec>,
         inspector: I,
     ) -> Self::Evm<DB, I> {
+        info!("hhf1 create_evm_with_inspector");
         CustomEvm::new(self.0.create_evm_with_inspector(db, input, inspector))
     }
 }
