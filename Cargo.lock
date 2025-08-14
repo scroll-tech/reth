@@ -8506,6 +8506,7 @@ dependencies = [
  "auto_impl",
  "derive_more",
  "futures-util",
+ "log",
  "metrics",
  "metrics-util",
  "reth-ethereum-forks",

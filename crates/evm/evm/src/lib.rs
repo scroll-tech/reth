@@ -57,6 +57,7 @@ pub use alloy_evm::{
 };
 
 pub use alloy_evm::block::state_changes as state_change;
+use log::info;
 
 /// A complete configuration of EVM for Reth.
 ///
@@ -302,6 +303,7 @@ pub trait ConfigureEvm: Clone + Debug + Send + Sync + Unpin {
         DB: Database,
         I: InspectorFor<Self, DB>,
     {
+        info!("hhf evm_with_env_and_inspector");
         self.evm_factory().create_evm_with_inspector(db, evm_env, inspector)
     }
 
