@@ -50,6 +50,7 @@ jsonrpsee.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 modular-bitfield.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 test-fuzz.workspace = true

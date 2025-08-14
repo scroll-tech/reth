@@ -3484,6 +3484,7 @@ dependencies = [
  "serde",
  "test-fuzz",
  "thiserror 2.0.12",
+ "tracing",
 ]
 
 [[package]]
@@ -11840,6 +11841,7 @@ dependencies = [
  "scroll-alloy-consensus",
  "scroll-alloy-hardforks",
  "serde",
+ "tracing",
 ]
 
 [[package]]
