@@ -765,6 +765,8 @@ where
                         let (res, (_, tx_env)) =
                             self.eth_api().inspect(db, evm_env, tx_env, &mut inspector)?;
 
+                        info!("hhf result: {res:?} tx_env: {tx_env:?}");
+
                         inspector.set_transaction_gas_limit(tx_env.gas_limit());
 
                         let frame = inspector
