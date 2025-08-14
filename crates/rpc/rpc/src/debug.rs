@@ -44,6 +44,7 @@ use revm_inspectors::tracing::{
 };
 use std::sync::Arc;
 use tokio::sync::{AcquireError, OwnedSemaphorePermit};
+use tracing::info;
 
 /// `debug` API implementation.
 ///
@@ -748,6 +749,7 @@ where
                         return Ok((FourByteFrame::from(&inspector).into(), res.state))
                     }
                     GethDebugBuiltInTracerType::CallTracer => {
+                        info!("Using Call Tracer for debug_traceCall");
                         let call_config = tracer_config
                             .clone()
                             .into_call_config()
@@ -796,6 +798,7 @@ where
                         Ok((NoopFrame::default().into(), Default::default()))
                     }
                     GethDebugBuiltInTracerType::MuxTracer => {
+                        info!("Using Mux Tracer for debug_traceCall");
                         let mux_config = tracer_config
                             .clone()
                             .into_mux_config()
