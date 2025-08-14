@@ -128,10 +128,10 @@ where
         tx: Self::Tx,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
         if self.inspect {
-            info!("Inspecting inspect_tx: {:?}", tx);
+            info!("hhf Inspecting inspect_tx: {:?}", tx);
             self.inner.inspect_tx(tx.into())
         } else {
-            info!("Executing transact: {:?}", tx);
+            info!("hhf Executing transact: {:?}", tx);
             self.inner.transact(tx.into())
         }
     }
