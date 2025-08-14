@@ -754,6 +754,7 @@ where
                             .clone()
                             .into_call_config()
                             .map_err(|_| EthApiError::InvalidTracerConfig)?;
+                        info!("Call config: {call_config:?}");
 
                         let mut inspector = fused_inspector.get_or_insert_with(|| {
                             TracingInspector::new(TracingInspectorConfig::from_geth_call_config(
