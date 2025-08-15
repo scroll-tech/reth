@@ -6,6 +6,9 @@ use alloy_rlp::{Encodable, RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 use core::ops::{Deref, DerefMut};
 
+#[cfg(feature = "reth-codec")]
+use reth_codecs::Compact;
+
 /// A wrapper around `alloy_consensus::Header` that excludes `extra_data` field when computing hash_slow.
 /// 
 /// This is useful for Scroll where the `extra_data` field should not be included in the block hash
@@ -22,6 +25,7 @@ use core::ops::{Deref, DerefMut};
     Serialize,
     Deserialize,
 )]
+#[cfg_attr(feature = "reth-codec", derive(Compact))]
 #[serde(rename_all = "camelCase")]
 pub struct ScrollHeader {
     /// The inner alloy consensus header
@@ -211,6 +215,28 @@ impl alloy_consensus::BlockHeader for ScrollHeader {
         self.inner.extra_data()
     }
 }
+
+// Additional trait implementations required by reth_primitives_traits::BlockHeader
+impl reth_primitives_traits::block::header::BlockHeaderMut for ScrollHeader {
+    fn extra_data_mut(&mut self) -> &mut Bytes {
+        &mut self.inner.extra_data
+    }
+}
+
+impl reth_primitives_traits::InMemorySize for ScrollHeader {
+    fn size(&self) -> usize {
+        self.inner.size()
+    }
+}
+
+impl AsRef<Self> for ScrollHeader {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+// Implement reth_primitives_traits::BlockHeader
+impl reth_primitives_traits::BlockHeader for ScrollHeader {}
 
 #[cfg(test)]
 mod tests {

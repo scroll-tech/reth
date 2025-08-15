@@ -12,6 +12,8 @@
 use once_cell as _;
 
 pub mod transaction;
+#[cfg(feature = "serde-bincode-compat")]
+use scroll_alloy_consensus::ScrollHeader;
 pub use transaction::{tx_type::ScrollTxType, ScrollTransactionSigned};
 
 use reth_primitives_traits::Block;
@@ -20,7 +22,7 @@ mod receipt;
 pub use receipt::ScrollReceipt;
 
 /// Scroll-specific block type.
-pub type ScrollBlock = alloy_consensus::Block<ScrollTransactionSigned>;
+pub type ScrollBlock = alloy_consensus::Block<ScrollTransactionSigned, ScrollHeader>;
 
 /// Scroll-specific block body type.
 pub type ScrollBlockBody = <ScrollBlock as Block>::Body;
@@ -32,7 +34,7 @@ pub struct ScrollPrimitives;
 #[cfg(feature = "serde-bincode-compat")]
 impl reth_primitives_traits::NodePrimitives for ScrollPrimitives {
     type Block = ScrollBlock;
-    type BlockHeader = alloy_consensus::Header;
+    type BlockHeader = ScrollHeader;
     type BlockBody = ScrollBlockBody;
     type SignedTx = ScrollTransactionSigned;
     type Receipt = ScrollReceipt;
