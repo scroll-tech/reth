@@ -55,6 +55,7 @@ pub use transaction::{PooledTransactionsElementEcRecovered, TransactionSignedEcR
 // Re-exports
 pub use reth_ethereum_forks::*;
 
+#[cfg(any(test, feature = "arbitrary"))]
 #[allow(unused_imports)]
 use arbitrary as _;
 
