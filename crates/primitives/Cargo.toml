@@ -39,8 +39,6 @@ alloy-rlp.workspace = true
 alloy-eips = { workspace = true, features = ["arbitrary"] }
 alloy-genesis.workspace = true
 
-arbitrary = { workspace = true, features = ["derive"] }
-
 proptest-arbitrary-interop.workspace = true
 proptest.workspace = true
 reth-codecs.workspace = true
