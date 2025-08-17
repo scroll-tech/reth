@@ -1,16 +1,16 @@
 use crate::{build::ScrollBlockAssembler, ScrollEvmConfig, ScrollNextBlockEnvAttributes};
 use alloc::sync::Arc;
-use alloy_consensus::{BlockHeader, Header};
+use alloy_consensus::BlockHeader;
 use alloy_evm::{FromRecoveredTx, FromTxWithEncoded};
 use alloy_primitives::B256;
 use core::convert::Infallible;
 use reth_chainspec::EthChainSpec;
 use reth_evm::{ConfigureEvm, EvmEnv, ExecutionCtxFor};
 use reth_primitives_traits::{
-    BlockTy, NodePrimitives, SealedBlock, SealedHeader, SignedTransaction,
+    BlockTy, NodePrimitives, SealedBlock, SealedHeader,
 };
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
-use reth_scroll_primitives::ScrollReceipt;
+use reth_scroll_primitives::{ScrollBlock, ScrollBlockBody, ScrollHeader, ScrollTransactionSigned, ScrollReceipt};
 use revm::{
     context::{BlockEnv, CfgEnv, TxEnv},
     primitives::U256,
@@ -28,13 +28,13 @@ where
     N: NodePrimitives<
         Receipt = R::Receipt,
         SignedTx = R::Transaction,
-        BlockHeader = Header,
-        BlockBody = alloy_consensus::BlockBody<R::Transaction>,
-        Block = alloy_consensus::Block<R::Transaction>,
+        BlockHeader = ScrollHeader,
+        BlockBody = ScrollBlockBody,
+        Block = ScrollBlock,
     >,
     ScrollTransactionIntoTxEnv<TxEnv>:
         FromRecoveredTx<N::SignedTx> + FromTxWithEncoded<N::SignedTx>,
-    R: ScrollReceiptBuilder<Receipt = ScrollReceipt, Transaction: SignedTransaction>,
+    R: ScrollReceiptBuilder<Receipt = ScrollReceipt, Transaction = ScrollTransactionSigned>,
     P: ScrollPrecompilesFactory,
     Self: Send + Sync + Unpin + Clone + 'static,
 {
@@ -184,7 +184,7 @@ mod tests {
         );
 
         // curie
-        let curie_header = Header { number: 7096836, ..Default::default() };
+        let curie_header = ScrollHeader { inner: Header { number: 7096836, ..Default::default() } };
 
         // fill cfg env
         let env = config.evm_env(&curie_header);
@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(env.cfg_env.spec, ScrollSpecId::CURIE);
 
         // bernoulli
-        let bernoulli_header = Header { number: 5220340, ..Default::default() };
+        let bernoulli_header = ScrollHeader { inner: Header { number: 5220340, ..Default::default() } };
 
         // fill cfg env
         let env = config.evm_env(&bernoulli_header);
@@ -204,7 +204,7 @@ mod tests {
         assert_eq!(env.cfg_env.spec, ScrollSpecId::BERNOULLI);
 
         // pre-bernoulli
-        let pre_bernoulli_header = Header { number: 0, ..Default::default() };
+        let pre_bernoulli_header = ScrollHeader { inner: Header { number: 0, ..Default::default() } };
 
         // fill cfg env
         let env = config.evm_env(&pre_bernoulli_header);
@@ -222,7 +222,7 @@ mod tests {
         );
 
         // curie header
-        let header = Header {
+        let header = ScrollHeader { inner: Header {
             number: 7096836,
             beneficiary: Address::random(),
             timestamp: 1719994277,
@@ -230,7 +230,7 @@ mod tests {
             base_fee_per_gas: Some(155157341),
             gas_limit: 10000000,
             ..Default::default()
-        };
+        }};
 
         // fill block env
         let env = config.evm_env(&header);
@@ -257,7 +257,7 @@ mod tests {
         );
 
         // pre curie header
-        let header = Header {
+        let header = ScrollHeader { inner: Header {
             number: 7096835,
             beneficiary: Address::random(),
             timestamp: 1719994274,
@@ -265,7 +265,7 @@ mod tests {
             base_fee_per_gas: None,
             gas_limit: 10000000,
             ..Default::default()
-        };
+        }};
 
         // curie block attributes
         let attributes = ScrollNextBlockEnvAttributes {

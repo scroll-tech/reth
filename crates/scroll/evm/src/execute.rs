@@ -63,7 +63,7 @@ mod tests {
     use reth_primitives_traits::{NodePrimitives, RecoveredBlock, SignedTransaction};
     use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpec, ScrollChainSpecBuilder};
     use reth_scroll_primitives::{
-        ScrollBlock, ScrollPrimitives, ScrollReceipt, ScrollTransactionSigned,
+        ScrollBlock, ScrollHeader, ScrollPrimitives, ScrollReceipt, ScrollTransactionSigned
     };
     use revm::{
         bytecode::Bytecode,
@@ -136,11 +136,13 @@ mod tests {
         let senders = transactions.iter().map(|t| t.recover_signer().unwrap()).collect();
         RecoveredBlock::new_unhashed(
             Block {
-                header: Header {
-                    number,
-                    timestamp,
-                    gas_limit: BLOCK_GAS_LIMIT,
-                    ..Default::default()
+                header: ScrollHeader {
+                    inner: Header {
+                        number,
+                        timestamp,
+                        gas_limit: BLOCK_GAS_LIMIT,
+                        ..Default::default()
+                    },
                 },
                 body: BlockBody { transactions, ..Default::default() },
             },

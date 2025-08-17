@@ -22,7 +22,7 @@ use reth_engine_primitives::EngineTypes;
 use reth_payload_primitives::{BuiltPayload, PayloadTypes};
 use reth_primitives::{Block, BlockBody, Header};
 use reth_primitives_traits::{NodePrimitives, SealedBlock};
-use reth_scroll_primitives::ScrollBlock;
+use reth_scroll_primitives::{ScrollBlock, ScrollHeader, ScrollTransactionSigned};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 
@@ -99,14 +99,14 @@ impl PayloadTypes for ScrollPayloadTypes {
 /// Scroll implementation of the [`ExecutionPayload::try_into_block`], which will fail with
 /// [`PayloadError::ExtraData`] due to the Scroll blocks containing extra data for the Clique
 /// consensus.
-pub fn try_into_block<T: Decodable2718, CS: ScrollHardforks>(
+pub fn try_into_block<CS: ScrollHardforks>(
     value: ExecutionData,
     chainspec: Arc<CS>,
-) -> Result<Block<T>, PayloadError> {
+) -> Result<ScrollBlock, PayloadError> {
     let mut block = match value.payload {
-        ExecutionPayload::V1(payload) => try_payload_v1_to_block(payload, chainspec)?,
-        ExecutionPayload::V2(payload) => try_payload_v2_to_block(payload, chainspec)?,
-        ExecutionPayload::V3(payload) => try_payload_v3_to_block(payload, chainspec)?,
+        ExecutionPayload::V1(payload) => try_payload_v1_to_block(payload, &*chainspec)?,
+        ExecutionPayload::V2(payload) => try_payload_v2_to_block(payload, &*chainspec)?,
+        ExecutionPayload::V3(payload) => try_payload_v3_to_block(payload, &*chainspec)?,
     };
 
     block.header.parent_beacon_block_root = value.sidecar.parent_beacon_block_root();
@@ -116,10 +116,10 @@ pub fn try_into_block<T: Decodable2718, CS: ScrollHardforks>(
 }
 
 /// Tries to convert an [`ExecutionPayloadV1`] to [`Block`].
-fn try_payload_v1_to_block<T: Decodable2718, CS: ScrollHardforks>(
+fn try_payload_v1_to_block<CS: ScrollHardforks>(
     payload: ExecutionPayloadV1,
     chainspec: CS,
-) -> Result<Block<T>, PayloadError> {
+) -> Result<ScrollBlock, PayloadError> {
     // WARNING: It’s allowed for a base fee in EIP1559 to increase unbounded. We assume that
     // it will fit in an u64. This is not always necessarily true, although it is extremely
     // unlikely not to be the case, a u64 maximum would have 2^64 which equates to 18 ETH per
@@ -137,7 +137,7 @@ fn try_payload_v1_to_block<T: Decodable2718, CS: ScrollHardforks>(
         .map(|tx| {
             let mut buf = tx.as_ref();
 
-            let tx = T::decode_2718(&mut buf).map_err(alloy_rlp::Error::from)?;
+            let tx = ScrollTransactionSigned::decode_2718(&mut buf).map_err(alloy_rlp::Error::from)?;
 
             if !buf.is_empty() {
                 return Err(alloy_rlp::Error::UnexpectedLength);
@@ -153,39 +153,41 @@ fn try_payload_v1_to_block<T: Decodable2718, CS: ScrollHardforks>(
             buf.put_slice(item)
         });
 
-    let header = Header {
-        parent_hash: payload.parent_hash,
-        beneficiary: payload.fee_recipient,
-        state_root: payload.state_root,
-        transactions_root,
-        receipts_root: payload.receipts_root,
-        withdrawals_root: None,
-        logs_bloom: payload.logs_bloom,
-        number: payload.block_number,
-        gas_limit: payload.gas_limit,
-        gas_used: payload.gas_used,
-        timestamp: payload.timestamp,
-        mix_hash: payload.prev_randao,
-        base_fee_per_gas: basefee,
-        blob_gas_used: None,
-        excess_blob_gas: None,
-        parent_beacon_block_root: None,
-        requests_hash: None,
-        extra_data: payload.extra_data,
-        // Defaults
-        ommers_hash: EMPTY_OMMER_ROOT_HASH,
-        difficulty: U256::ONE,
-        nonce: Default::default(),
+    let header = ScrollHeader {
+        inner: Header {
+            parent_hash: payload.parent_hash,
+            beneficiary: payload.fee_recipient,
+            state_root: payload.state_root,
+            transactions_root,
+            receipts_root: payload.receipts_root,
+            withdrawals_root: None,
+            logs_bloom: payload.logs_bloom,
+            number: payload.block_number,
+            gas_limit: payload.gas_limit,
+            gas_used: payload.gas_used,
+            timestamp: payload.timestamp,
+            mix_hash: payload.prev_randao,
+            base_fee_per_gas: basefee,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+            parent_beacon_block_root: None,
+            requests_hash: None,
+            extra_data: payload.extra_data,
+            // Defaults
+            ommers_hash: EMPTY_OMMER_ROOT_HASH,
+            difficulty: U256::ONE,
+            nonce: Default::default(),
+        }
     };
 
     Ok(Block { header, body: BlockBody { transactions, ..Default::default() } })
 }
 
 /// Tries to convert an [`ExecutionPayloadV2`] to [`Block`].
-fn try_payload_v2_to_block<T: Decodable2718, CS: ScrollHardforks>(
+fn try_payload_v2_to_block<CS: ScrollHardforks>(
     payload: ExecutionPayloadV2,
     chainspec: CS,
-) -> Result<Block<T>, PayloadError> {
+) -> Result<ScrollBlock, PayloadError> {
     // this performs the same conversion as the underlying V1 payload, but calculates the
     // withdrawals root and adds withdrawals
     let mut base_sealed_block = try_payload_v1_to_block(payload.payload_inner, chainspec)?;
@@ -196,10 +198,10 @@ fn try_payload_v2_to_block<T: Decodable2718, CS: ScrollHardforks>(
 }
 
 /// Tries to convert an [`ExecutionPayloadV3`] to [`Block`].
-fn try_payload_v3_to_block<T: Decodable2718, CS: ScrollHardforks>(
+fn try_payload_v3_to_block<CS: ScrollHardforks>(
     payload: ExecutionPayloadV3,
     chainspec: CS,
-) -> Result<Block<T>, PayloadError> {
+) -> Result<ScrollBlock, PayloadError> {
     // this performs the same conversion as the underlying V2 payload, but inserts the blob gas
     // used and excess blob gas
     let mut base_block = try_payload_v2_to_block(payload.payload_inner, chainspec)?;
@@ -218,7 +220,6 @@ mod tests {
     use arbitrary::{Arbitrary, Unstructured};
     use rand::Rng;
     use reth_scroll_chainspec::SCROLL_MAINNET;
-    use reth_scroll_primitives::ScrollTransactionSigned;
 
     #[test]
     fn test_can_convert_execution_v1_payload_into_block() -> eyre::Result<()> {
@@ -247,7 +248,7 @@ mod tests {
         });
         let execution_data = ExecutionData::new(execution_payload, Default::default());
 
-        let _: Block<ScrollTransactionSigned> =
+        let _: ScrollBlock =
             try_into_block(execution_data, SCROLL_MAINNET.clone())?;
 
         Ok(())
@@ -283,7 +284,7 @@ mod tests {
         });
         let execution_data = ExecutionData::new(execution_payload, Default::default());
 
-        let _: Block<ScrollTransactionSigned> =
+        let _: ScrollBlock =
             try_into_block(execution_data, SCROLL_MAINNET.clone())?;
 
         Ok(())
@@ -323,7 +324,7 @@ mod tests {
         });
         let execution_data = ExecutionData::new(execution_payload, Default::default());
 
-        let _: Block<ScrollTransactionSigned> =
+        let _: ScrollBlock =
             try_into_block(execution_data, SCROLL_MAINNET.clone())?;
 
         Ok(())

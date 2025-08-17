@@ -21,7 +21,7 @@ pub static SCROLL_MAINNET: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             // TODO(scroll): migrate to Chain::scroll() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
             chain: Chain::from_named(NamedChain::Scroll),
             genesis_header: SealedHeader::new(
-                make_genesis_header(&genesis),
+                make_genesis_header(&genesis).inner,
                 SCROLL_MAINNET_GENESIS_HASH,
             ),
             genesis,

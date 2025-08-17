@@ -17,6 +17,9 @@ alloy-provider = { workspace = true, default-features = false }
 scroll-alloy-consensus = { workspace = true, default-features = false }
 scroll-alloy-rpc-types = { workspace = true, default-features = false }
 
+# reth
+reth-scroll-primitives = { workspace = true, features = ["serde", "serde-bincode-compat", "reth-codec"] }
+
 # alloy
 alloy-consensus = { workspace = true, default-features = false }
 alloy-network = { workspace = true, default-features = false }

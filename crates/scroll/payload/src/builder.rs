@@ -29,7 +29,7 @@ use reth_revm::{cancelled::CancelOnDrop, database::StateProviderDatabase, db::St
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_engine_primitives::{ScrollBuiltPayload, ScrollPayloadBuilderAttributes};
 use reth_scroll_evm::{ScrollBaseFeeProvider, ScrollNextBlockEnvAttributes};
-use reth_scroll_primitives::{ScrollPrimitives, ScrollTransactionSigned};
+use reth_scroll_primitives::{ScrollHeader, ScrollPrimitives, ScrollTransactionSigned};
 use reth_storage_api::{BaseFeeProvider, StateProvider, StateProviderFactory};
 use reth_transaction_pool::{BestTransactionsAttributes, PoolTransaction, TransactionPool};
 use revm::context::{Block, BlockEnv};
@@ -189,7 +189,7 @@ where
     // system txs, hence on_missing_payload we return [MissingPayloadBehaviour::AwaitInProgress].
     fn build_empty_payload(
         &self,
-        config: PayloadConfig<Self::Attributes>,
+        config: PayloadConfig<Self::Attributes, ScrollHeader>,
     ) -> Result<Self::BuiltPayload, PayloadBuilderError> {
         let args = BuildArguments {
             config,
@@ -353,7 +353,7 @@ pub struct ScrollPayloadBuilderCtx<Evm: ConfigureEvm, ChainSpec> {
     /// The chainspec
     pub chain_spec: ChainSpec,
     /// How to build the payload.
-    pub config: PayloadConfig<ScrollPayloadBuilderAttributes>,
+    pub config: PayloadConfig<ScrollPayloadBuilderAttributes, ScrollHeader>,
     /// Marker to check whether the job has been cancelled.
     pub cancel: CancelOnDrop,
     /// The currently best payload.
@@ -368,7 +368,7 @@ where
 {
     /// Returns the parent block the payload will be build on.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn parent(&self) -> &SealedHeader {
+    pub fn parent(&self) -> &SealedHeader<ScrollHeader> {
         &self.config.parent_header
     }
 

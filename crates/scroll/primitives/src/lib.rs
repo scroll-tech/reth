@@ -12,9 +12,10 @@
 use once_cell as _;
 
 pub mod transaction;
-#[cfg(feature = "serde-bincode-compat")]
-use scroll_alloy_consensus::ScrollHeader;
 pub use transaction::{tx_type::ScrollTxType, ScrollTransactionSigned};
+
+pub mod header;
+pub use header::ScrollHeader;
 
 use reth_primitives_traits::Block;
 

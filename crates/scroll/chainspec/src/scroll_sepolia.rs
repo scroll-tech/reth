@@ -21,7 +21,7 @@ pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
             // TODO(scroll): migrate to Chain::scroll_sepolia() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
             chain: Chain::from_named(NamedChain::ScrollSepolia),
             genesis_header: SealedHeader::new(
-                make_genesis_header(&genesis),
+                make_genesis_header(&genesis).inner,
                 SCROLL_SEPOLIA_GENESIS_HASH,
             ),
             genesis,

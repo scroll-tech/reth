@@ -28,6 +28,19 @@ use reth_tasks::{
 use scroll_alloy_network::Scroll;
 use std::{fmt, marker::PhantomData, sync::Arc};
 
+/// Custom header converter for Scroll headers
+#[derive(Debug, Clone, Default)]
+pub struct ScrollHeaderConverter;
+
+impl reth_rpc_convert::transaction::HeaderConverter<reth_scroll_primitives::ScrollHeader, alloy_rpc_types_eth::Header> for ScrollHeaderConverter {
+    fn convert_header(&self, header: reth_primitives_traits::SealedHeader<reth_scroll_primitives::ScrollHeader>, block_size: usize) -> alloy_rpc_types_eth::Header {
+        // Convert the sealed ScrollHeader to a sealed alloy_consensus::Header
+        let inner_sealed = reth_primitives_traits::SealedHeader::new_unhashed(header.inner.clone());
+        // Use the default conversion for alloy_consensus::Header
+        reth_rpc_convert::transaction::FromConsensusHeader::<alloy_consensus::Header>::from_consensus_header(inner_sealed, block_size)
+    }
+}
+
 mod block;
 mod call;
 mod fee;
@@ -300,7 +313,7 @@ pub type ScrollRpcConvert<N, NetworkT> = RpcConverter<
     NetworkT,
     <N as FullNodeComponents>::Evm,
     ScrollReceiptConverter,
-    (),
+    ScrollHeaderConverter,
     ScrollTxInfoMapper<<N as FullNodeTypes>::Provider>,
 >;
 
@@ -391,6 +404,7 @@ where
             ..
         } = self;
         let rpc_converter = RpcConverter::new(ScrollReceiptConverter::default())
+            .with_header_converter(ScrollHeaderConverter::default())
             .with_mapper(ScrollTxInfoMapper::new(ctx.components.provider().clone()));
 
         let eth_api = ctx.eth_api_builder().with_rpc_converter(rpc_converter).build_inner();

@@ -19,6 +19,8 @@ reth-zstd-compressors = { workspace = true, optional = true }
 # alloy
 alloy-consensus.workspace = true
 alloy-eips.workspace = true
+alloy-json-rpc.workspace = true
+alloy-network.workspace = true
 alloy-primitives.workspace = true
 alloy-rlp.workspace = true
 

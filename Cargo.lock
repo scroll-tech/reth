@@ -10341,6 +10341,7 @@ dependencies = [
  "reth-network-peers",
  "reth-primitives-traits",
  "reth-scroll-forks",
+ "reth-scroll-primitives",
  "reth-trie-common",
  "scroll-alloy-hardforks",
  "serde",
@@ -10548,6 +10549,8 @@ version = "1.6.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
+ "alloy-json-rpc",
+ "alloy-network",
  "alloy-primitives",
  "alloy-rlp",
  "arbitrary",
@@ -11834,6 +11837,7 @@ dependencies = [
  "reth-evm",
  "reth-scroll-chainspec",
  "reth-scroll-evm",
+ "reth-scroll-primitives",
  "revm",
  "revm-scroll",
  "scroll-alloy-consensus",
@@ -11860,6 +11864,7 @@ dependencies = [
  "alloy-provider",
  "alloy-rpc-types-eth",
  "alloy-signer",
+ "reth-scroll-primitives",
  "scroll-alloy-consensus",
  "scroll-alloy-rpc-types",
 ]

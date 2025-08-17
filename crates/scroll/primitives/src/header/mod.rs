@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use core::ops::{Deref, DerefMut};
 
 #[cfg(feature = "reth-codec")]
-use reth_codecs::Compact;
 
 /// A wrapper around `alloy_consensus::Header` that excludes `extra_data` field when computing hash_slow.
 /// 
@@ -25,7 +24,7 @@ use reth_codecs::Compact;
     Serialize,
     Deserialize,
 )]
-#[cfg_attr(feature = "reth-codec", derive(Compact))]
+
 #[serde(rename_all = "camelCase")]
 pub struct ScrollHeader {
     /// The inner alloy consensus header
@@ -238,6 +237,39 @@ impl AsRef<Self> for ScrollHeader {
 // Implement reth_primitives_traits::BlockHeader
 impl reth_primitives_traits::BlockHeader for ScrollHeader {}
 
+
+
+// Implement Compact manually (like alloy_consensus::Header does)
+#[cfg(feature = "reth-codec")]
+impl reth_codecs::Compact for ScrollHeader {
+    fn to_compact<B>(&self, buf: &mut B) -> usize
+    where
+        B: bytes::BufMut + AsMut<[u8]>,
+    {
+        // Delegate to the inner Header's Compact implementation
+        self.inner.to_compact(buf)
+    }
+
+    fn from_compact(buf: &[u8], len: usize) -> (Self, &[u8]) {
+        let (header, remaining) = alloy_consensus::Header::from_compact(buf, len);
+        (Self::new(header), remaining)
+    }
+}
+
+// Implement SerdeBincodeCompat for ScrollHeader
+#[cfg(feature = "serde-bincode-compat")]
+impl reth_primitives_traits::serde_bincode_compat::SerdeBincodeCompat for ScrollHeader {
+    type BincodeRepr<'a> = alloy_consensus::serde_bincode_compat::Header<'a>;
+
+    fn as_repr(&self) -> Self::BincodeRepr<'_> {
+        (&self.inner).into()
+    }
+
+    fn from_repr(repr: Self::BincodeRepr<'_>) -> Self {
+        Self::new(repr.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -277,3 +309,11 @@ mod tests {
         assert_ne!(scroll_header1.hash_slow(), scroll_header2.hash_slow());
     }
 }
+
+// Implement HeaderResponse trait for ScrollHeader
+impl alloy_network::primitives::HeaderResponse for ScrollHeader {
+    fn hash(&self) -> alloy_primitives::BlockHash {
+        self.hash_slow()
+    }
+}
+

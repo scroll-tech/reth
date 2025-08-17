@@ -14,7 +14,7 @@ use reth_node_builder::{
 };
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
-use reth_scroll_primitives::ScrollPrimitives;
+use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
 use reth_trie_db::MerklePatriciaTrie;
 use scroll_alloy_network::Scroll;
 use std::sync::Arc;
@@ -96,10 +96,10 @@ impl<N> DebugNode<N> for ScrollNode
 where
     N: FullNodeComponents<Types = Self>,
 {
-    type RpcBlock = alloy_rpc_types_eth::Block<scroll_alloy_consensus::ScrollTxEnvelope>;
+    type RpcBlock = ScrollBlock;
 
     fn rpc_to_primitive_block(rpc_block: Self::RpcBlock) -> reth_node_api::BlockTy<Self> {
-        rpc_block.into_consensus()
+        rpc_block
     }
 
     fn local_payload_attributes_builder(

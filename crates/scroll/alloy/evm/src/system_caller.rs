@@ -99,6 +99,7 @@ mod tests {
     use reth_evm::ConfigureEvm;
     use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpecBuilder};
     use reth_scroll_evm::ScrollEvmConfig;
+    use reth_scroll_primitives::{ScrollBlock, ScrollHeader};
     use revm::{
         bytecode::Bytecode,
         database::{EmptyDBTyped, State},
@@ -146,7 +147,7 @@ mod tests {
         let block: Block<ScrollTxEnvelope, _> = Block { header, body: BlockBody::default() };
 
         // initiate the evm and apply the block hashes contract call.
-        let mut evm = evm_config.evm_for_block(state, &block.header);
+        let mut evm = evm_config.evm_for_block(state, &ScrollHeader { inner: block.header.clone() });
         system_caller.apply_blockhashes_contract_call(block.parent_hash, &mut evm).unwrap();
 
         // assert the storage slot remains unchanged.
@@ -189,7 +190,7 @@ mod tests {
             gas_limit: 20_000_000,
             ..Default::default()
         };
-        let block: Block<ScrollTxEnvelope, _> = Block { header, body: BlockBody::default() };
+        let block: Block<ScrollTxEnvelope, _> = ScrollBlock { header: ScrollHeader { inner: header }, body: BlockBody::default() };
 
         // initiate the evm and apply the block hashes contract call.
         let mut evm = evm_config.evm_for_block(state, &block.header);

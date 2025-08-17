@@ -23,6 +23,7 @@ use reth_ethereum_forks::{
 };
 use reth_network_peers::NodeRecord;
 use reth_primitives_traits::SealedHeader;
+use reth_scroll_primitives::ScrollHeader;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 use alloy_eips::eip7840::BlobParams;
@@ -203,7 +204,7 @@ impl ScrollChainSpec {
         if header.base_fee_per_gas.is_none() && feynman_active_at_genesis {
             header.base_fee_per_gas = Some(0);
         }
-        spec.inner.genesis_header = SealedHeader::new_unhashed(header);
+        spec.inner.genesis_header = SealedHeader::new_unhashed(header.inner);
 
         // Use Scroll's EIP-1559 params from Feynman onwards.
         spec.inner.base_fee_params = BaseFeeParamsKind::Variable(
@@ -242,7 +243,7 @@ pub struct ScrollChainSpec {
 }
 
 impl EthChainSpec for ScrollChainSpec {
-    type Header = Header;
+    type Header = ScrollHeader;
 
     fn chain(&self) -> alloy_chains::Chain {
         self.inner.chain()
@@ -276,8 +277,11 @@ impl EthChainSpec for ScrollChainSpec {
         Box::new(ChainSpec::display_hardforks(self))
     }
 
-    fn genesis_header(&self) -> &Header {
-        self.inner.genesis_header()
+    fn genesis_header(&self) -> &ScrollHeader {
+        // Store as a static to avoid lifetime issues
+        use std::sync::OnceLock;
+        static GENESIS_HEADER: OnceLock<ScrollHeader> = OnceLock::new();
+        GENESIS_HEADER.get_or_init(|| ScrollHeader { inner: self.inner.genesis_header().clone() })
     }
 
     fn genesis(&self) -> &Genesis {
@@ -300,25 +304,27 @@ impl EthereumCapabilities for ScrollChainSpec {
     }
 }
 
-fn make_genesis_header(genesis: &Genesis) -> Header {
-    Header {
-        gas_limit: genesis.gas_limit,
-        difficulty: genesis.difficulty,
-        nonce: genesis.nonce.into(),
-        extra_data: genesis.extra_data.clone(),
-        state_root: reth_trie_common::root::state_root_ref_unhashed(&genesis.alloc),
-        timestamp: genesis.timestamp,
-        mix_hash: genesis.mix_hash,
-        beneficiary: genesis.coinbase,
-        base_fee_per_gas: genesis
-            .base_fee_per_gas
-            .map(|b| b.try_into().expect("base fee should fit in u64")),
-        withdrawals_root: None,
-        parent_beacon_block_root: None,
-        blob_gas_used: None,
-        excess_blob_gas: None,
-        requests_hash: None,
-        ..Default::default()
+fn make_genesis_header(genesis: &Genesis) -> ScrollHeader {
+    ScrollHeader {
+        inner: Header {
+            gas_limit: genesis.gas_limit,
+            difficulty: genesis.difficulty,
+            nonce: genesis.nonce.into(),
+            extra_data: genesis.extra_data.clone(),
+            state_root: reth_trie_common::root::state_root_ref_unhashed(&genesis.alloc),
+            timestamp: genesis.timestamp,
+            mix_hash: genesis.mix_hash,
+            beneficiary: genesis.coinbase,
+            base_fee_per_gas: genesis
+                .base_fee_per_gas
+                .map(|b| b.try_into().expect("base fee should fit in u64")),
+            withdrawals_root: None,
+            parent_beacon_block_root: None,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+            requests_hash: None,
+            ..Default::default()
+        }
     }
 }
 
