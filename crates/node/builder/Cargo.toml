@@ -41,7 +41,7 @@ reth-node-metrics.workspace = true
 reth-payload-builder.workspace = true
 reth-provider.workspace = true
 reth-prune.workspace = true
-reth-rpc.workspace = true
+reth-rpc = { workspace = true, features = ["js-tracer"] }
 reth-rpc-api.workspace = true
 reth-rpc-builder.workspace = true
 reth-rpc-engine-api.workspace = true
