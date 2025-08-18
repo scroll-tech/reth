@@ -1,12 +1,12 @@
 use crate::{
-    builder::payload::SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT, ScrollEngineValidator,
-    ScrollEngineValidatorBuilder, ScrollStorage,
+    builder::{engine::ScrollEngineValidatorBuilder, payload::SCROLL_DEFAULT_PAYLOAD_SIZE_LIMIT},
+    ScrollStorage,
 };
-use reth_evm::{ConfigureEvm, EvmFactory, EvmFactoryFor};
-use reth_node_api::{AddOnsContext, NodeAddOns};
+use reth_evm::{ConfigureEngineEvm, EvmFactory, EvmFactoryFor};
+use reth_node_api::{AddOnsContext, NodeAddOns, PayloadTypes};
 use reth_node_builder::{
     rpc::{
-        BasicEngineApiBuilder, EngineValidatorAddOn, EngineValidatorBuilder, EthApiBuilder,
+        BasicEngineApiBuilder, BasicEngineValidatorBuilder, EngineValidatorAddOn, EthApiBuilder,
         Identity, RethRpcAddOns, RethRpcMiddleware, RpcAddOns, RpcHandle,
     },
     FullNodeComponents,
@@ -23,14 +23,31 @@ use reth_scroll_rpc::{
 };
 use revm::context::TxEnv;
 use scroll_alloy_evm::ScrollTransactionIntoTxEnv;
+use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_alloy_network::Scroll;
 use std::marker::PhantomData;
+
+/// Marker trait for Scroll node types with standard engine, chain spec, and primitives.
+pub trait ScrollNodeTypes:
+    NodeTypes<Payload = ScrollEngineTypes, ChainSpec: ScrollHardforks, Primitives = ScrollPrimitives>
+{
+}
+
+/// Blanket impl for all node types that conform to the Scroll spec.
+impl<N> ScrollNodeTypes for N where
+    N: NodeTypes<
+        Payload = ScrollEngineTypes,
+        ChainSpec: ScrollHardforks,
+        Primitives = ScrollPrimitives,
+    >
+{
+}
 
 /// Add-ons for the Scroll follower node.
 #[derive(Debug)]
 pub struct ScrollAddOns<N, RpcMiddleWare = Identity>
 where
-    N: FullNodeComponents,
+    N: FullNodeComponents<Types: ScrollNodeTypes>,
     ScrollEthApiBuilder: EthApiBuilder<N>,
 {
     /// Rpc add-ons responsible for launching the RPC servers and instantiating the RPC handlers
@@ -40,13 +57,14 @@ where
         ScrollEthApiBuilder,
         ScrollEngineValidatorBuilder,
         BasicEngineApiBuilder<ScrollEngineValidatorBuilder>,
+        BasicEngineValidatorBuilder<ScrollEngineValidatorBuilder>,
         RpcMiddleWare,
     >,
 }
 
 impl<N> Default for ScrollAddOns<N, Identity>
 where
-    N: FullNodeComponents<Types: NodeTypes<Primitives = ScrollPrimitives>>,
+    N: FullNodeComponents<Types: ScrollNodeTypes>,
     ScrollEthApiBuilder: EthApiBuilder<N>,
 {
     fn default() -> Self {
@@ -56,7 +74,7 @@ where
 
 impl<N, RpcMiddleware> ScrollAddOns<N, RpcMiddleware>
 where
-    N: FullNodeComponents<Types: NodeTypes<Primitives = ScrollPrimitives>>,
+    N: FullNodeComponents<Types: ScrollNodeTypes>,
     ScrollEthApiBuilder: EthApiBuilder<N>,
 {
     /// Build a [`ScrollAddOns`] using [`ScrollAddOnsBuilder`].
@@ -74,7 +92,10 @@ where
             Storage = ScrollStorage,
             Payload = ScrollEngineTypes,
         >,
-        Evm: ConfigureEvm<NextBlockEnvCtx = ScrollNextBlockEnvAttributes>,
+        Evm: ConfigureEngineEvm<
+            <<N::Types as NodeTypes>::Payload as PayloadTypes>::ExecutionData,
+            NextBlockEnvCtx = ScrollNextBlockEnvAttributes,
+        >,
     >,
     ScrollEthApiError: FromEvmError<N::Evm>,
     EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>>,
@@ -97,7 +118,10 @@ where
             Storage = ScrollStorage,
             Payload = ScrollEngineTypes,
         >,
-        Evm: ConfigureEvm<NextBlockEnvCtx = ScrollNextBlockEnvAttributes>,
+        Evm: ConfigureEngineEvm<
+            <<N::Types as NodeTypes>::Payload as PayloadTypes>::ExecutionData,
+            NextBlockEnvCtx = ScrollNextBlockEnvAttributes,
+        >,
     >,
     ScrollEthApiError: FromEvmError<N::Evm>,
     EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>>,
@@ -110,7 +134,7 @@ where
     }
 }
 
-impl<N, RpcMiddleware> EngineValidatorAddOn<N> for ScrollAddOns<N, RpcMiddleware>
+impl<N> EngineValidatorAddOn<N> for ScrollAddOns<N>
 where
     N: FullNodeComponents<
         Types: NodeTypes<
@@ -118,14 +142,17 @@ where
             Primitives = ScrollPrimitives,
             Payload = ScrollEngineTypes,
         >,
+        Evm: ConfigureEngineEvm<
+            <<N::Types as NodeTypes>::Payload as PayloadTypes>::ExecutionData,
+            NextBlockEnvCtx = ScrollNextBlockEnvAttributes,
+        >,
     >,
     ScrollEthApiBuilder: EthApiBuilder<N>,
-    RpcMiddleware: Send,
 {
-    type Validator = ScrollEngineValidator;
+    type ValidatorBuilder = BasicEngineValidatorBuilder<ScrollEngineValidatorBuilder>;
 
-    async fn engine_validator(&self, ctx: &AddOnsContext<'_, N>) -> eyre::Result<Self::Validator> {
-        ScrollEngineValidatorBuilder.build(ctx).await
+    fn engine_validator_builder(&self) -> Self::ValidatorBuilder {
+        EngineValidatorAddOn::engine_validator_builder(&self.rpc_add_ons)
     }
 }
 
@@ -197,7 +224,7 @@ impl<NetworkT, RpcMiddleWare> ScrollAddOnsBuilder<NetworkT, RpcMiddleWare> {
     /// Builds an instance of [`ScrollAddOns`].
     pub fn build<N>(self) -> ScrollAddOns<N, RpcMiddleWare>
     where
-        N: FullNodeComponents<Types: NodeTypes<Primitives = ScrollPrimitives>>,
+        N: FullNodeComponents<Types: ScrollNodeTypes>,
         ScrollEthApiBuilder: EthApiBuilder<N>,
     {
         let Self {
@@ -214,8 +241,9 @@ impl<NetworkT, RpcMiddleWare> ScrollAddOnsBuilder<NetworkT, RpcMiddleWare> {
                     .with_sequencer(sequencer_url)
                     .with_payload_size_limit(payload_size_limit)
                     .with_min_suggested_priority_fee(min_suggested_priority_fee),
-                Default::default(),
-                Default::default(),
+                ScrollEngineValidatorBuilder::default(),
+                BasicEngineApiBuilder::default(),
+                BasicEngineValidatorBuilder::default(),
                 rpc_middleware,
             ),
         }

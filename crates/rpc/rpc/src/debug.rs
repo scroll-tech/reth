@@ -62,7 +62,6 @@ impl<Eth> DebugApi<Eth> {
     }
 
     /// Access the underlying `Eth` API.
-    #[allow(clippy::missing_const_for_fn)]
     pub fn eth_api(&self) -> &Eth {
         &self.inner.eth_api
     }
@@ -636,13 +635,13 @@ where
             .eth_api()
             .spawn_with_state_at_block(block.parent_hash().into(), move |state_provider| {
                 let db = StateProviderDatabase::new(&state_provider);
-                let block_executor = this.eth_api().evm_config().batch_executor(db);
+                let block_executor = this.eth_api().evm_config().executor(db);
 
                 let mut witness_record = ExecutionWitnessRecord::default();
 
                 let mut withdraw_root_res: Result<_, reth_errors::ProviderError> = Ok(());
                 let _ = block_executor
-                    .execute_with_state_closure(&(*block).clone(), |statedb: &mut State<_>| {
+                    .execute_with_state_closure(&block, |statedb: &mut State<_>| {
                         #[cfg(feature = "scroll")]
                         {
                             use reth_scroll_evm::LoadWithdrawRoot;

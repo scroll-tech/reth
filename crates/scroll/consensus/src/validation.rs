@@ -235,7 +235,7 @@ fn verify_header_fields_pre_euclid_v2<H: BlockHeader>(
     header: &H,
     epoch: u64,
 ) -> Result<(), ScrollConsensusError> {
-    let is_checkpoint = (header.number() % epoch) == 0;
+    let is_checkpoint = header.number().is_multiple_of(epoch);
     if is_checkpoint && header.beneficiary() != Address::ZERO {
         return Err(ScrollConsensusError::CoinbaseNotZero(header.beneficiary()))
     }
