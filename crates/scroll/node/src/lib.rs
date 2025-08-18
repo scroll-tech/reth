@@ -6,7 +6,7 @@ pub use args::ScrollRollupArgs;
 mod builder;
 pub use builder::{
     consensus::ScrollConsensusBuilder,
-    engine::{ScrollEngineValidator, ScrollEngineValidatorBuilder},
+    engine::ScrollEngineValidator,
     execution::ScrollExecutorBuilder,
     network::{ScrollHeaderTransform, ScrollNetworkBuilder, ScrollNetworkPrimitives},
     payload::ScrollPayloadBuilderBuilder,

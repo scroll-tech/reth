@@ -1,16 +1,22 @@
 use crate::{build::ScrollBlockAssembler, ScrollEvmConfig, ScrollNextBlockEnvAttributes};
 use alloc::sync::Arc;
+
 use alloy_consensus::{BlockHeader, Header};
+use alloy_eips::{eip2718::WithEncoded, Decodable2718};
 use alloy_evm::{FromRecoveredTx, FromTxWithEncoded};
 use alloy_primitives::B256;
+use alloy_rpc_types_engine::ExecutionData;
 use core::convert::Infallible;
 use reth_chainspec::EthChainSpec;
-use reth_evm::{ConfigureEvm, EvmEnv, ExecutionCtxFor};
+use reth_evm::{
+    ConfigureEngineEvm, ConfigureEvm, EvmEnv, EvmEnvFor, ExecutableTxIterator, ExecutionCtxFor,
+};
 use reth_primitives_traits::{
-    BlockTy, NodePrimitives, SealedBlock, SealedHeader, SignedTransaction,
+    BlockTy, NodePrimitives, SealedBlock, SealedHeader, SignedTransaction, TxTy,
 };
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_primitives::ScrollReceipt;
+use reth_storage_api::errors::any::AnyError;
 use revm::{
     context::{BlockEnv, CfgEnv, TxEnv},
     primitives::U256,
@@ -132,6 +138,69 @@ where
         _attributes: Self::NextBlockEnvCtx,
     ) -> ExecutionCtxFor<'_, Self> {
         ScrollBlockExecutionCtx { parent_hash: parent.hash() }
+    }
+}
+
+impl<ChainSpec, N, R, P> ConfigureEngineEvm<ExecutionData> for ScrollEvmConfig<ChainSpec, N, R, P>
+where
+    ChainSpec: EthChainSpec + ChainConfig<Config = ScrollChainConfig> + ScrollHardforks,
+    N: NodePrimitives<
+        Receipt = R::Receipt,
+        SignedTx = R::Transaction,
+        BlockHeader = Header,
+        BlockBody = alloy_consensus::BlockBody<R::Transaction>,
+        Block = alloy_consensus::Block<R::Transaction>,
+    >,
+    ScrollTransactionIntoTxEnv<TxEnv>:
+        FromRecoveredTx<N::SignedTx> + FromTxWithEncoded<N::SignedTx>,
+    R: ScrollReceiptBuilder<Receipt = ScrollReceipt, Transaction: SignedTransaction>,
+    P: ScrollPrecompilesFactory,
+    Self: Send + Sync + Unpin + Clone + 'static,
+{
+    fn evm_env_for_payload(&self, payload: &ExecutionData) -> EvmEnvFor<Self> {
+        let timestamp = payload.payload.timestamp();
+        let block_number = payload.payload.block_number();
+        let chain_spec = self.chain_spec();
+
+        let spec_id = self.spec_id_at_timestamp_and_number(timestamp, block_number);
+
+        let cfg_env = CfgEnv::<ScrollSpecId>::default()
+            .with_chain_id(chain_spec.chain().id())
+            .with_spec(spec_id);
+
+        // get coinbase from chain config.
+        let coinbase =
+            if let Some(vault_address) = self.chain_spec().chain_config().fee_vault_address {
+                vault_address
+            } else {
+                payload.payload.as_v1().fee_recipient
+            };
+
+        let block_env = BlockEnv {
+            number: U256::from(block_number),
+            beneficiary: coinbase,
+            timestamp: U256::from(timestamp),
+            difficulty: U256::ONE,
+            prevrandao: Some(B256::ZERO),
+            gas_limit: payload.payload.as_v1().gas_limit,
+            basefee: payload.payload.as_v1().base_fee_per_gas.to(),
+            blob_excess_gas_and_price: None,
+        };
+
+        EvmEnv { cfg_env, block_env }
+    }
+
+    fn context_for_payload<'a>(&self, payload: &'a ExecutionData) -> ExecutionCtxFor<'a, Self> {
+        ScrollBlockExecutionCtx { parent_hash: payload.parent_hash() }
+    }
+
+    fn tx_iterator_for_payload(&self, payload: &ExecutionData) -> impl ExecutableTxIterator<Self> {
+        payload.payload.transactions().clone().into_iter().map(|encoded| {
+            let tx = TxTy::<Self::Primitives>::decode_2718_exact(encoded.as_ref())
+                .map_err(AnyError::new)?;
+            let signer = tx.try_recover().map_err(AnyError::new)?;
+            Ok::<_, AnyError>(WithEncoded::new(encoded, tx.with_signer(signer)))
+        })
     }
 }
 

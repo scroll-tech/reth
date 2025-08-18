@@ -196,7 +196,7 @@ where
     I: EngineTypes,
 {
     /// Get the number of nodes in the environment
-    pub fn node_count(&self) -> usize {
+    pub const fn node_count(&self) -> usize {
         self.node_clients.len()
     }
 

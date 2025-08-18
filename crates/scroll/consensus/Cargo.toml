@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 # alloy
 alloy-consensus.workspace = true
-alloy-primitives.workspace = true
+alloy-primitives = { workspace = true, features = ["getrandom"] }
 
 # reth
 reth-chainspec.workspace = true
@@ -26,6 +26,7 @@ reth-primitives-traits.workspace = true
 
 # scroll
 reth-scroll-primitives = { workspace = true, default-features = false }
+scroll-alloy-consensus.workspace = true
 scroll-alloy-hardforks.workspace = true
 
 # misc
@@ -34,3 +35,6 @@ tracing.workspace = true
 
 [package.metadata.cargo-udeps.ignore]
 normal = ["reth-primitives"]
+
+[dev-dependencies]
+reth-scroll-chainspec.workspace = true

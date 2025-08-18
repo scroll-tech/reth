@@ -3,7 +3,9 @@
 extern crate alloc;
 
 mod constants;
-pub use constants::MAX_ROLLUP_FEE;
+pub use constants::{
+    CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY, MAX_ROLLUP_FEE, SCROLL_MAXIMUM_BASE_FEE,
+};
 
 mod error;
 pub use error::ScrollConsensusError;
