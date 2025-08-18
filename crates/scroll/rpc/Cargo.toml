@@ -29,7 +29,11 @@ reth-node-builder.workspace = true
 # scroll
 reth-scroll-chainspec.workspace = true
 reth-scroll-evm.workspace = true
-reth-scroll-primitives = { workspace = true, features = ["serde", "serde-bincode-compat", "reth-codec"] }
+reth-scroll-primitives = { workspace = true, features = [
+    "serde",
+    "serde-bincode-compat",
+    "reth-codec",
+] }
 scroll-alloy-consensus.workspace = true
 scroll-alloy-hardforks.workspace = true
 scroll-alloy-network.workspace = true
@@ -47,7 +51,9 @@ alloy-rpc-client.workspace = true
 alloy-transport-http.workspace = true
 
 # reqwest
-reqwest = { workspace = true, default-features = false, features = ["rustls-tls-native-roots"] }
+reqwest = { workspace = true, default-features = false, features = [
+    "rustls-tls-native-roots",
+] }
 
 # tracing
 tracing.workspace = true
@@ -61,3 +67,6 @@ jsonrpsee-types.workspace = true
 # misc
 eyre.workspace = true
 thiserror.workspace = true
+
+[features]
+js-tracer = ["reth-rpc/js-tracer"]

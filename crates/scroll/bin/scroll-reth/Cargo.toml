@@ -24,7 +24,9 @@ clap = { workspace = true, features = ["derive", "env"] }
 tracing.workspace = true
 
 [features]
+default = []
 dev = ["reth-scroll-cli/dev"]
+js-tracer = ["reth-scroll-node/js-tracer"]
 
 [[bin]]
 name = "scroll-reth"
