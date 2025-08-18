@@ -44,7 +44,6 @@ op-revm.workspace = true
 
 # misc
 async-trait.workspace = true
-derive_more.workspace = true
 eyre.workspace = true
 jsonrpsee.workspace = true
 serde.workspace = true

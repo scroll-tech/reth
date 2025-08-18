@@ -3460,7 +3460,6 @@ dependencies = [
  "alloy-rpc-types-eth",
  "alloy-serde",
  "async-trait",
- "derive_more",
  "eyre",
  "jsonrpsee",
  "modular-bitfield",
