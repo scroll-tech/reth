@@ -442,7 +442,7 @@ pub struct RpcAddOns<
     /// Additional RPC add-ons.
     pub hooks: RpcHooks<Node, EthB::EthApi>,
     /// Builder for `EthApi`
-    eth_api_builder: EthB,
+    pub eth_api_builder: EthB,
     /// Engine validator
     engine_validator_builder: EV,
     /// Builder for `EngineApi`

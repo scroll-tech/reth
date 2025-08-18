@@ -8,20 +8,21 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use alloy_chains::Chain;
 use alloy_consensus::Header;
 use alloy_genesis::Genesis;
 use alloy_primitives::{B256, U256};
 use derive_more::{Constructor, Deref, From, Into};
 use reth_chainspec::{
-    BaseFeeParams, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec,
+    BaseFeeParams, BaseFeeParamsKind, ChainSpec, ChainSpecBuilder, DepositContract, EthChainSpec,
     EthereumCapabilities, EthereumHardforks, ForkFilter, ForkId, Hardforks, Head,
 };
 use reth_ethereum_forks::{
     ChainHardforks, EthereumHardfork, ForkCondition, ForkFilterKey, ForkHash, Hardfork,
 };
 use reth_network_peers::NodeRecord;
+use reth_primitives_traits::SealedHeader;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 use alloy_eips::eip7840::BlobParams;
@@ -34,10 +35,10 @@ extern crate alloc;
 
 mod constants;
 pub use constants::{
-    SCROLL_BASE_FEE_PARAMS_FEYNMAN, SCROLL_DEV_L1_CONFIG, SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS,
-    SCROLL_DEV_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_DEV_L1_PROXY_ADDRESS,
-    SCROLL_DEV_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS, SCROLL_DEV_MAX_L1_MESSAGES,
-    SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
+    MAX_TX_PAYLOAD_BYTES_PER_BLOCK, SCROLL_BASE_FEE_PARAMS_FEYNMAN, SCROLL_DEV_L1_CONFIG,
+    SCROLL_DEV_L1_MESSAGE_QUEUE_ADDRESS, SCROLL_DEV_L1_MESSAGE_QUEUE_V2_ADDRESS,
+    SCROLL_DEV_L1_PROXY_ADDRESS, SCROLL_DEV_L2_SYSTEM_CONFIG_CONTRACT_ADDRESS,
+    SCROLL_DEV_MAX_L1_MESSAGES, SCROLL_EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR_FEYNMAN,
     SCROLL_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER_FEYNMAN, SCROLL_FEE_VAULT_ADDRESS,
     SCROLL_MAINNET_GENESIS_HASH, SCROLL_MAINNET_L1_CONFIG, SCROLL_MAINNET_L1_MESSAGE_QUEUE_ADDRESS,
     SCROLL_MAINNET_L1_MESSAGE_QUEUE_V2_ADDRESS, SCROLL_MAINNET_L1_PROXY_ADDRESS,
@@ -181,6 +182,34 @@ impl ScrollChainSpecBuilder {
     /// [`Self::genesis`])
     pub fn build(self, config: ScrollChainConfig) -> ScrollChainSpec {
         ScrollChainSpec { inner: self.inner.build(), config }
+    }
+}
+
+// Used by the CLI for custom genesis files.
+impl ScrollChainSpec {
+    /// Build from a custom `Genesis`, ensuring:
+    /// - `genesis_header` has `base_fee_per_gas` (0 if Feynman@genesis)
+    /// - `base_fee_params` switch to Scroll defaults at Feynman
+    pub fn from_custom_genesis(genesis: Genesis) -> Self {
+        // Use the existing From<Genesis> as the base.
+        let mut spec: Self = genesis.into();
+
+        // Determine whether Feynman is active at genesis.
+        let feynman_active_at_genesis =
+            spec.is_feynman_active_at_timestamp(spec.inner.genesis.timestamp);
+
+        // Ensure the genesis header has a base fee when required.
+        let mut header = make_genesis_header(&spec.inner.genesis);
+        if header.base_fee_per_gas.is_none() && feynman_active_at_genesis {
+            header.base_fee_per_gas = Some(0);
+        }
+        spec.inner.genesis_header = SealedHeader::new_unhashed(header);
+
+        // Use Scroll's EIP-1559 params from Feynman onwards.
+        spec.inner.base_fee_params = BaseFeeParamsKind::Variable(
+            vec![(ScrollHardfork::Feynman.boxed(), SCROLL_BASE_FEE_PARAMS_FEYNMAN)].into(),
+        );
+        spec
     }
 }
 
@@ -516,11 +545,11 @@ mod tests {
                 ),
                 (
                     Head { number: 7096836, timestamp: 1745305200, ..Default::default() },
-                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 6000000000 },
+                    ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 1755576000 },
                 ),
                 (
-                    Head { number: 7096836, timestamp: 6000000000, ..Default::default() },
-                    ForkId { hash: ForkHash([0x64, 0xb1, 0x52, 0x56]), next: 0 },
+                    Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
+                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: 0 },
                 ),
             ],
         );
@@ -624,26 +653,26 @@ mod tests {
     #[test]
     fn parse_scroll_hardforks() {
         let geth_genesis = r#"
-    {
-      "config": {
-        "bernoulliBlock": 10,
-        "curieBlock": 20,
-        "darwinTime": 30,
-        "darwinV2Time": 31,
-        "scroll": {
-            "feeVaultAddress": "0x5300000000000000000000000000000000000005",
-            "l1Config": {
-                "l1ChainId": 1,
-                "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
-                "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
-                "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
-                "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
-                "numL1MessagesPerBlock": 10
+        {
+            "config": {
+              "bernoulliBlock": 10,
+              "curieBlock": 20,
+              "darwinTime": 30,
+              "darwinV2Time": 31,
+              "scroll": {
+                  "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                  "maxTxPayloadBytesPerBlock": 122880,
+                  "l1Config": {
+                      "l1ChainId": 1,
+                      "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
+                      "l1MessageQueueV2Address": "0x56971da63A3C0205184FEF096E9ddFc7A8C2D18a",
+                      "l2SystemConfigAddress": "0x331A873a2a85219863d80d248F9e2978fE88D0Ea",
+                      "scrollChainAddress": "0xa13BAF47339d63B743e7Da8741db5456DAc1E556",
+                      "numL1MessagesPerBlock": 10
+                  }
+              }
             }
-        }
-      }
-    }
-    "#;
+        }"#;
         let genesis: Genesis = serde_json::from_str(geth_genesis).unwrap();
 
         let actual_bernoulli_block = genesis.config.extra_fields.get("bernoulliBlock");
@@ -659,6 +688,7 @@ mod tests {
             scroll_object,
             &serde_json::json!({
                 "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                "maxTxPayloadBytesPerBlock": 122880,
                 "l1Config": {
                     "l1ChainId": 1,
                     "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
@@ -712,6 +742,7 @@ mod tests {
                         String::from("scroll"),
                         serde_json::json!({
                             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
+                            "maxTxPayloadBytesPerBlock": 122880,
                             "l1Config": {
                                 "l1ChainId": 1,
                                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",

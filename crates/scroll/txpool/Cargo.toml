@@ -28,6 +28,7 @@ reth-transaction-pool.workspace = true
 revm-scroll.workspace = true
 
 # reth-scroll
+reth-scroll-consensus.workspace = true
 reth-scroll-evm.workspace = true
 reth-scroll-forks.workspace = true
 reth-scroll-primitives.workspace = true

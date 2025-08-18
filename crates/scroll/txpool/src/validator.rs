@@ -6,6 +6,7 @@ use reth_primitives_traits::{
     transaction::error::InvalidTransactionError, Block, GotExpected, SealedBlock,
 };
 use reth_revm::database::StateProviderDatabase;
+use reth_scroll_consensus::MAX_ROLLUP_FEE;
 use reth_scroll_evm::{
     compute_compression_ratio, spec_id_at_timestamp_and_number, RethL1BlockInfo,
 };
@@ -181,6 +182,14 @@ where
                     return TransactionValidationOutcome::Error(*valid_tx.hash(), Box::new(err))
                 }
             };
+            // Check rollup fee is under u64::MAX.
+            if cost_addition >= MAX_ROLLUP_FEE {
+                return TransactionValidationOutcome::Invalid(
+                    valid_tx.into_transaction(),
+                    InvalidTransactionError::GasUintOverflow.into(),
+                )
+            }
+
             let cost = valid_tx.transaction().cost().saturating_add(cost_addition);
 
             // Checks for max cost

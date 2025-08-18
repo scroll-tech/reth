@@ -68,6 +68,7 @@ where
             .with_local_transactions_config(
                 pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config,
             )
+            .with_max_tx_input_bytes(ctx.chain_spec().chain_config().max_tx_payload_bytes_per_block)
             .with_additional_tasks(
                 pool_config_overrides
                     .additional_validation_tasks
@@ -128,5 +129,226 @@ where
         }
 
         Ok(transaction_pool)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ScrollNode;
+
+    use alloy_consensus::{transaction::Recovered, Header, Signed, TxLegacy};
+    use alloy_primitives::{private::rand::random_iter, Bytes, Signature, B256, U256};
+    use reth_chainspec::Head;
+    use reth_db::mock::DatabaseMock;
+    use reth_node_api::FullNodeTypesAdapter;
+    use reth_node_builder::common::WithConfigs;
+    use reth_node_core::node_config::NodeConfig;
+    use reth_primitives_traits::{
+        transaction::error::InvalidTransactionError, GotExpected, GotExpectedBoxed,
+    };
+    use reth_provider::{
+        noop::NoopProvider,
+        test_utils::{ExtendedAccount, MockEthProvider},
+    };
+    use reth_scroll_chainspec::{ScrollChainSpec, SCROLL_DEV, SCROLL_MAINNET};
+    use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
+    use reth_scroll_txpool::ScrollPooledTransaction;
+    use reth_tasks::TaskManager;
+    use reth_transaction_pool::{
+        blobstore::NoopBlobStore,
+        error::{InvalidPoolTransactionError, PoolErrorKind},
+        PoolConfig, TransactionOrigin, TransactionPool,
+    };
+    use scroll_alloy_consensus::ScrollTxEnvelope;
+    use scroll_alloy_evm::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
+
+    async fn pool() -> (
+        ScrollTransactionPool<NoopProvider<ScrollChainSpec, ScrollPrimitives>, DiskFileBlobStore>,
+        TaskManager,
+    ) {
+        let handle = tokio::runtime::Handle::current();
+        let manager = TaskManager::new(handle);
+        let config = WithConfigs {
+            config: NodeConfig::new(SCROLL_MAINNET.clone()),
+            toml_config: Default::default(),
+        };
+
+        let pool_builder = ScrollPoolBuilder::<ScrollPooledTransaction>::default();
+        let ctx = BuilderContext::<
+            FullNodeTypesAdapter<
+                ScrollNode,
+                DatabaseMock,
+                NoopProvider<ScrollChainSpec, ScrollPrimitives>,
+            >,
+        >::new(
+            Head::default(),
+            NoopProvider::new(SCROLL_MAINNET.clone()),
+            manager.executor(),
+            config,
+        );
+        (pool_builder.build_pool(&ctx).await.unwrap(), manager)
+    }
+
+    #[tokio::test]
+    async fn test_validate_one_oversized_transaction() {
+        // create the pool.
+        let (pool, manager) = pool().await;
+        let tx = ScrollTxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy { gas_limit: 21_000, ..Default::default() },
+            Signature::new(U256::ZERO, U256::ZERO, false),
+            Default::default(),
+        ));
+
+        // Create a pool transaction with an encoded length of 123,904 bytes.
+        let pool_tx = ScrollPooledTransaction::new(
+            Recovered::new_unchecked(tx, Default::default()),
+            121 * 1024,
+        );
+
+        // add the transaction to the pool and expect an `OversizedData` error.
+        let err = pool.add_transaction(TransactionOrigin::Local, pool_tx).await.unwrap_err();
+        assert!(matches!(
+            err.kind,
+            PoolErrorKind::InvalidTransaction(
+                InvalidPoolTransactionError::OversizedData(x, y,)
+            ) if x == 121*1024 && y == 120*1024,
+        ));
+
+        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
+        // drop all validation tasks.
+        drop(manager);
+    }
+
+    #[tokio::test]
+    async fn test_validate_one_rollup_fee_exceeds_limit() {
+        // create the client.
+        let handle = tokio::runtime::Handle::current();
+        let manager = TaskManager::new(handle);
+        let blob_store = NoopBlobStore::default();
+        let signer = Default::default();
+        let client =
+            MockEthProvider::<ScrollPrimitives, _>::new().with_chain_spec(SCROLL_DEV.clone());
+        let hash = B256::random();
+
+        // load a header, block, signer and the L1_GAS_PRICE_ORACLE_ADDRESS storage.
+        client.add_header(hash, Header::default());
+        client.add_block(hash, ScrollBlock::default());
+        client.add_account(signer, ExtendedAccount::new(0, U256::from(400_000)));
+        client.add_account(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            ExtendedAccount::new(0, U256::from(400_000)).extend_storage(
+                (0u8..8).map(|k| (B256::from(U256::from(k)), U256::from(u64::MAX))),
+            ),
+        );
+
+        // create the validation task.
+        let validator = TransactionValidationTaskExecutor::eth_builder(client)
+            .no_eip4844()
+            .build_with_tasks(manager.executor(), blob_store)
+            .map(|validator| {
+                ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true)
+            });
+
+        // create the pool.
+        let pool = ScrollTransactionPool::new(
+            validator,
+            CoinbaseTipOrdering::<ScrollPooledTransaction>::default(),
+            NoopBlobStore::default(),
+            PoolConfig::default(),
+        );
+
+        // prepare a transaction with random input.
+        let tx = ScrollTxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy {
+                gas_limit: 55_000,
+                gas_price: 7,
+                input: Bytes::from(random_iter::<u8>().take(100).collect::<Vec<_>>()),
+                ..Default::default()
+            },
+            Signature::new(U256::ZERO, U256::ZERO, false),
+            Default::default(),
+        ));
+        let pool_tx =
+            ScrollPooledTransaction::new(Recovered::new_unchecked(tx, signer), 120 * 1024);
+
+        // add the transaction in the pool and expect to hit `InsufficientFunds` error.
+        let err = pool.add_transaction(TransactionOrigin::Local, pool_tx).await.unwrap_err();
+        assert!(matches!(
+            err.kind,
+            PoolErrorKind::InvalidTransaction(InvalidPoolTransactionError::Consensus(
+                InvalidTransactionError::GasUintOverflow
+            ))
+        ));
+
+        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
+        // drop all validation tasks.
+        drop(manager);
+    }
+
+    #[tokio::test]
+    async fn test_validate_one_rollup_fee_exceeds_balance() {
+        // create the client.
+        let handle = tokio::runtime::Handle::current();
+        let manager = TaskManager::new(handle);
+        let blob_store = NoopBlobStore::default();
+        let signer = Default::default();
+        let client =
+            MockEthProvider::<ScrollPrimitives, _>::new().with_chain_spec(SCROLL_DEV.clone());
+        let hash = B256::random();
+
+        // load a header, block, signer and the L1_GAS_PRICE_ORACLE_ADDRESS storage.
+        client.add_header(hash, Header::default());
+        client.add_block(hash, ScrollBlock::default());
+        client.add_account(signer, ExtendedAccount::new(0, U256::from(400_000)));
+        client.add_account(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            ExtendedAccount::new(0, U256::from(400_000)).extend_storage(
+                (0u8..8).map(|k| (B256::from(U256::from(k)), U256::from(u32::MAX))),
+            ),
+        );
+
+        // create the validation task.
+        let validator = TransactionValidationTaskExecutor::eth_builder(client)
+            .no_eip4844()
+            .build_with_tasks(manager.executor(), blob_store)
+            .map(|validator| {
+                ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true)
+            });
+
+        // create the pool.
+        let pool = ScrollTransactionPool::new(
+            validator,
+            CoinbaseTipOrdering::<ScrollPooledTransaction>::default(),
+            NoopBlobStore::default(),
+            PoolConfig::default(),
+        );
+
+        // prepare a transaction with random input.
+        let tx = ScrollTxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy {
+                gas_limit: 55_000,
+                gas_price: 7,
+                input: Bytes::from(random_iter::<u8>().take(100).collect::<Vec<_>>()),
+                ..Default::default()
+            },
+            Signature::new(U256::ZERO, U256::ZERO, false),
+            Default::default(),
+        ));
+        let pool_tx =
+            ScrollPooledTransaction::new(Recovered::new_unchecked(tx, signer), 120 * 1024);
+
+        // add the transaction in the pool and expect to hit `InsufficientFunds` error.
+        let err = pool.add_transaction(TransactionOrigin::Local, pool_tx).await.unwrap_err();
+        assert!(matches!(
+            err.kind,
+            PoolErrorKind::InvalidTransaction(
+                InvalidPoolTransactionError::Consensus(InvalidTransactionError::InsufficientFunds(GotExpectedBoxed(expected)))
+            ) if *expected == GotExpected{ got: U256::from(400000), expected: U256::from(4205858031847u64) }
+        ));
+
+        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
+        // drop all validation tasks.
+        drop(manager);
     }
 }
