@@ -550,6 +550,7 @@ reth-scroll-primitives = { path = "crates/scroll/primitives", default-features =
 reth-scroll-rpc = { path = "crates/scroll/rpc" }
 reth-scroll-trie = { path = "crates/scroll/trie" }
 reth-scroll-txpool = { path = "crates/scroll/txpool" }
+scroll-rollup-node-db = { git = "https://github.com/scroll-tech/rollup-node.git", branch = "morty/fix-eth66-serve-signature", package = "scroll-db" }
 
 # op
 alloy-op-evm = { version = "0.17", default-features = false }

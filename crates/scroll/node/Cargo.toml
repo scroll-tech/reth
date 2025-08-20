@@ -62,6 +62,9 @@ scroll-alloy-hardforks.workspace = true
 scroll-alloy-network.workspace = true
 scroll-alloy-rpc-types-engine.workspace = true
 
+# scroll-rollup-node
+scroll-rollup-node-db.workspace = true
+
 # misc
 clap.workspace = true
 eyre.workspace = true
