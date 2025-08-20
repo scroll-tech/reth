@@ -56,7 +56,7 @@ impl ScrollNode {
             .pool(ScrollPoolBuilder::default())
             .executor(ScrollExecutorBuilder::default())
             .payload(BasicPayloadServiceBuilder::new(ScrollPayloadBuilderBuilder::default()))
-            .network(ScrollNetworkBuilder::new(database))
+            .network(ScrollNetworkBuilder::new())
             .executor(ScrollExecutorBuilder)
             .consensus(ScrollConsensusBuilder)
     }

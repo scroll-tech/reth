@@ -56,13 +56,19 @@ pub struct ScrollNetworkBuilder {
 
 impl ScrollNetworkBuilder {
     /// Create a new [`ScrollNetworkBuilder`] with default configuration.
-    pub fn new(database: Arc<Database>) -> Self {
-        Self { scroll_sub_protocols: RlpxSubProtocols::default(), rollup_node_db: database }
+    pub fn new() -> Self {
+        Self { scroll_sub_protocols: RlpxSubProtocols::default(), rollup_node_db: Arc::new(Database::default()) }
     }
 
     /// Add a scroll sub-protocol to the network builder.
     pub fn with_sub_protocol(mut self, protocol: RlpxSubProtocol) -> Self {
         self.scroll_sub_protocols.push(protocol);
+        self
+    }
+
+    /// Add a scroll sub-protocol to the network builder.
+    pub fn with_database(mut self, database: Arc<Database>) -> Self {
+        self.rollup_node_db = database;
         self
     }
 }
