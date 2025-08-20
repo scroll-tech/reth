@@ -11942,7 +11942,7 @@ dependencies = [
 [[package]]
 name = "rollup-node-primitives"
 version = "0.0.1"
-source = "git+https://github.com/scroll-tech/rollup-node.git?branch=morty%2Ffix-eth66-serve-signature#6d59e25b323ce52b688082fbe35b7cf4ae27073d"
+source = "git+https://github.com/scroll-tech/rollup-node.git?branch=morty%2Ffix-eth66-serve-signature#3ec60d49739718ef36429a22785fde4bcdd0acdf"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -12482,7 +12482,7 @@ dependencies = [
 [[package]]
 name = "scroll-db"
 version = "0.0.1"
-source = "git+https://github.com/scroll-tech/rollup-node.git?branch=morty%2Ffix-eth66-serve-signature#6d59e25b323ce52b688082fbe35b7cf4ae27073d"
+source = "git+https://github.com/scroll-tech/rollup-node.git?branch=morty%2Ffix-eth66-serve-signature#3ec60d49739718ef36429a22785fde4bcdd0acdf"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
