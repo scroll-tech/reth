@@ -34,7 +34,7 @@ impl ScrollNode {
     }
 
     /// Returns a [`ComponentsBuilder`] configured for a regular Ethereum node.
-    pub fn components<Node>(database: std::sync::Arc<scroll_rollup_node_db::Database>) -> ComponentsBuilder<
+    pub fn components<Node>() -> ComponentsBuilder<
         Node,
         ScrollPoolBuilder,
         BasicPayloadServiceBuilder<ScrollPayloadBuilderBuilder>,
@@ -80,9 +80,7 @@ where
     >;
 
     fn components_builder(&self) -> Self::ComponentsBuilder {
-        // TODO: Get the database from somewhere appropriate, perhaps from args or a default
-        let database = std::sync::Arc::new(scroll_rollup_node_db::Database::default());
-        Self::components(database)
+        Self::components()
     }
 
     fn add_ons(&self) -> Self::AddOns {
