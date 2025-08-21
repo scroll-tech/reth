@@ -1136,7 +1136,7 @@ where
     ) -> eyre::Result<Self::Network> {
         let network_config = self.network_config(ctx)?;
         let network = NetworkManager::builder(network_config).await?;
-        let handle = ctx.start_network(network, pool);
+        let handle = ctx.start_network(network, pool, None);
         info!(target: "reth::cli", enode=%handle.local_node_record(), "P2P networking initialized");
 
         Ok(handle)

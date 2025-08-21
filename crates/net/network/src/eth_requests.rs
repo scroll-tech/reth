@@ -2,7 +2,7 @@
 
 use crate::{
     budget::DEFAULT_BUDGET_TRY_DRAIN_DOWNLOADERS, metered_poll_nested_stream_with_budget,
-    metrics::EthRequestHandlerMetrics,
+    metrics::EthRequestHandlerMetrics, transform::header::HeaderTransform,
 };
 use alloy_consensus::{BlockHeader, ReceiptWithBloom};
 use alloy_eips::BlockHashOrNumber;
@@ -61,6 +61,8 @@ pub struct EthRequestHandler<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     peers: PeersHandle,
     /// Incoming request from the [`NetworkManager`](crate::NetworkManager).
     incoming_requests: ReceiverStream<IncomingEthRequest<N>>,
+    /// The header transform to apply to the headers before sending to peers.
+    header_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
     /// Metrics for the eth request handler.
     metrics: EthRequestHandlerMetrics,
 }
@@ -68,11 +70,17 @@ pub struct EthRequestHandler<C, N: NetworkPrimitives = EthNetworkPrimitives> {
 // === impl EthRequestHandler ===
 impl<C, N: NetworkPrimitives> EthRequestHandler<C, N> {
     /// Create a new instance
-    pub fn new(client: C, peers: PeersHandle, incoming: Receiver<IncomingEthRequest<N>>) -> Self {
+    pub fn new(
+        client: C,
+        peers: PeersHandle,
+        incoming: Receiver<IncomingEthRequest<N>>,
+        header_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+    ) -> Self {
         Self {
             client,
             peers,
             incoming_requests: ReceiverStream::new(incoming),
+            header_transform,
             metrics: Default::default(),
         }
     }
@@ -81,7 +89,7 @@ impl<C, N: NetworkPrimitives> EthRequestHandler<C, N> {
 impl<C, N> EthRequestHandler<C, N>
 where
     N: NetworkPrimitives,
-    C: BlockReader,
+    C: BlockReader<Header = N::BlockHeader>,
 {
     /// Returns the list of requested headers
     fn get_headers_response(&self, request: GetBlockHeaders) -> Vec<C::Header> {
@@ -142,6 +150,11 @@ where
             } else {
                 break
             }
+        }
+
+        // TODO: remove this once we deprecated l2geth
+        if let Some(ref header_transform) = self.header_transform {
+            headers = headers.into_iter().map(|h| header_transform.map(h)).collect()
         }
 
         headers

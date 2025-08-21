@@ -283,16 +283,17 @@ impl<N: NetworkPrimitives> StateFetcher<N> {
             // apply the header transform and delegate the response
             let _ = resp.response.send(res.map(|h| {
                 let original_count = h.len();
-                let transformed_headers: Vec<_> = h.into_iter()
+                let transformed_headers: Vec<_> = h
+                    .into_iter()
                     .map(|h| self.header_transform.map(h))
                     .filter(|h| h != &Default::default())
                     .collect();
-                
+
                 // If any headers were filtered out, mark response as likely bad
                 if transformed_headers.len() < original_count {
                     is_likely_bad_response = true;
                 }
-                
+
                 (peer_id, transformed_headers).into()
             }));
         }

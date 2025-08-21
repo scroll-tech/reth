@@ -169,7 +169,7 @@ where
         let client = self.client.clone();
         let (handle, network, _txpool, eth) = NetworkManager::builder::<C>(self)
             .await?
-            .request_handler::<C>(client)
+            .request_handler::<C>(client, None)
             .split_with_handle();
 
         tokio::task::spawn(network);
