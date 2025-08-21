@@ -1,5 +1,5 @@
 use alloy_primitives::{address, Address, Signature};
-use scroll_rollup_node_db::Database;
+use scroll_rollup_node_db::{Database, DatabaseOperations};
 use std::fmt;
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -28,6 +28,8 @@ pub enum SignatureError {
     InvalidSigner,
     /// Signature recovery failed
     RecoveryFailed,
+    /// No tokio runtime available
+    NoRuntimeAvailable,
     /// Database operation failed
     DatabaseError(String),
 }
@@ -38,6 +40,7 @@ impl fmt::Display for SignatureError {
             SignatureError::InvalidSignature => write!(f, "Invalid signature length, expected 65 bytes"),
             SignatureError::InvalidSigner => write!(f, "Invalid signer, not authorized"),
             SignatureError::RecoveryFailed => write!(f, "Failed to recover signer from signature"),
+            SignatureError::NoRuntimeAvailable => write!(f, "No tokio runtime available during signature storage"),
             SignatureError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
         }
     }
@@ -150,7 +153,7 @@ impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTra
 
             // TODO: remove this once we deprecated l2geth
             // Validate and process signature
-            if let Err(err) = self.validate_signature(&mut header) {
+            if let Err(err) = self.validate_and_store_signature(&mut header) {
                 reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
                 return H::default();
             }
@@ -161,7 +164,7 @@ impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTra
 
 impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<ChainSpec>
 {
-    fn validate_signature<H: BlockHeader>(&self, header: &mut H) -> Result<(), SignatureError> {
+    fn validate_and_store_signature<H: BlockHeader>(&self, header: &mut H) -> Result<(), SignatureError> {
         let signature_bytes = std::mem::take(header.extra_data_mut());
         
         // Parse 65-byte signature: [r (32 bytes), s (32 bytes), v (1 byte)]
@@ -186,8 +189,13 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         }
         
         // Store signature in database
-        self.db.insert_signature(header.hash_slow(), signature)
-            .map_err(|e| SignatureError::DatabaseError(e.to_string()))?;
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            if let Err(e) = handle.block_on(self.db.insert_signature(header.hash_slow(), signature)) {
+                return Err(SignatureError::DatabaseError(e.to_string()));
+            }
+        } else {
+            return Err(SignatureError::NoRuntimeAvailable);
+        }
         
         Ok(())
     }
