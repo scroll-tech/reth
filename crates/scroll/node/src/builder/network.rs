@@ -1,6 +1,6 @@
 use alloy_primitives::{address, Address, Signature};
 use scroll_rollup_node_db::{Database, DatabaseOperations};
-use std::fmt;
+use std::{fmt, fs};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
     config::NetworkMode,
@@ -54,13 +54,13 @@ pub struct ScrollNetworkBuilder {
     /// Additional `RLPx` sub-protocols to be added to the network.
     scroll_sub_protocols: RlpxSubProtocols,
     /// A reference to the rollup-node `Database`.
-    rollup_node_db: Arc<Database>,
+    rollup_node_db_path: Option<String>,
 }
 
 impl ScrollNetworkBuilder {
     /// Create a new [`ScrollNetworkBuilder`] with default configuration.
     pub fn new() -> Self {
-        Self { scroll_sub_protocols: RlpxSubProtocols::default(), rollup_node_db: Arc::new(Database::default()) }
+        Self { scroll_sub_protocols: RlpxSubProtocols::default(), rollup_node_db_path: None }
     }
 
     /// Add a scroll sub-protocol to the network builder.
@@ -70,8 +70,8 @@ impl ScrollNetworkBuilder {
     }
 
     /// Add a scroll sub-protocol to the network builder.
-    pub fn with_database(mut self, database: Arc<Database>) -> Self {
-        self.rollup_node_db = database;
+    pub fn with_database_path(mut self, db_path: Option<String>) -> Self {
+        self.rollup_node_db_path = db_path;
         self
     }
 }
@@ -95,9 +95,21 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<Self::Network> {
+        // initialize the rollup node database.
+        let db_path = ctx.config().datadir.datadir.as_ref();
+        let database_path = if let Some(database_path) = self.rollup_node_db_path {
+            database_path
+        } else {
+            // append the path using strings as using `join(...)` overwrites "sqlite://"
+            // if the path is absolute.
+            let path = db_path.unwrap().join("scroll.db?mode=rwc");
+            "sqlite://".to_string() + &*path.to_string_lossy()
+        };
+        let db = Database::new(&database_path).await?;
+
         // get the header transform.
         let chain_spec = ctx.chain_spec();
-        let transform = ScrollHeaderTransform { chain_spec, db: self.rollup_node_db };
+        let transform = ScrollHeaderTransform { chain_spec, db: Arc::new(db) };
 
         // set the network mode to work.
         let config = ctx.network_config()?;
