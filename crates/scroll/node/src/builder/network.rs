@@ -1,5 +1,7 @@
 use alloy_primitives::{address, Address, Signature};
+use reth_chainspec::{EthChainSpec, NamedChain};
 use scroll_rollup_node_db::{Database, DatabaseOperations};
+use tokio::io::Sink;
 use std::{fmt, path::PathBuf};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -25,7 +27,7 @@ pub enum SignatureError {
     /// Invalid signature length (expected 65 bytes)
     InvalidSignature,
     /// Invalid signer (not authorized)
-    InvalidSigner,
+    InvalidSigner(Address),
     /// Signature recovery failed
     RecoveryFailed,
     /// No tokio runtime available
@@ -38,7 +40,7 @@ impl fmt::Display for SignatureError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SignatureError::InvalidSignature => write!(f, "Invalid signature length, expected 65 bytes"),
-            SignatureError::InvalidSigner => write!(f, "Invalid signer, not authorized"),
+            SignatureError::InvalidSigner(signer) => write!(f, "Invalid signer, not authorized: {}", signer),
             SignatureError::RecoveryFailed => write!(f, "Failed to recover signer from signature"),
             SignatureError::NoRuntimeAvailable => write!(f, "No tokio runtime available during signature storage"),
             SignatureError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
@@ -132,8 +134,8 @@ pub type ScrollNetworkPrimitives =
     BasicNetworkPrimitives<ScrollPrimitives, scroll_alloy_consensus::ScrollPooledTransaction>;
 
 /// The correct signer address for Scroll mainnet.
-const SCROLL_MAINNET_SIGNER: Address = address!("0000000000000000000000000000000000000000");
-const SCROLL_SEPOLIA_SIGNER: Address = address!("0000000000000000000000000000000000000000");
+const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
+const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
 
 /// An implementation of a [`HeaderTransform`] for Scroll.
 #[derive(Debug, Clone)]
@@ -143,7 +145,7 @@ pub struct ScrollHeaderTransform<ChainSpec> {
     db: Arc<Database>,
 }
 
-impl<ChainSpec: ScrollHardforks + Debug + Send + Sync + 'static> ScrollHeaderTransform<ChainSpec> {
+impl<ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync + 'static> ScrollHeaderTransform<ChainSpec> {
     /// Returns a new instance of the [`ScrollHeaderTransform`] from the provider chain spec.
     pub const fn new(chain_spec: ChainSpec, db: Arc<Database>) -> Self {
         Self { chain_spec, db }
@@ -155,7 +157,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync + 'static> ScrollHeaderTra
     }
 }
 
-impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTransform<H>
+impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync> HeaderTransform<H>
     for ScrollHeaderTransform<ChainSpec>
 {
     fn map(&self, mut header: H) -> H {
@@ -165,11 +167,28 @@ impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTra
 
             // TODO: remove this once we deprecated l2geth
             // Validate and process signature
-            if self.chain_spec.scroll_mainnet() == Chain::ScrollMainnet {
-            if let Err(err) = self.validate_and_store_signature(&mut header) {
-                reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
-                return H::default();
-            }
+            match self.chain_spec.chain().named() {
+                Some(NamedChain::Scroll) => {
+                    if let Err(err) = self.validate_and_store_signature(&mut header, SCROLL_MAINNET_SIGNER) {
+                        reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
+                        return H::default();
+                    }
+                }
+                Some(NamedChain::ScrollSepolia) => {
+                    if let Err(err) = self.validate_and_store_signature(&mut header, SCROLL_SEPOLIA_SIGNER) {
+                        reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
+                        return H::default();
+                    }
+                }
+                Some(NamedChain::Dev) => {
+                    if let Err(err) = self.validate_and_store_signature(&mut header, SCROLL_SEPOLIA_SIGNER) {
+                        reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
+                        return H::default();
+                    }
+                }
+                _ => {
+                    *header.extra_data_mut() = Default::default();
+                }
             }
         }
         header
@@ -178,7 +197,7 @@ impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTra
 
 impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<ChainSpec>
 {
-    fn validate_and_store_signature<H: BlockHeader>(&self, header: &mut H) -> Result<(), SignatureError> {
+    fn validate_and_store_signature<H: BlockHeader>(&self, header: &mut H, authorized_signer: Address) -> Result<(), SignatureError> {
         let signature_bytes = std::mem::take(header.extra_data_mut());
         
         // Parse 65-byte signature: [r (32 bytes), s (32 bytes), v (1 byte)]
@@ -198,8 +217,8 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
             .map_err(|_| SignatureError::RecoveryFailed)?;
             
         // Verify signer is authorized
-        if SCROLL_MAINNET_SIGNER != signer {
-            return Err(SignatureError::InvalidSigner);
+        if authorized_signer != signer {
+            return Err(SignatureError::InvalidSigner(signer));
         }
         
         // Store signature in database
