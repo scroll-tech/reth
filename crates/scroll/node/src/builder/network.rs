@@ -1,6 +1,6 @@
 use alloy_primitives::{address, Address, Signature};
 use scroll_rollup_node_db::{Database, DatabaseOperations};
-use std::{fmt, fs};
+use std::{fmt, path::PathBuf};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
     config::NetworkMode,
@@ -54,7 +54,7 @@ pub struct ScrollNetworkBuilder {
     /// Additional `RLPx` sub-protocols to be added to the network.
     scroll_sub_protocols: RlpxSubProtocols,
     /// A reference to the rollup-node `Database`.
-    rollup_node_db_path: Option<String>,
+    rollup_node_db_path: Option<PathBuf>,
 }
 
 impl ScrollNetworkBuilder {
@@ -70,7 +70,7 @@ impl ScrollNetworkBuilder {
     }
 
     /// Add a scroll sub-protocol to the network builder.
-    pub fn with_database_path(mut self, db_path: Option<String>) -> Self {
+    pub fn with_database_path(mut self, db_path: Option<PathBuf>) -> Self {
         self.rollup_node_db_path = db_path;
         self
     }
@@ -96,13 +96,13 @@ where
         pool: Pool,
     ) -> eyre::Result<Self::Network> {
         // initialize the rollup node database.
-        let db_path = ctx.config().datadir.datadir.as_ref();
+        let db_path = ctx.config().datadir().db();
         let database_path = if let Some(database_path) = self.rollup_node_db_path {
-            database_path
+            database_path.to_string_lossy().to_string()
         } else {
             // append the path using strings as using `join(...)` overwrites "sqlite://"
             // if the path is absolute.
-            let path = db_path.unwrap().join("scroll.db?mode=rwc");
+            let path = db_path.join("scroll.db?mode=rwc");
             "sqlite://".to_string() + &*path.to_string_lossy()
         };
         let db = Database::new(&database_path).await?;
@@ -165,9 +165,11 @@ impl<H: BlockHeader, ChainSpec: ScrollHardforks + Debug + Send + Sync> HeaderTra
 
             // TODO: remove this once we deprecated l2geth
             // Validate and process signature
+            if self.chain_spec.scroll_mainnet() == Chain::ScrollMainnet {
             if let Err(err) = self.validate_and_store_signature(&mut header) {
                 reth_tracing::tracing::warn!("Header signature validation failed, header hash: {:?}, error: {}", header.hash_slow(), err);
                 return H::default();
+            }
             }
         }
         header
