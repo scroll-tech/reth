@@ -140,6 +140,7 @@ pub type ScrollNetworkPrimitives =
 /// The correct signer address for Scroll mainnet.
 const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
 const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
+const NULL_SIGNER: Address = address!("0x0000000000000000000000000000000000000000");
 
 /// An implementation of a [`HeaderTransform`] for downloaded headers for Scroll.
 #[derive(Debug, Clone)]
@@ -179,7 +180,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
             match self.chain_spec.chain().named() {
                 Some(NamedChain::Scroll) => {
                     if let Err(err) =
-                        self.validate_and_store_signature(&mut header, SCROLL_MAINNET_SIGNER)
+                        self.validate_and_store_signature(&mut header, Some(SCROLL_MAINNET_SIGNER))
                     {
                         warn!(
                             "Header signature validation failed, header hash: {:?}, error: {}",
@@ -191,7 +192,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                 }
                 Some(NamedChain::ScrollSepolia) => {
                     if let Err(err) =
-                        self.validate_and_store_signature(&mut header, SCROLL_SEPOLIA_SIGNER)
+                        self.validate_and_store_signature(&mut header, Some(SCROLL_SEPOLIA_SIGNER))
                     {
                         warn!(
                             "Header signature validation failed, header hash: {:?}, error: {}",
@@ -202,7 +203,16 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                     }
                 }
                 _ => {
-                    *header.extra_data_mut() = Default::default();
+                    if let Err(err) =
+                        self.validate_and_store_signature(&mut header, None)
+                    {
+                        warn!(
+                            "Header signature validation failed, header hash: {:?}, error: {}",
+                            header.hash_slow(),
+                            err
+                        );
+                        return H::default();
+                    }
                 }
             }
         }
@@ -214,7 +224,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
     fn validate_and_store_signature<H: BlockHeader>(
         &self,
         header: &mut H,
-        authorized_signer: Address,
+        authorized_signer: Option<Address>,
     ) -> Result<(), HeaderTransformError> {
         let signature_bytes = std::mem::take(header.extra_data_mut());
 
@@ -238,7 +248,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         .map_err(|_| HeaderTransformError::RecoveryFailed)?;
 
         // Verify signer is authorized
-        if authorized_signer != signer {
+        if authorized_signer.is_some() && authorized_signer.unwrap() != signer {
             return Err(HeaderTransformError::InvalidSigner(signer));
         }
 
@@ -270,35 +280,31 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
     fn map(&self, mut header: H) -> H {
         if self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
             // read the signature from the rollup node database and add it to the extra_data field.
-            if let Some(NamedChain::Scroll | NamedChain::ScrollSepolia) =
-                self.chain_spec.chain().named()
-            {
-                let signature = if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                    match handle.block_on(self.db.get_block_signature(header.hash_slow())) {
-                        Ok(sig) => sig,
-                        Err(e) => {
-                            warn!("Failed to get block signature from database, header hash: {:?}, error: {}", header.hash_slow(), HeaderTransformError::DatabaseError(e.to_string()));
-                            return header;
-                        }
+            let signature = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                match handle.block_on(self.db.get_block_signature(header.hash_slow())) {
+                    Ok(sig) => sig,
+                    Err(e) => {
+                        warn!("Failed to get block signature from database, header hash: {:?}, error: {}", header.hash_slow(), HeaderTransformError::DatabaseError(e.to_string()));
+                        return header;
                     }
-                } else {
-                    warn!(
-                        "Failed to get block signature from database, header hash: {:?}, error: {}",
-                        header.hash_slow(),
-                        HeaderTransformError::NoRuntimeAvailable
-                    );
-                    return header;
-                };
-                if let Some(sig) = signature {
-                    *header.extra_data_mut() = sig.as_bytes().into();
-                } else {
-                    warn!(
-                        "Failed to get block signature from database, header hash: {:?}, error: {}",
-                        header.hash_slow(),
-                        HeaderTransformError::SignatureNotFound
-                    );
-                    return header;
                 }
+            } else {
+                warn!(
+                    "Failed to get block signature from database, header hash: {:?}, error: {}",
+                    header.hash_slow(),
+                    HeaderTransformError::NoRuntimeAvailable
+                );
+                return header;
+            };
+            if let Some(sig) = signature {
+                *header.extra_data_mut() = sig.as_bytes().into();
+            } else {
+                warn!(
+                    "Failed to get block signature from database, header hash: {:?}, error: {}",
+                    header.hash_slow(),
+                    HeaderTransformError::SignatureNotFound
+                );
+                return header;
             }
         }
         header
