@@ -263,7 +263,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
             } else {
                 return Err(HeaderTransformError::NoRuntimeAvailable);
             }
-            debug!("Persisted block signature to database, header hash: {:?}, sig: {:?}", header.hash_slow(), signature.to_string());
+            debug!("Persisted block signature to database, block hash: {:?}, sig: {:?}", header.hash_slow(), signature.to_string());
             Ok(())
         })?;
 
