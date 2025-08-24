@@ -253,14 +253,18 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         }
 
         // Store signature in database
-        if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            if let Err(e) = handle.block_on(self.db.insert_signature(header.hash_slow(), signature))
-            {
-                return Err(HeaderTransformError::DatabaseError(e.to_string()));
+        tokio::task::block_in_place(|| {
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                if let Err(e) = handle.block_on(async {
+                    self.db.insert_signature(header.hash_slow(), signature).await
+                }) {
+                    return Err(HeaderTransformError::DatabaseError(e.to_string()));
+                }
+            } else {
+                return Err(HeaderTransformError::NoRuntimeAvailable);
             }
-        } else {
-            return Err(HeaderTransformError::NoRuntimeAvailable);
-        }
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -280,22 +284,30 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
     fn map(&self, mut header: H) -> H {
         if self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
             // read the signature from the rollup node database and add it to the extra_data field.
-            let signature = if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                match handle.block_on(self.db.get_block_signature(header.hash_slow())) {
-                    Ok(sig) => sig,
-                    Err(e) => {
-                        warn!("Failed to get block signature from database, header hash: {:?}, error: {}", header.hash_slow(), HeaderTransformError::DatabaseError(e.to_string()));
-                        return header;
+            let signature = tokio::task::block_in_place(|| {
+                if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                    match handle.block_on(async {
+                        self.db.get_block_signature(header.hash_slow()).await
+                    }) {
+                        Ok(sig) => sig,
+                        Err(e) => {
+                            warn!(
+                                "Failed to get block signature from database, header hash: {:?}, error: {}",
+                                header.hash_slow(),
+                                HeaderTransformError::DatabaseError(e.to_string())
+                            );
+                            None
+                        }
                     }
+                } else {
+                    warn!(
+                        "Failed to get block signature from database, header hash: {:?}, error: {}",
+                        header.hash_slow(),
+                        HeaderTransformError::NoRuntimeAvailable
+                    );
+                    None
                 }
-            } else {
-                warn!(
-                    "Failed to get block signature from database, header hash: {:?}, error: {}",
-                    header.hash_slow(),
-                    HeaderTransformError::NoRuntimeAvailable
-                );
-                return header;
-            };
+            });
             if let Some(sig) = signature {
                 *header.extra_data_mut() = sig.as_bytes().into();
             } else {
