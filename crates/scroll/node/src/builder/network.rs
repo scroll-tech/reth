@@ -13,7 +13,7 @@ use reth_node_types::NodeTypes;
 use reth_primitives_traits::BlockHeader;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_tracing::tracing::{info, warn};
+use reth_tracing::tracing::{info, warn, debug};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
@@ -263,6 +263,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
             } else {
                 return Err(HeaderTransformError::NoRuntimeAvailable);
             }
+            debug!("Persisted block signature to database, header hash: {:?}, sig: {:?}", header.hash_slow(), signature.to_string());
             Ok(())
         })?;
 
@@ -309,6 +310,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                 }
             });
             if let Some(sig) = signature {
+                debug!("Retrieved block signature from database, header hash: {:?}, sig: {:?}", header.hash_slow(), sig.to_string());
                 *header.extra_data_mut() = sig.as_bytes().into();
             } else {
                 warn!(
