@@ -13,7 +13,7 @@ use reth_node_types::NodeTypes;
 use reth_primitives_traits::BlockHeader;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_tracing::tracing::{info, warn, debug};
+use reth_tracing::tracing::{info, warn};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
@@ -140,7 +140,6 @@ pub type ScrollNetworkPrimitives =
 /// The correct signer address for Scroll mainnet.
 const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
 const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
-const NULL_SIGNER: Address = address!("0x0000000000000000000000000000000000000000");
 
 /// An implementation of a [`HeaderTransform`] for downloaded headers for Scroll.
 #[derive(Debug, Clone)]
@@ -263,7 +262,6 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
             } else {
                 return Err(HeaderTransformError::NoRuntimeAvailable);
             }
-            debug!("Persisted block signature to database, block hash: {:?}, sig: {:?}", header.hash_slow(), signature.to_string());
             Ok(())
         })?;
 
@@ -310,7 +308,6 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                 }
             });
             if let Some(sig) = signature {
-                debug!("Retrieved block signature from database, header hash: {:?}, sig: {:?}", header.hash_slow(), sig.to_string());
                 *header.extra_data_mut() = sig.as_bytes().into();
             } else {
                 warn!(
