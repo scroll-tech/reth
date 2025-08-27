@@ -1,4 +1,4 @@
-use alloy_primitives::{address, Address, Signature};
+use alloy_primitives::{address, Address, Signature, B256};
 use reth_chainspec::{EthChainSpec, NamedChain};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -13,7 +13,7 @@ use reth_node_types::NodeTypes;
 use reth_primitives_traits::BlockHeader;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_tracing::tracing::{info, warn, trace};
+use reth_tracing::tracing::{info, warn, debug, trace};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
@@ -170,51 +170,31 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
     HeaderTransform<H> for ScrollHeaderTransform<ChainSpec>
 {
     fn map(&self, mut header: H) -> H {
-        if self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
-            // clear the extra data field.
-            // *header.extra_data_mut() = Default::default()
-
-            // TODO: remove this once we deprecated l2geth
-            // Validate and process signature
-            match self.chain_spec.chain().named() {
-                Some(NamedChain::Scroll) => {
-                    if let Err(err) =
-                        self.validate_and_store_signature(&mut header, Some(SCROLL_MAINNET_SIGNER))
-                    {
-                        warn!(
-                            "Header signature validation failed, header hash: {:?}, error: {}",
-                            header.hash_slow(),
-                            err
-                        );
-                        return H::default();
-                    }
-                }
-                Some(NamedChain::ScrollSepolia) => {
-                    if let Err(err) =
-                        self.validate_and_store_signature(&mut header, Some(SCROLL_SEPOLIA_SIGNER))
-                    {
-                        warn!(
-                            "Header signature validation failed, header hash: {:?}, error: {}",
-                            header.hash_slow(),
-                            err
-                        );
-                        return H::default();
-                    }
-                }
-                _ => {
-                    if let Err(err) =
-                        self.validate_and_store_signature(&mut header, None)
-                    {
-                        warn!(
-                            "Header signature validation failed, header hash: {:?}, error: {}",
-                            header.hash_slow(),
-                            err
-                        );
-                        return H::default();
-                    }
-                }
-            }
+        if !self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
+            return header;
         }
+        // clear the extra data field.
+        // *header.extra_data_mut() = Default::default()
+
+        // TODO: remove this once we deprecated l2geth
+        // Validate and process signature
+        let authorized_signer = match self.chain_spec.chain().named() {
+            Some(NamedChain::Scroll) => Some(SCROLL_MAINNET_SIGNER),
+            Some(NamedChain::ScrollSepolia) => Some(SCROLL_SEPOLIA_SIGNER),
+            _ => None,
+        };
+
+        if let Err(err) =
+            self.validate_and_store_signature(&mut header, authorized_signer)
+        {
+            debug!(
+                target: "scroll::network::response_header_transform",
+                "Header signature persistence failed, header hash: {:?}, error: {}",
+                header.hash_slow(), err
+            );
+            return H::default();
+        }
+
         header
     }
 }
@@ -226,36 +206,13 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         authorized_signer: Option<Address>,
     ) -> Result<(), HeaderTransformError> {
         let signature_bytes = std::mem::take(header.extra_data_mut());
+        let signature = parse_65b_signature(&signature_bytes)?;
 
-        // Parse 65-byte signature: [r (32 bytes), s (32 bytes), v (1 byte)]
-        if signature_bytes.len() != 65 {
-            return Err(HeaderTransformError::InvalidSignature);
-        }
-
-        let signature = Signature::from_raw(&signature_bytes)
-            .map_err(|_| HeaderTransformError::InvalidSignature)?;
-
-        // Recover signer from signature
-        let signer = reth_primitives_traits::crypto::secp256k1::recover_signer(
-            &signature,
-            header.hash_slow(),
-        )
-        .map_err(|_| HeaderTransformError::RecoveryFailed)?;
-
-        // Verify signer is authorized
-        if authorized_signer.is_some() && authorized_signer.unwrap() != signer {
-            return Err(HeaderTransformError::InvalidSigner(signer));
-        }
+        // Recover and verify signer
+        recover_and_verify_signer(&signature, header.hash_slow(), authorized_signer)?;
 
         // Store signature in database
-        let db = Arc::clone(&self.db);
-        let hash = header.hash_slow();
-        tokio::spawn(async move {
-            trace!("Persisting block signature to database, block hash: {:?}, sig: {:?}", hash, signature.to_string());
-            if let Err(e) = db.insert_signature(hash, signature).await {
-                warn!("Failed to store signature in database: {}", e);
-            }
-        });
+        persist_signature_blocking(self.db.clone(), header.hash_slow(), signature);
 
         Ok(())
     }
@@ -300,15 +257,72 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                 }
             });
             if let Some(sig) = signature {
+                let authorized_signer = match self.chain_spec.chain().named() {
+                    Some(NamedChain::Scroll) => Some(SCROLL_MAINNET_SIGNER),
+                    Some(NamedChain::ScrollSepolia) => Some(SCROLL_SEPOLIA_SIGNER),
+                    _ => None,
+                };
+
+                if let Err(err) = recover_and_verify_signer(&sig, header.hash_slow(), authorized_signer) {
+                    warn!(
+                        "Found invalid signature(different from the hardcoded signer) for header hash: {:?}, sig: {:?}, error: {}",
+                        header.hash_slow(),
+                        sig.to_string(),
+                        err
+                    );
+                    return H::default();
+                }
+
                 *header.extra_data_mut() = sig.as_bytes().into();
-            } else {
-                warn!(
-                    "Failed to get block signature from database, header hash: {:?}, error: {}",
-                    header.hash_slow(),
-                    HeaderTransformError::SignatureNotFound
-                );
             }
         }
         header
     }
+}
+
+/// Recover signer from signature and verify authorization.
+fn recover_and_verify_signer(
+    signature: &Signature,
+    hash: B256,
+    authorized_signer: Option<Address>,
+) -> Result<Address, HeaderTransformError> {
+    // Recover signer from signature
+    let signer = reth_primitives_traits::crypto::secp256k1::recover_signer(
+        signature,
+        hash,
+    )
+    .map_err(|_| HeaderTransformError::RecoveryFailed)?;
+
+    // Verify signer is authorized
+    if authorized_signer.is_some() && authorized_signer.unwrap() != signer {
+        return Err(HeaderTransformError::InvalidSigner(signer));
+    }
+
+    Ok(signer)
+}
+
+/// Parse a canonical 65-byte secp256k1 signature: r (32) | s (32) | v (1).
+fn parse_65b_signature(bytes: &[u8]) -> Result<Signature, HeaderTransformError> {
+    if bytes.len() != 65 {
+        return Err(HeaderTransformError::InvalidSignature);
+    }
+
+    let signature = Signature::from_raw(&bytes)
+        .map_err(|_| HeaderTransformError::InvalidSignature)?;
+
+    Ok(signature)
+}
+
+/// Run the async DB insert from sync code safely.
+fn persist_signature_blocking(
+    db: Arc<Database>,
+    hash: B256,
+    signature: Signature,
+) -> () {
+    tokio::spawn(async move {
+        trace!("Persisting block signature to database, block hash: {:?}, sig: {:?}", hash, signature.to_string());
+        if let Err(e) = db.insert_signature(hash, signature).await {
+            warn!("Failed to store signature in database: {}", e);
+        }
+    });
 }
