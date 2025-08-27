@@ -232,12 +232,8 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
             return Err(HeaderTransformError::InvalidSignature);
         }
 
-        let r = alloy_primitives::U256::from_be_slice(&signature_bytes[0..32]);
-        let s = alloy_primitives::U256::from_be_slice(&signature_bytes[32..64]);
-        let v = signature_bytes[64];
-        let parity = v != 0;
-
-        let signature = Signature::new(r, s, parity);
+        let signature = Signature::from_raw(&signature_bytes)
+            .map_err(|_| HeaderTransformError::InvalidSignature)?;
 
         // Recover signer from signature
         let signer = reth_primitives_traits::crypto::secp256k1::recover_signer(
@@ -311,7 +307,6 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                     header.hash_slow(),
                     HeaderTransformError::SignatureNotFound
                 );
-                return header;
             }
         }
         header
