@@ -6,6 +6,7 @@ use reth_primitives_traits::{
     transaction::error::InvalidTransactionError, Block, GotExpected, SealedBlock,
 };
 use reth_revm::database::StateProviderDatabase;
+use reth_scroll_consensus::MAX_ROLLUP_FEE;
 use reth_scroll_evm::{
     compute_compression_ratio, spec_id_at_timestamp_and_number, RethL1BlockInfo,
 };
@@ -16,6 +17,7 @@ use reth_transaction_pool::{
     TransactionValidator,
 };
 use revm_scroll::l1block::L1BlockInfo;
+use scroll_alloy_consensus::ScrollTransaction;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
@@ -84,7 +86,7 @@ impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
 impl<Client, Tx> ScrollTransactionValidator<Client, Tx>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
-    Tx: EthPoolTransaction,
+    Tx: EthPoolTransaction + ScrollTransaction,
 {
     /// Create a new [`ScrollTransactionValidator`].
     pub fn new(inner: EthTransactionValidator<Client, Tx>) -> Self {
@@ -140,6 +142,12 @@ where
         if transaction.is_eip4844() {
             return TransactionValidationOutcome::Invalid(
                 transaction,
+                InvalidTransactionError::Eip4844Disabled.into(),
+            )
+        }
+        if transaction.is_l1_message() {
+            return TransactionValidationOutcome::Invalid(
+                transaction,
                 InvalidTransactionError::TxTypeNotSupported.into(),
             )
         }
@@ -181,6 +189,14 @@ where
                     return TransactionValidationOutcome::Error(*valid_tx.hash(), Box::new(err))
                 }
             };
+            // Check rollup fee is under u64::MAX.
+            if cost_addition >= MAX_ROLLUP_FEE {
+                return TransactionValidationOutcome::Invalid(
+                    valid_tx.into_transaction(),
+                    InvalidTransactionError::GasUintOverflow.into(),
+                )
+            }
+
             let cost = valid_tx.transaction().cost().saturating_add(cost_addition);
 
             // Checks for max cost
@@ -223,7 +239,7 @@ where
 impl<Client, Tx> TransactionValidator for ScrollTransactionValidator<Client, Tx>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
-    Tx: EthPoolTransaction,
+    Tx: EthPoolTransaction + ScrollTransaction,
 {
     type Transaction = Tx;
 

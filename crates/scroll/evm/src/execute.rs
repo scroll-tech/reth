@@ -94,7 +94,7 @@ mod tests {
     const CURIE_BLOCK_NUMBER: u64 = 7096837;
     const EUCLID_V2_BLOCK_NUMBER: u64 = 14907015;
     const EUCLID_V2_BLOCK_TIMESTAMP: u64 = 1745305200;
-    const FEYNMAN_BLOCK_TIMESTAMP: u64 = u64::MAX;
+    const FEYNMAN_BLOCK_TIMESTAMP: u64 = 1755576000;
 
     const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
     const OVER_HEAD_SLOT: U256 = U256::from_limbs([2, 0, 0, 0]);

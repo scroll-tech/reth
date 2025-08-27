@@ -1,66 +1,56 @@
-use alloy_consensus::BlockHeader;
-use alloy_primitives::U256;
-use alloy_rpc_types_engine::{ExecutionData, PayloadError};
-use reth_node_api::{
-    InvalidPayloadAttributesError, MessageValidationKind, NewPayloadError, PayloadAttributes,
-    PayloadTypes, PayloadValidator, VersionSpecificValidationError,
-};
-use reth_node_builder::{
-    rpc::EngineValidatorBuilder, AddOnsContext, EngineApiMessageVersion,
-    EngineObjectValidationError, EngineTypes, EngineValidator, ExecutionPayload,
-    FullNodeComponents, PayloadOrAttributes,
-};
-use reth_node_types::NodeTypes;
-use reth_primitives_traits::{Block, RecoveredBlock};
-use reth_scroll_chainspec::ScrollChainSpec;
-use reth_scroll_engine_primitives::{try_into_block, ScrollEngineTypes};
-use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
-use scroll_alloy_hardforks::ScrollHardforks;
-use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
+use crate::addons::ScrollNodeTypes;
 use std::sync::Arc;
 
-/// The block difficulty for in turn signing in the Clique consensus.
-const CLIQUE_IN_TURN_DIFFICULTY: U256 = U256::from_limbs([2, 0, 0, 0]);
-/// The block difficulty for out of turn signing in the Clique consensus.
-const CLIQUE_NO_TURN_DIFFICULTY: U256 = U256::from_limbs([1, 0, 0, 0]);
+use alloy_consensus::BlockHeader;
+use alloy_rpc_types_engine::{ExecutionData, PayloadError};
+use reth_node_api::{
+    AddOnsContext, EngineApiMessageVersion, EngineApiValidator, EngineObjectValidationError,
+    ExecutionPayload, FullNodeComponents, InvalidPayloadAttributesError, MessageValidationKind,
+    NewPayloadError, PayloadAttributes, PayloadOrAttributes, PayloadTypes, PayloadValidator,
+    VersionSpecificValidationError,
+};
+use reth_node_builder::rpc::PayloadValidatorBuilder;
+use reth_node_types::NodeTypes;
+use reth_primitives_traits::{Block, RecoveredBlock};
+use reth_scroll_consensus::{CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY};
+use reth_scroll_engine_primitives::try_into_block;
+use reth_scroll_primitives::ScrollBlock;
+use scroll_alloy_hardforks::ScrollHardforks;
+use scroll_alloy_rpc_types_engine::ScrollPayloadAttributes;
 
 /// Builder for [`ScrollEngineValidator`].
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
+#[non_exhaustive]
 pub struct ScrollEngineValidatorBuilder;
 
-impl<Node, Types> EngineValidatorBuilder<Node> for ScrollEngineValidatorBuilder
+impl<Node> PayloadValidatorBuilder<Node> for ScrollEngineValidatorBuilder
 where
-    Types: NodeTypes<
-        ChainSpec = ScrollChainSpec,
-        Primitives = ScrollPrimitives,
-        Payload = ScrollEngineTypes,
-    >,
-    Node: FullNodeComponents<Types = Types>,
+    Node: FullNodeComponents<Types: ScrollNodeTypes>,
 {
-    type Validator = ScrollEngineValidator;
+    type Validator = ScrollEngineValidator<<Node::Types as NodeTypes>::ChainSpec>;
 
     async fn build(self, ctx: &AddOnsContext<'_, Node>) -> eyre::Result<Self::Validator> {
-        let chainspec = ctx.config.chain.clone();
-        Ok(ScrollEngineValidator { chainspec })
+        Ok(ScrollEngineValidator::new(ctx.config.chain.clone()))
     }
 }
 
 /// Scroll engine validator.
 #[derive(Debug, Clone)]
-pub struct ScrollEngineValidator {
-    chainspec: Arc<ScrollChainSpec>,
+pub struct ScrollEngineValidator<CS> {
+    chainspec: Arc<CS>,
 }
 
-impl ScrollEngineValidator {
+impl<CS> ScrollEngineValidator<CS> {
     /// Returns a new [`ScrollEngineValidator`].
-    pub const fn new(chainspec: Arc<ScrollChainSpec>) -> Self {
+    pub const fn new(chainspec: Arc<CS>) -> Self {
         Self { chainspec }
     }
 }
 
-impl<Types> EngineValidator<Types> for ScrollEngineValidator
+impl<CS, Types> EngineApiValidator<Types> for ScrollEngineValidator<CS>
 where
-    Types: EngineTypes<PayloadAttributes = ScrollPayloadAttributes, ExecutionData = ExecutionData>,
+    Types: PayloadTypes<PayloadAttributes = ScrollPayloadAttributes, ExecutionData = ExecutionData>,
+    CS: ScrollHardforks + Send + Sync + 'static,
 {
     fn validate_version_specific_fields(
         &self,
@@ -114,9 +104,10 @@ fn validate_scroll_payload_or_attributes<Payload: ExecutionPayload>(
     Ok(())
 }
 
-impl<Types> PayloadValidator<Types> for ScrollEngineValidator
+impl<CS, Types> PayloadValidator<Types> for ScrollEngineValidator<CS>
 where
     Types: PayloadTypes<ExecutionData = ExecutionData>,
+    CS: ScrollHardforks + Send + Sync + 'static,
 {
     type Block = ScrollBlock;
 

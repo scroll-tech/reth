@@ -14,7 +14,7 @@ pub use builder::{
 };
 
 mod addons;
-pub use addons::{ScrollAddOns, ScrollAddOnsBuilder};
+pub use addons::{ScrollAddOns, ScrollAddOnsBuilder, ScrollNodeTypes};
 
 mod node;
 pub use node::ScrollNode;

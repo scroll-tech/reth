@@ -2,7 +2,7 @@ use super::FromRecoveredTx;
 use crate::ScrollTransactionIntoTxEnv;
 use alloy_consensus::transaction::Recovered;
 use alloy_eips::{Encodable2718, Typed2718};
-use alloy_evm::{IntoTxEnv, RecoveredTx};
+use alloy_evm::{RecoveredTx, ToTxEnv};
 use alloy_primitives::{Address, Bytes, TxKind, U256};
 use revm::context::TxEnv;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
@@ -104,10 +104,10 @@ where
     }
 }
 
-impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> ToTxEnv<TxEnv>
     for WithCompressionRatio<Recovered<T>>
 {
-    fn into_tx_env(self) -> TxEnv {
+    fn to_tx_env(&self) -> TxEnv {
         let recovered = &self.value;
         TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),
@@ -118,38 +118,10 @@ impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
     }
 }
 
-impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
-    for &WithCompressionRatio<Recovered<T>>
-{
-    fn into_tx_env(self) -> TxEnv {
-        let recovered = &self.value;
-        TxEnv::from_tx_with_compression_ratio(
-            recovered.inner(),
-            recovered.signer(),
-            self.encoded_bytes.clone(),
-            Some(self.compression_ratio),
-        )
-    }
-}
-
-impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
+impl<T, TxEnv: FromTxWithCompressionRatio<T>> ToTxEnv<TxEnv>
     for WithCompressionRatio<&Recovered<T>>
 {
-    fn into_tx_env(self) -> TxEnv {
-        let recovered = &self.value;
-        TxEnv::from_tx_with_compression_ratio(
-            recovered.inner(),
-            *recovered.signer(),
-            self.encoded_bytes.clone(),
-            Some(self.compression_ratio),
-        )
-    }
-}
-
-impl<T, TxEnv: FromTxWithCompressionRatio<T>> IntoTxEnv<TxEnv>
-    for &WithCompressionRatio<&Recovered<T>>
-{
-    fn into_tx_env(self) -> TxEnv {
+    fn to_tx_env(&self) -> TxEnv {
         let recovered = &self.value;
         TxEnv::from_tx_with_compression_ratio(
             recovered.inner(),

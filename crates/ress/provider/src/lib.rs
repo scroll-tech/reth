@@ -154,7 +154,7 @@ where
         // invalid blocks.
         if let Err(error) = self.evm_config.batch_executor(&mut db).execute_with_state_closure(
             &block,
-            |state: &State<_>| {
+            |state: &mut State<_>| {
                 record.record_executed_state(state);
             },
         ) {

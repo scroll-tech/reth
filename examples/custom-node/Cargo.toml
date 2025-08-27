@@ -19,7 +19,7 @@ reth-primitives-traits.workspace = true
 reth-rpc-api.workspace = true
 reth-engine-primitives.workspace = true
 reth-rpc-engine-api.workspace = true
-reth-ethereum = { workspace = true, features = ["node-api", "network", "evm", "pool", "trie", "storage-api"] }
+reth-ethereum = { workspace = true, features = ["node-api", "network", "evm", "pool", "trie", "storage-api", "provider"] }
 
 # revm
 revm.workspace = true
@@ -44,7 +44,6 @@ op-revm.workspace = true
 
 # misc
 async-trait.workspace = true
-derive_more.workspace = true
 eyre.workspace = true
 jsonrpsee.workspace = true
 serde.workspace = true

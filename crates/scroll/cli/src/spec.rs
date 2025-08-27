@@ -15,7 +15,7 @@ impl ChainSpecParser for ScrollChainSpecParser {
             "dev" => SCROLL_DEV.clone(),
             "scroll-mainnet" => SCROLL_MAINNET.clone(),
             "scroll-sepolia" => SCROLL_SEPOLIA.clone(),
-            _ => Arc::new(parse_genesis(s)?.into()),
+            _ => Arc::new(ScrollChainSpec::from_custom_genesis(parse_genesis(s)?)),
         })
     }
 }

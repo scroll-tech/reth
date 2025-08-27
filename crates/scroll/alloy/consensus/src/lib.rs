@@ -13,8 +13,8 @@ extern crate alloc as std;
 mod transaction;
 pub use transaction::{
     ScrollAdditionalInfo, ScrollL1MessageTransactionFields, ScrollPooledTransaction,
-    ScrollTransactionInfo, ScrollTxEnvelope, ScrollTxType, ScrollTypedTransaction, TxL1Message,
-    L1_MESSAGE_TRANSACTION_TYPE, L1_MESSAGE_TX_TYPE_ID,
+    ScrollTransaction, ScrollTransactionInfo, ScrollTxEnvelope, ScrollTxType,
+    ScrollTypedTransaction, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE, L1_MESSAGE_TX_TYPE_ID,
 };
 
 mod receipt;

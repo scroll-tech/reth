@@ -237,7 +237,7 @@ fn run_case(case: &BlockchainTest) -> Result<(), Error> {
         let executor = executor_provider.batch_executor(state_db);
 
         let output = executor
-            .execute_with_state_closure(&(*block).clone(), |statedb: &State<_>| {
+            .execute_with_state_closure(&(*block).clone(), |statedb: &mut State<_>| {
                 witness_record.record_executed_state(statedb);
             })
             .map_err(|err| Error::block_failed(block_number, err))?;
@@ -396,7 +396,7 @@ pub fn should_skip(path: &Path) -> bool {
         | "typeTwoBerlin.json"
 
         // Test checks if nonce overflows. We are handling this correctly but we are not parsing
-        // exception in testsuite There are more nonce overflow tests that are in internal
+        // exception in testsuite There are more nonce overflow tests that are internal
         // call/create, and those tests are passing and are enabled.
         | "CreateTransactionHighNonce.json"
 

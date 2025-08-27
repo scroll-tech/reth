@@ -21,7 +21,7 @@ reth-rpc-eth-api = { workspace = true, features = ["scroll"] }
 reth-rpc-eth-types.workspace = true
 reth-tasks = { workspace = true, features = ["rayon"] }
 reth-transaction-pool.workspace = true
-reth-rpc.workspace = true
+reth-rpc = { workspace = true, features = ["scroll"] }
 reth-rpc-convert = { workspace = true, features = ["scroll"] }
 reth-node-api.workspace = true
 reth-node-builder.workspace = true
