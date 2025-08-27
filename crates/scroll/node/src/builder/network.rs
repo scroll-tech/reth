@@ -13,7 +13,7 @@ use reth_node_types::NodeTypes;
 use reth_primitives_traits::BlockHeader;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_tracing::tracing::{info, warn};
+use reth_tracing::tracing::{info, warn, trace};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
@@ -252,18 +252,14 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         }
 
         // Store signature in database
-        tokio::task::block_in_place(|| {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                if let Err(e) = handle.block_on(async {
-                    self.db.insert_signature(header.hash_slow(), signature).await
-                }) {
-                    return Err(HeaderTransformError::DatabaseError(e.to_string()));
-                }
-            } else {
-                return Err(HeaderTransformError::NoRuntimeAvailable);
+        let db = Arc::clone(&self.db);
+        let hash = header.hash_slow();
+        tokio::spawn(async move {
+            trace!("Persisting block signature to database, block hash: {:?}, sig: {:?}", hash, signature.to_string());
+            if let Err(e) = db.insert_signature(hash, signature).await {
+                warn!("Failed to store signature in database: {}", e);
             }
-            Ok(())
-        })?;
+        });
 
         Ok(())
     }
