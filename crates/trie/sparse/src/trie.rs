@@ -270,16 +270,20 @@ pub struct SerialSparseTrie {
     /// This contains all of the revealed nodes in trie.
     nodes: HashMap<Nibbles, SparseNode>,
     /// When a branch is set, the corresponding child subtree is stored in the database.
+    #[cfg_attr(feature = "serde", serde(skip, default))]
     branch_node_tree_masks: HashMap<Nibbles, TrieMask>,
     /// When a bit is set, the corresponding child is stored as a hash in the database.
+    #[cfg_attr(feature = "serde", serde(skip, default))]
     branch_node_hash_masks: HashMap<Nibbles, TrieMask>,
     /// Map from leaf key paths to their values.
     /// All values are stored here instead of directly in leaf nodes.
     values: HashMap<Nibbles, Vec<u8>>,
     /// Set of prefixes (key paths) that have been marked as updated.
-    /// This is used to track which parts of the trie need to be recalculated.
+    /// This is used to track which parts of the trie need to be recalculated
+    #[cfg_attr(feature = "serde", serde(skip, default))]
     prefix_set: PrefixSetMut,
     /// Optional tracking of trie updates for later use.
+    #[cfg_attr(feature = "serde", serde(skip, default))]
     updates: Option<SparseTrieUpdates>,
     /// Reusable buffer for RLP encoding of nodes.
     #[cfg_attr(feature = "serde", serde(skip, default))]
