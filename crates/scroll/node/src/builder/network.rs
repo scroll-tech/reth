@@ -1,4 +1,4 @@
-use alloy_primitives::{address, Address, Signature, B256};
+use alloy_primitives::{address, Address, B256};
 use reth_chainspec::{EthChainSpec, NamedChain};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -17,6 +17,7 @@ use reth_tracing::tracing::{info, warn, debug, trace};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
+use scroll_rollup_node_signer::Signature;
 use std::{fmt, fmt::Debug, path::PathBuf, sync::Arc};
 
 /// Errors that can occur during signature validation
@@ -30,8 +31,6 @@ pub(crate) enum HeaderTransformError {
     RecoveryFailed,
     /// No tokio runtime available
     NoRuntimeAvailable,
-    /// Signature not found in database
-    SignatureNotFound,
     /// Database operation failed
     DatabaseError(String),
 }
@@ -44,8 +43,7 @@ impl fmt::Display for HeaderTransformError {
             Self::RecoveryFailed => write!(f, "Failed to recover signer from signature"),
             Self::NoRuntimeAvailable => {
                 write!(f, "No tokio runtime available during signature storage")
-            }
-            Self::SignatureNotFound => write!(f, "Signature not found in database"),
+            },
             Self::DatabaseError(msg) => write!(f, "Database error: {}", msg),
         }
     }
