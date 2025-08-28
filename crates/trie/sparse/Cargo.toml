@@ -27,6 +27,7 @@ alloy-rlp.workspace = true
 auto_impl.workspace = true
 rayon = { workspace = true, optional = true }
 smallvec = { workspace = true, features = ["const_new"] }
+serde = { workspace = true, features = ["derive"], optional = true }
 
 # metrics
 reth-metrics = { workspace = true, optional = true }
@@ -81,6 +82,14 @@ arbitrary = [
     "reth-primitives-traits/arbitrary",
     "reth-trie-common/arbitrary",
     "smallvec/arbitrary",
+]
+serde = [
+    "dep:serde",
+    "alloy-primitives/serde",
+    "alloy-trie/serde",
+    "reth-primitives-traits/serde",
+    "reth-storage-api/serde",
+    "reth-trie-common/serde",
 ]
 
 [[bench]]

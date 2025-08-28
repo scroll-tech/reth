@@ -11155,6 +11155,7 @@ dependencies = [
  "reth-trie",
  "reth-trie-common",
  "reth-trie-db",
+ "serde",
  "smallvec",
  "tracing",
 ]

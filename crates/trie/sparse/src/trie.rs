@@ -264,6 +264,7 @@ impl<T: SparseTrieInterface> SparseTrie<T> {
 ///   The opposite is also true.
 /// - All keys in `values` collection are full leaf paths.
 #[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SerialSparseTrie {
     /// Map from a path (nibbles) to its corresponding sparse trie node.
     /// This contains all of the revealed nodes in trie.
@@ -281,6 +282,7 @@ pub struct SerialSparseTrie {
     /// Optional tracking of trie updates for later use.
     updates: Option<SparseTrieUpdates>,
     /// Reusable buffer for RLP encoding of nodes.
+    #[cfg_attr(feature = "serde", serde(skip, default))]
     rlp_buf: Vec<u8>,
 }
 
@@ -1710,6 +1712,7 @@ impl SparseNodeType {
 
 /// Enum representing trie nodes in sparse trie.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SparseNode {
     /// Empty trie node.
     Empty,

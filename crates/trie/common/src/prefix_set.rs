@@ -94,6 +94,7 @@ pub struct TriePrefixSets {
 /// assert!(prefix_set.contains(&Nibbles::from_nibbles_unchecked([0xa, 0xb, 0xc])));
 /// ```
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PrefixSetMut {
     /// Flag indicating that any entry should be considered changed.
     /// If set, the keys will be discarded.
