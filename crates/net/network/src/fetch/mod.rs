@@ -275,24 +275,15 @@ impl<N: NetworkPrimitives> StateFetcher<N> {
 
         let resp = self.inflight_headers_requests.remove(&peer_id);
 
-        let mut is_likely_bad_response =
+        let is_likely_bad_response =
             resp.as_ref().is_some_and(|r| res.is_likely_bad_headers_response(&r.request));
 
         // TODO: revert this change once we deprecated l2geth
         if let Some(resp) = resp {
             // apply the header transform and delegate the response
             let _ = resp.response.send(res.map(|h| {
-                let original_count = h.len();
-                let transformed_headers: Vec<_> = h
-                    .into_iter()
-                    .map(|h| self.header_transform.map(h))
-                    .filter(|h| h != &Default::default())
-                    .collect();
-
-                // If any headers were filtered out, mark response as likely bad
-                if transformed_headers.len() < original_count {
-                    is_likely_bad_response = true;
-                }
+                let transformed_headers: Vec<_> =
+                    h.into_iter().map(|h| self.header_transform.map(h)).collect();
 
                 (peer_id, transformed_headers).into()
             }));
