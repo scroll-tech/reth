@@ -12,5 +12,10 @@ pub enum ScrollPayloadBuilderError {
     #[error(
         "Sequencer transaction gas limit {gas_limit} exceeds remaining block gas {remaining_gas}, cannot skip sequencer transactions"
     )]
-    L1MessageGasExceedsBlock { gas_limit: u64, remaining_gas: u64 },
+    L1MessageGasExceedsBlock {
+        /// The gas limit of the sequencer transaction
+        gas_limit: u64,
+        /// The remaining gas available in the block
+        remaining_gas: u64,
+    },
 }
