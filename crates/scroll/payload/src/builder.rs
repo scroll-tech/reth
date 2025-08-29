@@ -468,7 +468,11 @@ where
             }
 
             let gas_used = match builder.execute_transaction(sequencer_tx.clone()) {
-                Ok(gas_used) => gas_used,
+                Ok(_actual_gas_used) => {
+                    // For sequencer transactions, use the full gas limit (no refunds)
+                    // This matches scroll-geth L1 message logic: st.gas += st.msg.Gas()
+                    gas_limit
+                }
                 Err(BlockExecutionError::Validation(BlockValidationError::InvalidTx {
                     error,
                     ..
