@@ -437,6 +437,7 @@ where
         builder: &mut impl BlockBuilder<Primitives = Evm::Primitives>,
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
+        let block_gas_limit = builder.evm().block().gas_limit;
 
         for sequencer_tx in &self.attributes().transactions {
             // A sequencer's block should never contain blob transactions.
@@ -445,7 +446,6 @@ where
                     ScrollPayloadBuilderError::BlobTransactionRejected,
                 ))
             }
-
             // Convert the transaction to a [RecoveredTx]. This is
             // purely for the purposes of utilizing the `evm_config.tx_env`` function.
             // Deposit transactions do not have signatures, so if the tx is a deposit, this
@@ -453,6 +453,19 @@ where
             let sequencer_tx = sequencer_tx.value().try_clone_into_recovered().map_err(|_| {
                 PayloadBuilderError::other(ScrollPayloadBuilderError::TransactionEcRecoverFailed)
             })?;
+
+            let gas_limit = sequencer_tx.gas_limit();
+
+            // Check if there's enough gas in the block gas limit
+            let remaining_gas = block_gas_limit.saturating_sub(info.cumulative_gas_used);
+            if gas_limit > remaining_gas {
+                return Err(PayloadBuilderError::other(
+                    ScrollPayloadBuilderError::L1MessageGasExceedsBlock {
+                        gas_limit,
+                        remaining_gas,
+                    },
+                ));
+            }
 
             let gas_used = match builder.execute_transaction(sequencer_tx.clone()) {
                 Ok(gas_used) => gas_used,
