@@ -460,7 +460,7 @@ where
             let remaining_gas = block_gas_limit.saturating_sub(info.cumulative_gas_used);
             if gas_limit > remaining_gas {
                 return Err(PayloadBuilderError::other(
-                    ScrollPayloadBuilderError::L1MessageGasExceedsBlock {
+                    ScrollPayloadBuilderError::SequencerTxGasExceedsBlock {
                         gas_limit,
                         remaining_gas,
                     },
