@@ -215,7 +215,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         recover_and_verify_signer(&signature, header.hash_slow(), authorized_signer)?;
 
         // Store signature in database
-        persist_signature_blocking(self.db.clone(), header.hash_slow(), signature);
+        persist_signature(self.db.clone(), header.hash_slow(), signature);
 
         Ok(())
     }
@@ -316,7 +316,7 @@ fn parse_65b_signature(bytes: &[u8]) -> Result<Signature, HeaderTransformError> 
 }
 
 /// Run the async DB insert from sync code safely.
-fn persist_signature_blocking(db: Arc<Database>, hash: B256, signature: Signature) -> () {
+fn persist_signature(db: Arc<Database>, hash: B256, signature: Signature) -> () {
     tokio::spawn(async move {
         trace!(
             "Persisting block signature to database, block hash: {:?}, sig: {:?}",
