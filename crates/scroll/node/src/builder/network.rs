@@ -1,4 +1,4 @@
-use alloy_primitives::{Address, B256};
+use alloy_primitives::{Address, B256, Signature};
 use reth_chainspec::EthChainSpec;
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -17,7 +17,6 @@ use reth_tracing::tracing::{debug, info, trace, warn};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
-use scroll_rollup_node_signer::Signature;
 use std::{fmt, fmt::Debug, path::PathBuf, sync::Arc};
 
 /// Errors that can occur during signature validation
