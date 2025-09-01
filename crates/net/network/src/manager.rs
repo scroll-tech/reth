@@ -380,7 +380,7 @@ impl<N: NetworkPrimitives> NetworkManager<N> {
     ///         .await
     ///         .unwrap()
     ///         .transactions(pool, transactions_manager_config)
-    ///         .request_handler(client)
+    ///         .request_handler(client, None)
     ///         .split_with_handle();
     /// }
     /// ```
