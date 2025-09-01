@@ -438,6 +438,7 @@ where
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
         let block_gas_limit = builder.evm().block().gas_limit;
+        let mut remaining_gas_pool = block_gas_limit;
 
         for sequencer_tx in &self.attributes().transactions {
             // A sequencer's block should never contain blob transactions.
@@ -456,23 +457,18 @@ where
 
             let gas_limit = sequencer_tx.gas_limit();
 
-            // Check if there's enough gas in the block gas limit
-            let remaining_gas = block_gas_limit.saturating_sub(info.cumulative_gas_used);
-            if gas_limit > remaining_gas {
+            // Check if there's enough gas in the gas pool (similar to st.gp.SubGas in geth)
+            if gas_limit > remaining_gas_pool {
                 return Err(PayloadBuilderError::other(
                     ScrollPayloadBuilderError::SequencerTxGasExceedsBlock {
                         gas_limit,
-                        remaining_gas,
+                        remaining_gas: remaining_gas_pool,
                     },
                 ));
             }
 
             let gas_used = match builder.execute_transaction(sequencer_tx.clone()) {
-                Ok(_actual_gas_used) => {
-                    // For sequencer transactions, use the full gas limit (no refunds)
-                    // This matches scroll-geth L1 message logic: st.gas += st.msg.Gas()
-                    gas_limit
-                }
+                Ok(gas_used) => gas_used,
                 Err(BlockExecutionError::Validation(BlockValidationError::InvalidTx {
                     error,
                     ..
@@ -488,6 +484,8 @@ where
 
             // add gas used by the transaction to cumulative gas used, before creating the receipt
             info.cumulative_gas_used += gas_used;
+
+            remaining_gas_pool = remaining_gas_pool.saturating_sub(gas_limit);
         }
 
         Ok(info)
