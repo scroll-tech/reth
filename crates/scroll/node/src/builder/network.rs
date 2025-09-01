@@ -1,4 +1,4 @@
-use alloy_primitives::{Address, B256, Signature};
+use alloy_primitives::{Address, Signature, B256};
 use reth_chainspec::EthChainSpec;
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
@@ -85,7 +85,7 @@ impl ScrollNetworkBuilder {
 
     /// Set the signer for which we will persist and serve signatures if included in block header
     /// extra data field.
-    pub fn with_signer(mut self, signer: Option<Address>) -> Self {
+    pub const fn with_signer(mut self, signer: Option<Address>) -> Self {
         self.signer = signer;
         self
     }
@@ -309,13 +309,13 @@ fn parse_65b_signature(bytes: &[u8]) -> Result<Signature, HeaderTransformError> 
     }
 
     let signature =
-        Signature::from_raw(&bytes).map_err(|_| HeaderTransformError::InvalidSignature)?;
+        Signature::from_raw(bytes).map_err(|_| HeaderTransformError::InvalidSignature)?;
 
     Ok(signature)
 }
 
 /// Run the async DB insert from sync code safely.
-fn persist_signature(db: Arc<Database>, hash: B256, signature: Signature) -> () {
+fn persist_signature(db: Arc<Database>, hash: B256, signature: Signature) {
     tokio::spawn(async move {
         trace!(
             "Persisting block signature to database, block hash: {:?}, sig: {:?}",

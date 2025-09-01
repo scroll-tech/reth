@@ -112,6 +112,7 @@ test-utils = [
     "reth-db/test-utils",
     "reth-revm/test-utils",
     "reth-scroll-node/test-utils",
+    "scroll-rollup-node-db/test-utils",
 ]
 scroll-alloy-traits = [
     "reth-db/scroll-alloy-traits",
