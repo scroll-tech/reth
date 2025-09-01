@@ -1,5 +1,5 @@
-use alloy_primitives::{Address, Signature, B256};
-use reth_chainspec::EthChainSpec;
+use alloy_primitives::{address, Address, Signature, B256};
+use reth_chainspec::{EthChainSpec, NamedChain};
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
     config::NetworkMode,
@@ -124,13 +124,22 @@ where
 
         // get the header transform.
         let chain_spec = ctx.chain_spec();
+        let authorized_signer = if self.signer.is_none() {
+            match chain_spec.chain().named() {
+                Some(NamedChain::Scroll) => Some(SCROLL_MAINNET_SIGNER),
+                Some(NamedChain::ScrollSepolia) => Some(SCROLL_SEPOLIA_SIGNER),
+                _ => None,
+            }
+        } else {
+            self.signer
+        };
         let transform = ScrollHeaderTransform {
             chain_spec: chain_spec.clone(),
             db: db.clone(),
-            signer: self.signer,
+            signer: authorized_signer,
         };
         let request_transform =
-            ScrollRequestHeaderTransform { chain_spec, db: db.clone(), signer: self.signer };
+            ScrollRequestHeaderTransform { chain_spec, db: db.clone(), signer: authorized_signer };
 
         // set the network mode to work.
         let config = ctx.network_config()?;
@@ -151,6 +160,11 @@ where
 /// Network primitive types used by Scroll networks.
 pub type ScrollNetworkPrimitives =
     BasicNetworkPrimitives<ScrollPrimitives, scroll_alloy_consensus::ScrollPooledTransaction>;
+
+
+/// The correct signer address for Scroll mainnet and sepolia.
+const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
+const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
 
 /// An implementation of a [`HeaderTransform`] for downloaded headers for Scroll.
 #[derive(Debug, Clone)]
