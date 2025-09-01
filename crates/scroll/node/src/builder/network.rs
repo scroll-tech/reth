@@ -161,7 +161,6 @@ where
 pub type ScrollNetworkPrimitives =
     BasicNetworkPrimitives<ScrollPrimitives, scroll_alloy_consensus::ScrollPooledTransaction>;
 
-
 /// The correct signer address for Scroll mainnet and sepolia.
 const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
 const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
