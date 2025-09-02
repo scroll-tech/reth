@@ -308,7 +308,7 @@ fn recover_and_verify_signer(
         .map_err(|_| HeaderTransformError::RecoveryFailed)?;
 
     // Verify signer is authorized
-    if Some(signer) != authorized_signer {
+    if authorized_signer.is_some() && Some(signer) != authorized_signer {
         return Err(HeaderTransformError::InvalidSigner(signer));
     }
 
