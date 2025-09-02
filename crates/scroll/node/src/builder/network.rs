@@ -17,6 +17,7 @@ use reth_tracing::tracing::{debug, info, trace, warn};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
 use scroll_rollup_node_db::{Database, DatabaseOperations};
+use scroll_rollup_node_signer::SignatureAsBytes;
 use std::{fmt, fmt::Debug, path::PathBuf, sync::Arc};
 
 /// Errors that can occur during signature validation
@@ -289,7 +290,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                     err
                 );
             } else {
-                *header.extra_data_mut() = sig.as_bytes().into();
+                *header.extra_data_mut() = sig.sig_as_bytes().into();
             }
         }
 
