@@ -30,8 +30,7 @@ skip = []
 skip-tree = []
 
 [graph]
-warn = ["duplicate"]
-deny = []
+duplicate = "allow"
 
 [licenses]
 version = 2
