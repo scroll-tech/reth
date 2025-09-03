@@ -22,38 +22,16 @@ highlight = "all"
 # List of crates to deny
 # TODO issue #201 deny = [{ name = "openssl" }]
 # Certain crates/versions that will be skipped when doing duplicate detection.
-skip = [
-    # Allow multiple versions of base64 due to transitive dependencies
-    { name = "base64", version = "0.13" },
-    { name = "base64", version = "0.21" },
-    # Allow multiple versions of bitflags due to transitive dependencies
-    { name = "bitflags", version = "1.3" },
-    # Allow multiple versions of cargo_metadata due to transitive dependencies
-    { name = "cargo_metadata", version = "0.14" },
-    # Allow multiple versions of core-foundation due to transitive dependencies
-    { name = "core-foundation", version = "0.9" },
-    # Allow multiple versions of other commonly duplicated crates
-    { name = "core-foundation-sys", version = "0.8" },
-    { name = "security-framework", version = "2.9" },
-    { name = "security-framework-sys", version = "2.9" },
-    { name = "windows-sys", version = "0.48" },
-    { name = "windows-targets", version = "0.48" },
-    { name = "windows_x86_64_msvc", version = "0.48" },
-    { name = "windows_x86_64_gnu", version = "0.48" },
-    { name = "windows_i686_msvc", version = "0.48" },
-    { name = "windows_i686_gnu", version = "0.48" },
-    { name = "windows_aarch64_msvc", version = "0.48" },
-    { name = "windows_aarch64_gnullvm", version = "0.48" },
-    { name = "syn", version = "1.0" },
-    { name = "quote", version = "1.0" },
-    { name = "proc-macro2", version = "1.0" },
-    { name = "unicode-ident", version = "1.0" },
-]
+skip = []
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = []
+
+[graph]
+warn = ["duplicate"]
+deny = []
 
 [licenses]
 version = 2
