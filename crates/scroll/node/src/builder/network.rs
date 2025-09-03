@@ -78,7 +78,7 @@ impl ScrollNetworkBuilder {
         self
     }
 
-    /// Add a scroll sub-protocol to the network builder.
+    /// Add rollup node database path to the network builder.
     pub fn with_database_path(mut self, db_path: Option<PathBuf>) -> Self {
         self.rollup_node_db_path = db_path;
         self
