@@ -15,7 +15,7 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-// TODO: remove this to `warn` once we deprecated l2geth.
+// TODO: revert this to `warn` once we deprecated l2geth.
 multiple-versions = "allow"
 # Lint level for when a crate version requirement is `*`
 wildcards = "allow"
