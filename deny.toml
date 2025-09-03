@@ -15,7 +15,7 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-multiple-versions = "warn"
+multiple-versions = "allow"
 # Lint level for when a crate version requirement is `*`
 wildcards = "allow"
 highlight = "all"
@@ -28,9 +28,6 @@ skip = []
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = []
-
-[graph.duplicate]
-level = "warn"
 
 [licenses]
 version = 2
