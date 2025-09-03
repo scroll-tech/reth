@@ -109,4 +109,6 @@ allow-git = [
     "https://github.com/scroll-tech/scroll-revm.git",
     "https://github.com/scroll-tech/revm.git",
     "https://github.com/scroll-tech/da-codec.git",
+    "https://github.com/scroll-tech/reth.git",
+    "https://github.com/scroll-tech/rollup-node.git",
 ]
