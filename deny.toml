@@ -29,8 +29,8 @@ skip = []
 # by default infinite
 skip-tree = []
 
-[graph]
-duplicate = "allow"
+[graph.duplicate]
+level = "warn"
 
 [licenses]
 version = 2
