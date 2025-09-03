@@ -2530,6 +2530,7 @@ Post-merge hard forks (timestamp based):
                 update_fraction: 3338477,
                 min_blob_fee: BLOB_TX_MIN_BLOB_GASPRICE,
                 max_blobs_per_tx: 6,
+                blob_base_cost: 0,
             },
             prague: BlobParams {
                 target_blob_count: 3,
@@ -2537,6 +2538,7 @@ Post-merge hard forks (timestamp based):
                 update_fraction: 3338477,
                 min_blob_fee: BLOB_TX_MIN_BLOB_GASPRICE,
                 max_blobs_per_tx: 6,
+                blob_base_cost: 0,
             },
             ..Default::default()
         };
