@@ -15,8 +15,7 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-# TODO: revert this to `warn` once we deprecated l2geth.
-multiple-versions = "allow"
+multiple-versions = "warn"
 # Lint level for when a crate version requirement is `*`
 wildcards = "allow"
 highlight = "all"
@@ -111,8 +110,4 @@ allow-git = [
     "https://github.com/scroll-tech/scroll-revm.git",
     "https://github.com/scroll-tech/revm.git",
     "https://github.com/scroll-tech/da-codec.git",
-
-    # TODO: remove this once we deprecated l2geth.
-    "https://github.com/scroll-tech/reth.git",
-    "https://github.com/scroll-tech/rollup-node.git",
 ]

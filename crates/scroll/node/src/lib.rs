@@ -9,8 +9,8 @@ pub use builder::{
     engine::{ScrollEngineValidator, ScrollEngineValidatorBuilder},
     execution::ScrollExecutorBuilder,
     network::{
-        SignatureProvider, ScrollHeaderTransform, ScrollNetworkBuilder, ScrollNetworkPrimitives,
-        ScrollRequestHeaderTransform,
+        ScrollHeaderTransform, ScrollNetworkBuilder, ScrollNetworkPrimitives,
+        ScrollRequestHeaderTransform, SignatureProvider,
     },
     payload::ScrollPayloadBuilderBuilder,
     pool::ScrollPoolBuilder,

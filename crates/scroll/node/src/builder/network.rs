@@ -1,4 +1,4 @@
-use alloy_primitives::{address, Address, Signature, B256};
+use alloy_primitives::{Address, Signature, B256};
 use async_trait::async_trait;
 use reth_chainspec::EthChainSpec;
 use reth_eth_wire_types::BasicNetworkPrimitives;
@@ -129,17 +129,16 @@ where
 pub type ScrollNetworkPrimitives =
     BasicNetworkPrimitives<ScrollPrimitives, scroll_alloy_consensus::ScrollPooledTransaction>;
 
-/// The correct signer address for Scroll mainnet and sepolia.
-const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
-const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
-
 /// A trait for getting and inserting signatures from a database.
 #[async_trait]
 pub trait SignatureProvider {
+    /// The error type returned by signature operations.
     type Error: std::fmt::Debug + std::fmt::Display + Send;
 
+    /// Retrieves a signature for the given block hash.
     async fn get_signature(&self, hash: B256) -> Result<Option<Signature>, Self::Error>;
 
+    /// Inserts a signature for the given block hash.
     async fn insert_signature(&self, hash: B256, signature: Signature) -> Result<(), Self::Error>;
 }
 

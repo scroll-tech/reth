@@ -62,10 +62,6 @@ scroll-alloy-hardforks.workspace = true
 scroll-alloy-network.workspace = true
 scroll-alloy-rpc-types-engine.workspace = true
 
-# scroll-rollup-node
-scroll-rollup-node-db.workspace = true
-scroll-rollup-node-signer.workspace = true
-
 # misc
 async-trait.workspace = true
 clap.workspace = true
@@ -113,7 +109,6 @@ test-utils = [
     "reth-db/test-utils",
     "reth-revm/test-utils",
     "reth-scroll-node/test-utils",
-    "scroll-rollup-node-db/test-utils",
 ]
 scroll-alloy-traits = [
     "reth-db/scroll-alloy-traits",
