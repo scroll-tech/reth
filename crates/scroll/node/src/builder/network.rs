@@ -1,5 +1,6 @@
 use alloy_primitives::{address, Address, Signature, B256};
-use reth_chainspec::{EthChainSpec, NamedChain};
+use async_trait::async_trait;
+use reth_chainspec::EthChainSpec;
 use reth_eth_wire_types::BasicNetworkPrimitives;
 use reth_network::{
     config::NetworkMode,
@@ -16,8 +17,6 @@ use reth_scroll_primitives::ScrollPrimitives;
 use reth_tracing::tracing::{debug, info, trace, warn};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
-use scroll_rollup_node_db::{Database, DatabaseOperations};
-use scroll_rollup_node_signer::SignatureAsBytes;
 use std::{fmt, fmt::Debug, path::PathBuf, sync::Arc};
 
 /// Errors that can occur during signature validation
@@ -111,48 +110,16 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<Self::Network> {
-        // initialize the rollup node database.
-        let db_path = ctx.config().datadir().db();
-        let database_path = if let Some(database_path) = self.rollup_node_db_path {
-            database_path.to_string_lossy().to_string()
-        } else {
-            // append the path using strings as using `join(...)` overwrites "sqlite://"
-            // if the path is absolute.
-            let path = db_path.join("scroll.db?mode=rwc");
-            "sqlite://".to_string() + &*path.to_string_lossy()
-        };
-        let db = Arc::new(Database::new(&database_path).await?);
-
-        // get the header transform.
-        let chain_spec = ctx.chain_spec();
-        let authorized_signer = if self.signer.is_none() {
-            match chain_spec.chain().named() {
-                Some(NamedChain::Scroll) => Some(SCROLL_MAINNET_SIGNER),
-                Some(NamedChain::ScrollSepolia) => Some(SCROLL_SEPOLIA_SIGNER),
-                _ => None,
-            }
-        } else {
-            self.signer
-        };
-        let transform = ScrollHeaderTransform {
-            chain_spec: chain_spec.clone(),
-            db: db.clone(),
-            signer: authorized_signer,
-        };
-        let request_transform =
-            ScrollRequestHeaderTransform { chain_spec, db: db.clone(), signer: authorized_signer };
-
         // set the network mode to work.
         let config = ctx.network_config()?;
         let config = NetworkConfig {
             network_mode: NetworkMode::Work,
-            header_transform: Box::new(transform),
             extra_protocols: self.scroll_sub_protocols,
             ..config
         };
 
         let network = NetworkManager::builder(config).await?;
-        let handle = ctx.start_network(network, pool, Some(Box::new(request_transform)));
+        let handle = ctx.start_network(network, pool, None);
         info!(target: "reth::cli", enode=%handle.local_node_record(), "P2P networking initialized");
         Ok(handle)
     }
@@ -166,35 +133,50 @@ pub type ScrollNetworkPrimitives =
 const SCROLL_MAINNET_SIGNER: Address = address!("0xD83C4892BB5aA241B63d8C4C134920111E142A20");
 const SCROLL_SEPOLIA_SIGNER: Address = address!("0x687E0E85AD67ff71aC134CF61b65905b58Ab43b2");
 
+/// A trait for getting and inserting signatures from a database.
+#[async_trait]
+pub trait SignatureProvider {
+    type Error: std::fmt::Debug + std::fmt::Display + Send;
+
+    async fn get_signature(&self, hash: B256) -> Result<Option<Signature>, Self::Error>;
+
+    async fn insert_signature(&self, hash: B256, signature: Signature) -> Result<(), Self::Error>;
+}
+
 /// An implementation of a [`HeaderTransform`] for downloaded headers for Scroll.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-pub struct ScrollHeaderTransform<ChainSpec> {
+pub struct ScrollHeaderTransform<ChainSpec, P> {
     chain_spec: ChainSpec,
-    db: Arc<Database>,
+    provider: Arc<P>,
     signer: Option<Address>,
 }
 
-impl<ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync + 'static>
-    ScrollHeaderTransform<ChainSpec>
+impl<
+        ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync + 'static,
+        P: SignatureProvider + Debug + Send + Sync + 'static,
+    > ScrollHeaderTransform<ChainSpec, P>
 {
     /// Returns a new instance of the [`ScrollHeaderTransform`] from the provider chain spec.
-    pub const fn new(chain_spec: ChainSpec, db: Arc<Database>, signer: Option<Address>) -> Self {
-        Self { chain_spec, db, signer }
+    pub const fn new(chain_spec: ChainSpec, provider: Arc<P>, signer: Option<Address>) -> Self {
+        Self { chain_spec, provider, signer }
     }
 
     /// Returns a new [`ScrollHeaderTransform`] as a [`HeaderTransform`] trait object.
     pub fn boxed<H: BlockHeader>(
         chain_spec: ChainSpec,
-        db: Arc<Database>,
+        provider: Arc<P>,
         signer: Option<Address>,
     ) -> Box<dyn HeaderTransform<H>> {
-        Box::new(Self { chain_spec, db, signer })
+        Box::new(Self { chain_spec, provider, signer })
     }
 }
 
-impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync>
-    HeaderTransform<H> for ScrollHeaderTransform<ChainSpec>
+impl<
+        H: BlockHeader,
+        ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync,
+        P: SignatureProvider + Debug + Send + Sync + 'static,
+    > HeaderTransform<H> for ScrollHeaderTransform<ChainSpec, P>
 {
     fn map(&self, mut header: H) -> H {
         if !self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
@@ -215,7 +197,11 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
     }
 }
 
-impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<ChainSpec> {
+impl<
+        ChainSpec: ScrollHardforks + Debug + Send + Sync,
+        P: SignatureProvider + Debug + Send + Sync + 'static,
+    > ScrollHeaderTransform<ChainSpec, P>
+{
     fn validate_and_store_signature<H: BlockHeader>(
         &self,
         header: &mut H,
@@ -228,7 +214,7 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
         recover_and_verify_signer(&signature, header.hash_slow(), authorized_signer)?;
 
         // Store signature in database
-        persist_signature(self.db.clone(), header.hash_slow(), signature);
+        persist_signature(self.provider.clone(), header.hash_slow(), signature);
 
         Ok(())
     }
@@ -237,14 +223,28 @@ impl<ChainSpec: ScrollHardforks + Debug + Send + Sync> ScrollHeaderTransform<Cha
 /// An implementation of a [`HeaderTransform`] for header request responses for Scroll.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-pub(crate) struct ScrollRequestHeaderTransform<ChainSpec> {
+pub struct ScrollRequestHeaderTransform<ChainSpec, P> {
     chain_spec: ChainSpec,
-    db: Arc<Database>,
+    provider: Arc<P>,
     signer: Option<Address>,
 }
 
-impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync>
-    HeaderTransform<H> for ScrollRequestHeaderTransform<ChainSpec>
+impl<
+        ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync + 'static,
+        P: SignatureProvider + Debug + Send + Sync + 'static,
+    > ScrollRequestHeaderTransform<ChainSpec, P>
+{
+    /// Returns a new instance of the [`ScrollHeaderTransform`] from the provider chain spec.
+    pub const fn new(chain_spec: ChainSpec, provider: Arc<P>, signer: Option<Address>) -> Self {
+        Self { chain_spec, provider, signer }
+    }
+}
+
+impl<
+        H: BlockHeader,
+        ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + Sync,
+        P: SignatureProvider + Debug + Send + Sync,
+    > HeaderTransform<H> for ScrollRequestHeaderTransform<ChainSpec, P>
 {
     fn map(&self, mut header: H) -> H {
         if !self.chain_spec.is_euclid_v2_active_at_timestamp(header.timestamp()) {
@@ -255,7 +255,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
         let signature = tokio::task::block_in_place(|| {
             if let Ok(handle) = tokio::runtime::Handle::try_current() {
                 match handle
-                    .block_on(async { self.db.get_block_signature(header.hash_slow()).await })
+                    .block_on(async { self.provider.get_signature(header.hash_slow()).await })
                 {
                     Ok(sig) => sig,
                     Err(e) => {
@@ -290,7 +290,7 @@ impl<H: BlockHeader, ChainSpec: EthChainSpec + ScrollHardforks + Debug + Send + 
                     err
                 );
             } else {
-                *header.extra_data_mut() = sig.sig_as_bytes().into();
+                *header.extra_data_mut() = sig.as_bytes().into();
             }
         }
 
@@ -309,7 +309,7 @@ fn recover_and_verify_signer(
         .map_err(|_| HeaderTransformError::RecoveryFailed)?;
 
     // Verify signer is authorized
-    if authorized_signer.is_some() && Some(signer) != authorized_signer {
+    if Some(signer) != authorized_signer {
         return Err(HeaderTransformError::InvalidSigner(signer));
     }
 
@@ -329,15 +329,19 @@ fn parse_65b_signature(bytes: &[u8]) -> Result<Signature, HeaderTransformError> 
 }
 
 /// Run the async DB insert from sync code safely.
-fn persist_signature(db: Arc<Database>, hash: B256, signature: Signature) {
+fn persist_signature<P: SignatureProvider + Send + Sync + 'static>(
+    provider: Arc<P>,
+    hash: B256,
+    signature: Signature,
+) {
     tokio::spawn(async move {
         trace!(
             "Persisting block signature to database, block hash: {:?}, sig: {:?}",
             hash,
             signature.to_string()
         );
-        if let Err(e) = db.insert_signature(hash, signature).await {
-            warn!(target: "scroll::network::header_transform", "Failed to store signature in database: {}", e);
+        if let Err(e) = provider.insert_signature(hash, signature).await {
+            warn!(target: "scroll::network::header_transform", "Failed to store signature in database: {:?}", e);
         }
     });
 }

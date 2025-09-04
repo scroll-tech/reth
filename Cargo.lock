@@ -11055,6 +11055,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-engine",
  "alloy-rpc-types-eth",
+ "async-trait",
  "clap",
  "eyre",
  "reth-chainspec 1.6.0",

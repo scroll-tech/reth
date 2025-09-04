@@ -67,6 +67,7 @@ scroll-rollup-node-db.workspace = true
 scroll-rollup-node-signer.workspace = true
 
 # misc
+async-trait.workspace = true
 clap.workspace = true
 eyre.workspace = true
 serde_json = { workspace = true, optional = true }
