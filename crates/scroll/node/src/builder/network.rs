@@ -55,38 +55,17 @@ impl std::error::Error for HeaderTransformError {}
 pub struct ScrollNetworkBuilder {
     /// Additional `RLPx` sub-protocols to be added to the network.
     scroll_sub_protocols: RlpxSubProtocols,
-    /// A reference to the rollup-node `Database`.
-    rollup_node_db_path: Option<PathBuf>,
-    /// The address for which we should persist and serve signatures for.
-    signer: Option<Address>,
 }
 
 impl ScrollNetworkBuilder {
     /// Create a new [`ScrollNetworkBuilder`] with default configuration.
     pub fn new() -> Self {
-        Self {
-            scroll_sub_protocols: RlpxSubProtocols::default(),
-            rollup_node_db_path: None,
-            signer: None,
-        }
+        Self { scroll_sub_protocols: RlpxSubProtocols::default() }
     }
 
     /// Add a scroll sub-protocol to the network builder.
     pub fn with_sub_protocol(mut self, protocol: RlpxSubProtocol) -> Self {
         self.scroll_sub_protocols.push(protocol);
-        self
-    }
-
-    /// Add rollup node database path to the network builder.
-    pub fn with_database_path(mut self, db_path: Option<PathBuf>) -> Self {
-        self.rollup_node_db_path = db_path;
-        self
-    }
-
-    /// Set the signer for which we will persist and serve signatures if included in block header
-    /// extra data field.
-    pub const fn with_signer(mut self, signer: Option<Address>) -> Self {
-        self.signer = signer;
         self
     }
 }
