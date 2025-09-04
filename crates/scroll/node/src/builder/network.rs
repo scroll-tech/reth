@@ -17,7 +17,7 @@ use reth_scroll_primitives::ScrollPrimitives;
 use reth_tracing::tracing::{debug, info, trace, warn};
 use reth_transaction_pool::{PoolTransaction, TransactionPool};
 use scroll_alloy_hardforks::ScrollHardforks;
-use std::{fmt, fmt::Debug, path::PathBuf, sync::Arc};
+use std::{fmt, fmt::Debug, sync::Arc};
 
 /// Errors that can occur during signature validation
 #[derive(Debug, Clone, PartialEq, Eq)]
