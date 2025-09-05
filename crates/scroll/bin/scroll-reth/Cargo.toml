@@ -25,6 +25,7 @@ tracing.workspace = true
 
 [features]
 dev = ["reth-scroll-cli/dev"]
+js-tracer = ["reth-scroll-node/js-tracer"]
 
 [[bin]]
 name = "scroll-reth"
