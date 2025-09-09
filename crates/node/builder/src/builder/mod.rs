@@ -17,7 +17,7 @@ use reth_db_api::{database::Database, database_metrics::DatabaseMetrics};
 use reth_exex::ExExContext;
 use reth_network::{
     transactions::{TransactionPropagationPolicy, TransactionsManagerConfig},
-    transform::header::HeaderTransform,
+    transform::header::HeaderResponseTransform,
     NetworkBuilder, NetworkConfig, NetworkConfigBuilder, NetworkHandle, NetworkManager,
     NetworkPrimitives,
 };
@@ -586,10 +586,10 @@ where
     ///     .extend_rpc_modules(|ctx| {
     ///         // Access node components, so they can used by the CustomApi
     ///         let pool = ctx.pool().clone();
-    ///         
+    ///
     ///         // Add custom RPC namespace
     ///         ctx.modules.merge_configured(CustomApi { pool }.into_rpc())?;
-    ///         
+    ///
     ///         Ok(())
     ///     })
     ///     .build()?;
@@ -790,7 +790,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
         &self,
         builder: NetworkBuilder<(), (), N>,
         pool: Pool,
-        request_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+        request_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> NetworkHandle<N>
     where
         N: NetworkPrimitives,
@@ -824,7 +824,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
         pool: Pool,
         tx_config: TransactionsManagerConfig,
         propagation_policy: Policy,
-        request_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+        request_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> NetworkHandle<N>
     where
         N: NetworkPrimitives,

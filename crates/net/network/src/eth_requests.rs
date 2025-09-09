@@ -2,7 +2,7 @@
 
 use crate::{
     budget::DEFAULT_BUDGET_TRY_DRAIN_DOWNLOADERS, metered_poll_nested_stream_with_budget,
-    metrics::EthRequestHandlerMetrics, transform::header::HeaderTransform,
+    metrics::EthRequestHandlerMetrics, transform::header::HeaderResponseTransform,
 };
 use alloy_consensus::{BlockHeader, ReceiptWithBloom};
 use alloy_eips::BlockHashOrNumber;
@@ -20,6 +20,7 @@ use reth_storage_api::{BlockReader, HeaderProvider};
 use std::{
     future::Future,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
@@ -54,7 +55,7 @@ pub const SOFT_RESPONSE_LIMIT: usize = 2 * 1024 * 1024;
 #[must_use = "Manager does nothing unless polled."]
 pub struct EthRequestHandler<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     /// The client type that can interact with the chain.
-    client: C,
+    client: Arc<C>,
     /// Used for reporting peers.
     // TODO use to report spammers
     #[expect(dead_code)]
@@ -62,7 +63,7 @@ pub struct EthRequestHandler<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     /// Incoming request from the [`NetworkManager`](crate::NetworkManager).
     incoming_requests: ReceiverStream<IncomingEthRequest<N>>,
     /// The header transform to apply to the headers before sending to peers.
-    header_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+    header_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     /// Metrics for the eth request handler.
     metrics: EthRequestHandlerMetrics,
 }
@@ -74,10 +75,10 @@ impl<C, N: NetworkPrimitives> EthRequestHandler<C, N> {
         client: C,
         peers: PeersHandle,
         incoming: Receiver<IncomingEthRequest<N>>,
-        header_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+        header_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> Self {
         Self {
-            client,
+            client: Arc::new(client),
             peers,
             incoming_requests: ReceiverStream::new(incoming),
             header_transform,
@@ -89,10 +90,14 @@ impl<C, N: NetworkPrimitives> EthRequestHandler<C, N> {
 impl<C, N> EthRequestHandler<C, N>
 where
     N: NetworkPrimitives,
-    C: BlockReader<Header = N::BlockHeader>,
+    C: BlockReader<Header = N::BlockHeader> + 'static,
 {
     /// Returns the list of requested headers
-    fn get_headers_response(&self, request: GetBlockHeaders) -> Vec<C::Header> {
+    async fn get_headers_response(
+        client: Arc<C>,
+        header_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
+        request: GetBlockHeaders,
+    ) -> Vec<C::Header> {
         let GetBlockHeaders { start_block, limit, skip, direction } = request;
 
         let mut headers = Vec::new();
@@ -100,9 +105,7 @@ where
         let mut block: BlockHashOrNumber = match start_block {
             BlockHashOrNumber::Hash(start) => start.into(),
             BlockHashOrNumber::Number(num) => {
-                let Some(hash) = self.client.block_hash(num).unwrap_or_default() else {
-                    return headers
-                };
+                let Some(hash) = client.block_hash(num).unwrap_or_default() else { return headers };
                 hash.into()
             }
         };
@@ -111,7 +114,7 @@ where
         let mut total_bytes = 0;
 
         for _ in 0..limit {
-            if let Some(header) = self.client.header_by_hash_or_number(block).unwrap_or_default() {
+            if let Some(header) = client.header_by_hash_or_number(block).unwrap_or_default() {
                 let number = header.number();
                 let parent_hash = header.parent_hash();
 
@@ -153,8 +156,12 @@ where
         }
 
         // TODO: remove this once we deprecated l2geth
-        if let Some(ref header_transform) = self.header_transform {
-            headers = headers.into_iter().map(|h| header_transform.map(h)).collect()
+        if let Some(ref header_transform) = header_transform {
+            let mut out = Vec::with_capacity(headers.len());
+            for header in headers {
+                out.push(header_transform.map(header).await);
+            }
+            return out;
         }
 
         headers
@@ -165,10 +172,14 @@ where
         _peer_id: PeerId,
         request: GetBlockHeaders,
         response: oneshot::Sender<RequestResult<BlockHeaders<C::Header>>>,
-    ) {
+    ) -> impl Future<Output = ()> + 'static {
         self.metrics.eth_headers_requests_received_total.increment(1);
-        let headers = self.get_headers_response(request);
-        let _ = response.send(Ok(BlockHeaders(headers)));
+        let client = self.client.clone();
+        let header_transform = self.header_transform.clone();
+        async move {
+            let headers = Self::get_headers_response(client, header_transform, request).await;
+            let _ = response.send(Ok(BlockHeaders(headers)));
+        }
     }
 
     fn on_bodies_request(
@@ -267,7 +278,8 @@ where
     N: NetworkPrimitives,
     C: BlockReader<Block = N::Block, Receipt = N::Receipt>
         + HeaderProvider<Header = N::BlockHeader>
-        + Unpin,
+        + Unpin
+        + 'static,
 {
     type Output = ();
 
@@ -284,7 +296,8 @@ where
             |incoming| {
                 match incoming {
                     IncomingEthRequest::GetBlockHeaders { peer_id, request, response } => {
-                        this.on_headers_request(peer_id, request, response)
+                        let future = this.on_headers_request(peer_id, request, response);
+                        tokio::spawn(future);
                     }
                     IncomingEthRequest::GetBlockBodies { peer_id, request, response } => {
                         this.on_bodies_request(peer_id, request, response)

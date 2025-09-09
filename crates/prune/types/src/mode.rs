@@ -8,20 +8,15 @@ use alloy_primitives::BlockNumber;
 #[cfg_attr(any(test, feature = "reth-codec"), reth_codecs::add_arbitrary_tests(compact))]
 #[cfg_attr(any(test, feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(any(test, feature = "serde"), serde(rename_all = "lowercase"))]
+#[cfg_attr(any(test, feature = "test-utils"), derive(Default))]
 pub enum PruneMode {
     /// Prune all blocks.
+    #[cfg_attr(any(test, feature = "test-utils"), default)]
     Full,
     /// Prune blocks before the `head-N` block number. In other words, keep last N + 1 blocks.
     Distance(u64),
     /// Prune blocks before the specified block number. The specified block number is not pruned.
     Before(BlockNumber),
-}
-
-#[cfg(any(test, feature = "test-utils"))]
-impl Default for PruneMode {
-    fn default() -> Self {
-        Self::Full
-    }
 }
 
 impl PruneMode {

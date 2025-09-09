@@ -60,6 +60,7 @@ reth-metrics = { workspace = true, features = ["common"] }
 metrics.workspace = true
 
 # misc
+async-trait.workspace = true
 auto_impl.workspace = true
 aquamarine.workspace = true
 tracing.workspace = true

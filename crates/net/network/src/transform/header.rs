@@ -13,3 +13,18 @@ impl<H: BlockHeader> HeaderTransform<H> for () {
         header
     }
 }
+
+/// An instance of the trait applies a mapping to headers that are being sent to a peer in response
+/// to a request.
+#[async_trait::async_trait]
+pub trait HeaderResponseTransform<H: BlockHeader>: std::fmt::Debug + Send + Sync {
+    /// Applies a mapping to the response headers.
+    async fn map(&self, header: H) -> H;
+}
+
+#[async_trait::async_trait]
+impl<H: BlockHeader> HeaderResponseTransform<H> for () {
+    async fn map(&self, header: H) -> H {
+        header
+    }
+}

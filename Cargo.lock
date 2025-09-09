@@ -8846,6 +8846,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "aquamarine",
+ "async-trait",
  "auto_impl",
  "codspeed-criterion-compat",
  "derive_more",
