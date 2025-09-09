@@ -7,7 +7,7 @@ use crate::{
 use alloy_consensus::{BlockHeader, ReceiptWithBloom};
 use alloy_eips::BlockHashOrNumber;
 use alloy_rlp::Encodable;
-use futures::StreamExt;
+use futures::{future::join_all, StreamExt};
 use reth_eth_wire::{
     BlockBodies, BlockHeaders, EthNetworkPrimitives, GetBlockBodies, GetBlockHeaders, GetNodeData,
     GetReceipts, HeadersDirection, NetworkPrimitives, NodeData, Receipts, Receipts69,
@@ -157,11 +157,7 @@ where
 
         // TODO: remove this once we deprecated l2geth
         if let Some(ref header_transform) = header_transform {
-            let mut out = Vec::with_capacity(headers.len());
-            for header in headers {
-                out.push(header_transform.map(header).await);
-            }
-            return out;
+            return join_all(headers.into_iter().map(|h| header_transform.map(h))).await;
         }
 
         headers
