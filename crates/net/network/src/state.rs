@@ -12,7 +12,6 @@ use crate::{
 };
 use alloy_consensus::BlockHeader;
 use alloy_primitives::B256;
-use rand::seq::SliceRandom;
 use reth_eth_wire::{
     BlockHashNumber, Capabilities, DisconnectReason, EthNetworkPrimitives, NetworkPrimitives,
     NewBlockHashes, NewBlockPayload, UnifiedStatus,
