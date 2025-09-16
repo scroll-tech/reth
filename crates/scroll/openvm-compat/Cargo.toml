@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [dependencies]
-openvm = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.2.0", default-features = false }
+openvm = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.0", default-features = false }
 
 reth-chainspec = { path = "../../chainspec", default-features = false }
 reth-evm = { path = "../../evm/evm", default-features = false }
