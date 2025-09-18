@@ -11413,7 +11413,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm#e424e5400e4bb225cbb48b22bd8d7f342832c039"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=fix%2Finstructions-gas-used#eff2403dad3a9a9649f1a468eec2f60bb7802d8b"
 dependencies = [
  "auto_impl",
  "enumn",
