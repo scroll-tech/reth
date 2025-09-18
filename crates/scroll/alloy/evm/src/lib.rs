@@ -139,7 +139,7 @@ where
         contract: Address,
         data: Bytes,
     ) -> Result<ResultAndState<Self::HaltReason>, Self::Error> {
-        self.inner.transact_system_call_with_caller_finalize(caller, contract, data)
+        self.inner.system_call_with_caller(caller, contract, data)
     }
 
     fn db_mut(&mut self) -> &mut Self::DB {

@@ -4,7 +4,7 @@ footer: |
 base:
   name: reth
   url: https://github.com/paradigmxyz/reth
-  hash: bcbd2d64cedbde0c8f4f044a74da1bfb9324e2ce
+  hash: 1b08843bc5f982f54fc9f8a0a0fe97e39f8964f6
 fork:
   name: scroll-reth
   url: https://github.com/scroll-tech/reth

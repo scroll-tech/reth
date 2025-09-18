@@ -113,7 +113,7 @@ mod best;
 mod blob;
 mod listener;
 mod parked;
-pub(crate) mod pending;
+pub mod pending;
 pub(crate) mod size;
 pub(crate) mod state;
 pub mod txpool;
@@ -510,10 +510,7 @@ where
 
                 let added = pool.add_transaction(tx, balance, state_nonce, bytecode_hash)?;
                 let hash = *added.hash();
-                let state = match added.subpool() {
-                    SubPool::Pending => AddedTransactionState::Pending,
-                    _ => AddedTransactionState::Queued,
-                };
+                let state = added.transaction_state();
 
                 // transaction was successfully inserted into the pool
                 if let Some(sidecar) = maybe_sidecar {
@@ -574,22 +571,24 @@ where
         Ok(listener)
     }
 
-    /// Adds all transactions in the iterator to the pool, returning a list of results.
+    /// Adds all transactions in the iterator to the pool, each with its individual origin,
+    /// returning a list of results.
     ///
     /// Note: A large batch may lock the pool for a long time that blocks important operations
     /// like updating the pool on canonical state changes. The caller should consider having
     /// a max batch size to balance transaction insertions with other updates.
-    pub fn add_transactions(
+    pub fn add_transactions_with_origins(
         &self,
-        origin: TransactionOrigin,
-        transactions: impl IntoIterator<Item = TransactionValidationOutcome<T::Transaction>>,
+        transactions: impl IntoIterator<
+            Item = (TransactionOrigin, TransactionValidationOutcome<T::Transaction>),
+        >,
     ) -> Vec<PoolResult<AddedTransactionOutcome>> {
-        // Add the transactions and enforce the pool size limits in one write lock
+        // Process all transactions in one write lock, maintaining individual origins
         let (mut added, discarded) = {
             let mut pool = self.pool.write();
             let added = transactions
                 .into_iter()
-                .map(|tx| self.add_transaction(&mut pool, origin, tx))
+                .map(|(origin, tx)| self.add_transaction(&mut pool, origin, tx))
                 .collect::<Vec<_>>();
 
             // Enforce the pool size limits if at least one transaction was added successfully
@@ -622,6 +621,19 @@ where
         }
 
         added
+    }
+
+    /// Adds all transactions in the iterator to the pool, returning a list of results.
+    ///
+    /// Note: A large batch may lock the pool for a long time that blocks important operations
+    /// like updating the pool on canonical state changes. The caller should consider having
+    /// a max batch size to balance transaction insertions with other updates.
+    pub fn add_transactions(
+        &self,
+        origin: TransactionOrigin,
+        transactions: impl IntoIterator<Item = TransactionValidationOutcome<T::Transaction>>,
+    ) -> Vec<PoolResult<AddedTransactionOutcome>> {
+        self.add_transactions_with_origins(transactions.into_iter().map(|tx| (origin, tx)))
     }
 
     /// Notify all listeners about a new pending transaction.
@@ -1146,6 +1158,8 @@ pub enum AddedTransaction<T: PoolTransaction> {
         replaced: Option<Arc<ValidPoolTransaction<T>>>,
         /// The subpool it was moved to.
         subpool: SubPool,
+        /// The specific reason why the transaction is queued (if applicable).
+        queued_reason: Option<QueuedReason>,
     },
 }
 
@@ -1217,24 +1231,98 @@ impl<T: PoolTransaction> AddedTransaction<T> {
             Self::Parked { transaction, .. } => transaction.id(),
         }
     }
+
+    /// Returns the queued reason if the transaction is parked with a queued reason.
+    pub(crate) const fn queued_reason(&self) -> Option<&QueuedReason> {
+        match self {
+            Self::Pending(_) => None,
+            Self::Parked { queued_reason, .. } => queued_reason.as_ref(),
+        }
+    }
+
+    /// Returns the transaction state based on the subpool and queued reason.
+    pub(crate) fn transaction_state(&self) -> AddedTransactionState {
+        match self.subpool() {
+            SubPool::Pending => AddedTransactionState::Pending,
+            _ => {
+                // For non-pending transactions, use the queued reason directly from the
+                // AddedTransaction
+                if let Some(reason) = self.queued_reason() {
+                    AddedTransactionState::Queued(reason.clone())
+                } else {
+                    // Fallback - this shouldn't happen with the new implementation
+                    AddedTransactionState::Queued(QueuedReason::NonceGap)
+                }
+            }
+        }
+    }
+}
+
+/// The specific reason why a transaction is queued (not ready for execution)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QueuedReason {
+    /// Transaction has a nonce gap - missing prior transactions
+    NonceGap,
+    /// Transaction has parked ancestors - waiting for other transactions to be mined
+    ParkedAncestors,
+    /// Sender has insufficient balance to cover the transaction cost
+    InsufficientBalance,
+    /// Transaction exceeds the block gas limit
+    TooMuchGas,
+    /// Transaction doesn't meet the base fee requirement
+    InsufficientBaseFee,
+    /// Transaction doesn't meet the blob fee requirement (EIP-4844)
+    InsufficientBlobFee,
 }
 
 /// The state of a transaction when is was added to the pool
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AddedTransactionState {
     /// Ready for execution
     Pending,
-    /// Not ready for execution due to a nonce gap or insufficient balance
-    Queued, // TODO: Break it down to missing nonce, insufficient balance, etc.
+    /// Not ready for execution due to a specific condition
+    Queued(QueuedReason),
+}
+
+impl AddedTransactionState {
+    /// Returns whether the transaction was submitted as queued.
+    pub const fn is_queued(&self) -> bool {
+        matches!(self, Self::Queued(_))
+    }
+
+    /// Returns whether the transaction was submitted as pending.
+    pub const fn is_pending(&self) -> bool {
+        matches!(self, Self::Pending)
+    }
+
+    /// Returns the specific queued reason if the transaction is queued.
+    pub const fn queued_reason(&self) -> Option<&QueuedReason> {
+        match self {
+            Self::Queued(reason) => Some(reason),
+            Self::Pending => None,
+        }
+    }
 }
 
 /// The outcome of a successful transaction addition
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AddedTransactionOutcome {
     /// The hash of the transaction
     pub hash: TxHash,
     /// The state of the transaction
     pub state: AddedTransactionState,
+}
+
+impl AddedTransactionOutcome {
+    /// Returns whether the transaction was submitted as queued.
+    pub const fn is_queued(&self) -> bool {
+        self.state.is_queued()
+    }
+
+    /// Returns whether the transaction was submitted as pending.
+    pub const fn is_pending(&self) -> bool {
+        self.state.is_pending()
+    }
 }
 
 /// Contains all state changes after a [`CanonicalStateUpdate`] was processed

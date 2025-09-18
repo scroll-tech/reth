@@ -5,7 +5,7 @@ use reth_rpc_eth_api::{
     helpers::{pending_block::PendingEnvBuilder, LoadPendingBlock},
     RpcConvert, RpcNodeCore,
 };
-use reth_rpc_eth_types::{error::FromEvmError, PendingBlock};
+use reth_rpc_eth_types::{builder::config::PendingBlockKind, error::FromEvmError, PendingBlock};
 
 impl<N, Rpc> LoadPendingBlock for ScrollEthApi<N, Rpc>
 where
@@ -21,5 +21,9 @@ where
     #[inline]
     fn pending_env_builder(&self) -> &dyn PendingEnvBuilder<Self::Evm> {
         self.inner.eth_api.pending_env_builder()
+    }
+
+    fn pending_block_kind(&self) -> PendingBlockKind {
+        self.inner.eth_api.pending_block_kind()
     }
 }

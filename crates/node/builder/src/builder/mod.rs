@@ -17,6 +17,7 @@ use reth_db_api::{database::Database, database_metrics::DatabaseMetrics};
 use reth_exex::ExExContext;
 use reth_network::{
     transactions::{TransactionPropagationPolicy, TransactionsManagerConfig},
+    transform::header::HeaderResponseTransform,
     NetworkBuilder, NetworkConfig, NetworkConfigBuilder, NetworkHandle, NetworkManager,
     NetworkPrimitives,
 };
@@ -585,10 +586,10 @@ where
     ///     .extend_rpc_modules(|ctx| {
     ///         // Access node components, so they can used by the CustomApi
     ///         let pool = ctx.pool().clone();
-    ///         
+    ///
     ///         // Add custom RPC namespace
     ///         ctx.modules.merge_configured(CustomApi { pool }.into_rpc())?;
-    ///         
+    ///
     ///         Ok(())
     ///     })
     ///     .build()?;
@@ -789,6 +790,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
         &self,
         builder: NetworkBuilder<(), (), N>,
         pool: Pool,
+        request_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> NetworkHandle<N>
     where
         N: NetworkPrimitives,
@@ -806,6 +808,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
             pool,
             self.config().network.transactions_manager_config(),
             self.config().network.tx_propagation_policy,
+            request_transform,
         )
     }
 
@@ -821,6 +824,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
         pool: Pool,
         tx_config: TransactionsManagerConfig,
         propagation_policy: Policy,
+        request_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> NetworkHandle<N>
     where
         N: NetworkPrimitives,
@@ -836,7 +840,7 @@ impl<Node: FullNodeTypes> BuilderContext<Node> {
     {
         let (handle, network, txpool, eth) = builder
             .transactions_with_policy(pool, tx_config, propagation_policy)
-            .request_handler(self.provider().clone())
+            .request_handler(self.provider().clone(), request_transform)
             .split_with_handle();
 
         self.executor.spawn_critical("p2p txpool", Box::pin(txpool));

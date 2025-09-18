@@ -12,7 +12,6 @@ use crate::{
 };
 use alloy_consensus::BlockHeader;
 use alloy_primitives::B256;
-use rand::seq::SliceRandom;
 use reth_eth_wire::{
     BlockHashNumber, Capabilities, DisconnectReason, EthNetworkPrimitives, NetworkPrimitives,
     NewBlockHashes, NewBlockPayload, UnifiedStatus,
@@ -192,21 +191,13 @@ impl<N: NetworkPrimitives> NetworkState<N> {
     ///
     /// This is supposed to be invoked after the block was validated.
     ///
-    /// > It then sends the block to a small fraction of connected peers (usually the square root of
-    /// > the total number of peers) using the `NewBlock` message.
+    /// Note: Sends a `NewBlock` message to all of the connected peers. This is okay because this
+    /// method is only used until we deprecate l2geth clients which don't support scroll-wire.
     ///
     /// See also <https://github.com/ethereum/devp2p/blob/master/caps/eth.md>
     pub(crate) fn announce_new_block(&mut self, msg: NewBlockMessage<N::NewBlockPayload>) {
-        // send a `NewBlock` message to a fraction of the connected peers (square root of the total
-        // number of peers)
-        let num_propagate = (self.active_peers.len() as f64).sqrt() as u64 + 1;
-
         let number = msg.block.block().header().number();
-        let mut count = 0;
-
-        // Shuffle to propagate to a random sample of peers on every block announcement
-        let mut peers: Vec<_> = self.active_peers.iter_mut().collect();
-        peers.shuffle(&mut rand::rng());
+        let peers: Vec<_> = self.active_peers.iter_mut().collect();
 
         for (peer_id, peer) in peers {
             if peer.blocks.contains(&msg.hash) {
@@ -215,24 +206,16 @@ impl<N: NetworkPrimitives> NetworkState<N> {
             }
 
             // Queue a `NewBlock` message for the peer
-            if count < num_propagate {
-                self.queued_messages
-                    .push_back(StateAction::NewBlock { peer_id: *peer_id, block: msg.clone() });
+            self.queued_messages
+                .push_back(StateAction::NewBlock { peer_id: *peer_id, block: msg.clone() });
 
-                // update peer block info
-                if self.state_fetcher.update_peer_block(peer_id, msg.hash, number) {
-                    peer.best_hash = msg.hash;
-                }
-
-                // mark the block as seen by the peer
-                peer.blocks.insert(msg.hash);
-
-                count += 1;
+            // update peer block info
+            if self.state_fetcher.update_peer_block(peer_id, msg.hash, number) {
+                peer.best_hash = msg.hash;
             }
 
-            if count >= num_propagate {
-                break
-            }
+            // mark the block as seen by the peer
+            peer.blocks.insert(msg.hash);
         }
     }
 

@@ -60,13 +60,13 @@ reth-metrics = { workspace = true, features = ["common"] }
 metrics.workspace = true
 
 # misc
+async-trait.workspace = true
 auto_impl.workspace = true
 aquamarine.workspace = true
 tracing.workspace = true
 rustc-hash.workspace = true
 thiserror.workspace = true
 parking_lot.workspace = true
-rand.workspace = true
 rand_08.workspace = true
 secp256k1 = { workspace = true, features = ["global-context", "std", "recovery"] }
 derive_more.workspace = true
@@ -92,9 +92,9 @@ reth-transaction-pool = { workspace = true, features = ["test-utils"] }
 alloy-genesis.workspace = true
 
 # misc
-tempfile.workspace = true
 url.workspace = true
 secp256k1 = { workspace = true, features = ["rand"] }
+rand.workspace = true
 
 ## Benchmarks
 criterion = { workspace = true, features = ["async_tokio", "html_reports"] }
@@ -113,7 +113,6 @@ serde = [
     "alloy-primitives/serde",
     "discv5/serde",
     "parking_lot/serde",
-    "rand/serde",
     "smallvec/serde",
     "url/serde",
     "reth-primitives-traits/serde",
@@ -123,6 +122,7 @@ serde = [
     "reth-ethereum-primitives/serde",
     "reth-network-api/serde",
     "rand_08/serde",
+    "rand/serde",
     "reth-storage-api/serde",
 ]
 test-utils = [

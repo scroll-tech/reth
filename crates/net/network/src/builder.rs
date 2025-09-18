@@ -9,11 +9,13 @@ use crate::{
         policy::NetworkPolicies,
         TransactionPropagationPolicy, TransactionsManager, TransactionsManagerConfig,
     },
+    transform::header::HeaderResponseTransform,
     NetworkHandle, NetworkManager,
 };
 use reth_eth_wire::{EthNetworkPrimitives, NetworkPrimitives};
 use reth_network_api::test_utils::PeersHandleProvider;
 use reth_transaction_pool::TransactionPool;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 /// We set the max channel capacity of the `EthRequestHandler` to 256
@@ -63,12 +65,13 @@ impl<Tx, Eth, N: NetworkPrimitives> NetworkBuilder<Tx, Eth, N> {
     pub fn request_handler<Client>(
         self,
         client: Client,
+        request_header_transform: Option<Arc<dyn HeaderResponseTransform<N::BlockHeader>>>,
     ) -> NetworkBuilder<Tx, EthRequestHandler<Client, N>, N> {
         let Self { mut network, transactions, .. } = self;
         let (tx, rx) = mpsc::channel(ETH_REQUEST_CHANNEL_CAPACITY);
         network.set_eth_request_handler(tx);
         let peers = network.handle().peers_handle().clone();
-        let request_handler = EthRequestHandler::new(client, peers, rx);
+        let request_handler = EthRequestHandler::new(client, peers, rx, request_header_transform);
         NetworkBuilder { network, request_handler, transactions }
     }
 

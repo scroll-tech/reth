@@ -15,7 +15,6 @@ use reth_node_builder::{
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
 use reth_scroll_primitives::ScrollPrimitives;
-use reth_trie_db::MerklePatriciaTrie;
 use scroll_alloy_network::Scroll;
 use std::sync::Arc;
 
@@ -113,7 +112,6 @@ where
 impl NodeTypes for ScrollNode {
     type Primitives = ScrollPrimitives;
     type ChainSpec = ScrollChainSpec;
-    type StateCommitment = MerklePatriciaTrie;
     type Storage = ScrollStorage;
     type Payload = ScrollEngineTypes;
 }

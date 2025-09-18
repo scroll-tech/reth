@@ -15,10 +15,7 @@ use reth_cli_commands::{launcher::FnLauncher, node::NoArgs};
 use reth_cli_runner::CliRunner;
 use reth_db::DatabaseEnv;
 use reth_node_builder::{NodeBuilder, WithLaunchContext};
-use reth_node_core::{
-    args::LogArgs,
-    version::{LONG_VERSION, SHORT_VERSION},
-};
+use reth_node_core::{args::LogArgs, version::version_metadata};
 use reth_scroll_chainspec::ScrollChainSpec;
 use std::{ffi::OsString, fmt, future::Future, sync::Arc};
 
@@ -26,7 +23,7 @@ use std::{ffi::OsString, fmt, future::Future, sync::Arc};
 ///
 /// This is the entrypoint to the executable.
 #[derive(Debug, Parser)]
-#[command(author, version = SHORT_VERSION, long_version = LONG_VERSION, about = "Scroll Reth", long_about = None
+#[command(author, version = version_metadata().short_version.as_ref(), long_version = version_metadata().long_version.as_ref(), about = "Scroll Reth", long_about = None
 )]
 pub struct Cli<Spec: ChainSpecParser = ScrollChainSpecParser, Ext: clap::Args + fmt::Debug = NoArgs>
 {

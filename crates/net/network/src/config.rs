@@ -25,7 +25,10 @@ use secp256k1::SECP256K1;
 use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 
 // re-export for convenience
-use crate::protocol::{IntoRlpxSubProtocol, RlpxSubProtocols};
+use crate::{
+    protocol::{IntoRlpxSubProtocol, RlpxSubProtocols},
+    transactions::TransactionPropagationMode,
+};
 pub use secp256k1::SecretKey;
 
 /// Convenience function to create a new random [`SecretKey`]
@@ -169,7 +172,7 @@ where
         let client = self.client.clone();
         let (handle, network, _txpool, eth) = NetworkManager::builder::<C>(self)
             .await?
-            .request_handler::<C>(client)
+            .request_handler::<C>(client, None)
             .split_with_handle();
 
         tokio::task::spawn(network);
@@ -349,6 +352,12 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     /// Configures the transactions manager with the given config.
     pub const fn transactions_manager_config(mut self, config: TransactionsManagerConfig) -> Self {
         self.transactions_manager_config = config;
+        self
+    }
+
+    /// Configures the propagation mode for the transaction manager.
+    pub const fn transaction_propagation_mode(mut self, mode: TransactionPropagationMode) -> Self {
+        self.transactions_manager_config.propagation_mode = mode;
         self
     }
 

@@ -35,7 +35,7 @@ pub struct ScrollL1BlockInfo {
 }
 
 /// Validator for Scroll transactions.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ScrollTransactionValidator<Client, Tx> {
     /// The type that performs the actual validation.
     inner: EthTransactionValidator<Client, Tx>,
@@ -56,7 +56,7 @@ impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
     }
 
     /// Returns the configured client
-    pub fn client(&self) -> &Client {
+    pub const fn client(&self) -> &Client {
         self.inner.client()
     }
 

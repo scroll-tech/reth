@@ -16,7 +16,7 @@ use reth_rpc_convert::{RpcConvert, RpcConverter, RpcTypes, SignableTxRequest};
 use reth_rpc_eth_api::{
     helpers::{
         pending_block::BuildPendingEnv, spec::SignersForApi, AddDevSigners, EthApiSpec, EthState,
-        LoadFee, LoadState, SpawnBlocking, Trace,
+        LoadFee, LoadPendingBlock, LoadState, SpawnBlocking, Trace,
     },
     EthApiTypes, FullEthApiServer, RpcNodeCore, RpcNodeCoreExt,
 };
@@ -227,6 +227,7 @@ impl<N, Rpc> LoadState for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     Rpc: RpcConvert<Primitives = N::Primitives>,
+    Self: LoadPendingBlock,
 {
 }
 
@@ -234,6 +235,7 @@ impl<N, Rpc> EthState for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     Rpc: RpcConvert<Primitives = N::Primitives>,
+    Self: LoadPendingBlock,
 {
     #[inline]
     fn max_proof_window(&self) -> u64 {

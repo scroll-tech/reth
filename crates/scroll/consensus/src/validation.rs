@@ -331,12 +331,12 @@ fn validate_against_parent_gas_limit<H: BlockHeader>(
         return if header.gas_limit() > parent.gas_limit() {
             Err(ConsensusError::GasLimitInvalidIncrease {
                 parent_gas_limit: parent.gas_limit(),
-                child_gas_limit: parent.gas_limit(),
+                child_gas_limit: header.gas_limit(),
             })
         } else {
             Err(ConsensusError::GasLimitInvalidDecrease {
                 parent_gas_limit: parent.gas_limit(),
-                child_gas_limit: parent.gas_limit(),
+                child_gas_limit: header.gas_limit(),
             })
         }
     }

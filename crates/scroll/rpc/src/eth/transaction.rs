@@ -119,7 +119,7 @@ impl<Provider> ScrollTxInfoMapper<Provider> {
     }
 }
 
-impl<Provider> TxInfoMapper<&ScrollTxEnvelope> for ScrollTxInfoMapper<Provider>
+impl<Provider> TxInfoMapper<ScrollTxEnvelope> for ScrollTxInfoMapper<Provider>
 where
     Provider: ReceiptProvider<Receipt = ScrollReceipt>,
 {

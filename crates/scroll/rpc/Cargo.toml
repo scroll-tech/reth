@@ -61,3 +61,6 @@ jsonrpsee-types.workspace = true
 # misc
 eyre.workspace = true
 thiserror.workspace = true
+
+[features]
+js-tracer = ["reth-rpc/js-tracer"]

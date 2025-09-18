@@ -8,7 +8,7 @@ pub use builder::{
     consensus::ScrollConsensusBuilder,
     engine::{ScrollEngineValidator, ScrollEngineValidatorBuilder},
     execution::ScrollExecutorBuilder,
-    network::{ScrollHeaderTransform, ScrollNetworkBuilder, ScrollNetworkPrimitives},
+    network::{ScrollNetworkBuilder, ScrollNetworkPrimitives},
     payload::ScrollPayloadBuilderBuilder,
     pool::ScrollPoolBuilder,
 };

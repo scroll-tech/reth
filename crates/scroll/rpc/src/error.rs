@@ -9,6 +9,7 @@ use reth_rpc_convert::transaction::EthTxEnvError;
 use reth_rpc_eth_api::{AsEthApiError, TransactionConversionError};
 use reth_rpc_eth_types::{error::api::FromEvmHalt, EthApiError};
 use revm::context::result::{EVMError, HaltReason};
+use std::convert::Infallible;
 
 /// Scroll specific errors, that extend [`EthApiError`].
 #[derive(Debug, thiserror::Error)]
@@ -51,11 +52,11 @@ impl From<BlockError> for ScrollEthApiError {
     }
 }
 
-impl<DB> From<EVMError<DB>> for ScrollEthApiError
+impl<T> From<EVMError<T>> for ScrollEthApiError
 where
-    EthApiError: From<EVMError<DB>>,
+    T: Into<EthApiError>,
 {
-    fn from(error: EVMError<DB>) -> Self {
+    fn from(error: EVMError<T>) -> Self {
         Self::Eth(error.into())
     }
 }
@@ -75,6 +76,12 @@ impl From<TransactionConversionError> for ScrollEthApiError {
 impl From<ProviderError> for ScrollEthApiError {
     fn from(value: ProviderError) -> Self {
         Self::Eth(EthApiError::from(value))
+    }
+}
+
+impl From<Infallible> for ScrollEthApiError {
+    fn from(value: Infallible) -> Self {
+        match value {}
     }
 }
 

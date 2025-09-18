@@ -84,9 +84,7 @@ alloy-consensus.workspace = true
 
 [features]
 default = ["reth-codec", "scroll-alloy-traits"]
-reth-codec = [
-    "reth-scroll-primitives/reth-codec",
-]
+reth-codec = ["reth-scroll-primitives/reth-codec"]
 test-utils = [
     "dep:alloy-genesis",
     "dep:reth-e2e-test-utils",
@@ -116,3 +114,4 @@ scroll-alloy-traits = [
     "reth-scroll-node/scroll-alloy-traits",
     "reth-engine-local/scroll-alloy-traits",
 ]
+js-tracer = ["reth-scroll-rpc/js-tracer"]

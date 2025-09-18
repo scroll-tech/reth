@@ -129,7 +129,7 @@ mod tests {
     use alloy_rpc_types_engine::{
         ClientCode, ClientVersionV1, ExecutionPayloadV1, ForkchoiceState, PayloadId,
     };
-    use reth_engine_primitives::BeaconConsensusEngineHandle;
+    use reth_engine_primitives::ConsensusEngineHandle;
     use reth_payload_builder::{PayloadBuilderHandle, PayloadBuilderService};
     use reth_payload_primitives::PayloadTypes;
     use reth_primitives::{Block, TransactionSigned};
@@ -169,7 +169,7 @@ mod tests {
             .socket_addr(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)))
             .build();
         let (tx, _rx) = unbounded_channel();
-        let beacon_engine_handle = BeaconConsensusEngineHandle::<ScrollEngineTypes>::new(tx);
+        let beacon_engine_handle = ConsensusEngineHandle::<ScrollEngineTypes>::new(tx);
         let client = ClientVersionV1 {
             code: ClientCode::RH,
             name: "Reth".to_string(),

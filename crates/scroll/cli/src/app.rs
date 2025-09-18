@@ -68,7 +68,10 @@ where
         let _ = install_prometheus_recorder();
 
         let components = |spec: Arc<ScrollChainSpec>| {
-            (ScrollExecutorProvider::scroll(spec.clone()), ScrollBeaconConsensus::new(spec))
+            (
+                ScrollExecutorProvider::scroll(spec.clone()),
+                Arc::new(ScrollBeaconConsensus::new(spec)),
+            )
         };
 
         match self.cli.command {
