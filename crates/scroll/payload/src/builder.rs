@@ -438,9 +438,9 @@ where
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
         let block_gas_limit = builder.evm().block().gas_limit;
-        let mut remaining_gas_pool = block_gas_limit;
+        let mut gas_spent_by_transaction = Vec::new();
 
-        for sequencer_tx in &self.attributes().transactions {
+        for (i, sequencer_tx) in self.attributes().transactions.iter().enumerate() {
             // A sequencer's block should never contain blob transactions.
             if sequencer_tx.value().is_eip4844() {
                 return Err(PayloadBuilderError::other(
@@ -455,14 +455,14 @@ where
                 PayloadBuilderError::other(ScrollPayloadBuilderError::TransactionEcRecoverFailed)
             })?;
 
-            let gas_limit = sequencer_tx.gas_limit();
-
-            // Check if there's enough gas in the gas pool (similar to st.gp.SubGas in geth)
-            if gas_limit > remaining_gas_pool {
+            let tx_gas = sequencer_tx.gas_limit();
+            // check if there's enough gas in the gas left
+            if info.cumulative_gas_used + tx_gas > block_gas_limit {
+                gas_spent_by_transaction.push((i as u64, tx_gas));
                 return Err(PayloadBuilderError::other(
-                    ScrollPayloadBuilderError::SequencerTxGasExceedsBlock {
-                        gas_limit,
-                        remaining_gas: remaining_gas_pool,
+                    ScrollPayloadBuilderError::SequencerBlockGasUsedMismatch {
+                        gas_spent_by_tx: gas_spent_by_transaction,
+                        gas: block_gas_limit,
                     },
                 ));
             }
@@ -482,10 +482,14 @@ where
                 }
             };
 
+            // unspent gas is not refunded and not reallocated to other transactions for L1
+            // messages.
+            let gas_used =
+                if sequencer_tx.is_l1_message() { sequencer_tx.gas_limit() } else { gas_used };
+
             // add gas used by the transaction to cumulative gas used, before creating the receipt
             info.cumulative_gas_used += gas_used;
-
-            remaining_gas_pool = remaining_gas_pool.saturating_sub(gas_limit);
+            gas_spent_by_transaction.push((i as u64, gas_used));
         }
 
         Ok(info)
@@ -572,19 +576,6 @@ where
 
         Ok(None)
     }
-}
-
-/// Holds the state after execution
-#[derive(Debug)]
-pub struct ExecutedPayload<N: NodePrimitives> {
-    /// Tracked execution info
-    pub info: ExecutionInfo,
-    /// Withdrawal hash.
-    pub withdrawals_root: Option<B256>,
-    /// The transaction receipts.
-    pub receipts: Vec<N::Receipt>,
-    /// The block env used during execution.
-    pub block_env: BlockEnv,
 }
 
 /// This acts as the container for executed transactions and its byproducts (receipts, gas used)
