@@ -29,17 +29,18 @@ pub const L1_MESSAGE_TRANSACTION_TYPE: u8 = 126;
 /// contain optionally serializable fields, no `bincode` compatible bridge implementation is
 /// required.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-#[cfg_attr(any(test, feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(any(test, feature = "serde"), serde(rename_all = "camelCase"))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    serde(from = "msg_serde::L1MsgSerdeHelper", into = "msg_serde::L1MsgSerdeHelper")
+)]
 #[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
 #[cfg_attr(any(test, feature = "reth-codec"), derive(Compact))]
 #[cfg_attr(any(test, feature = "reth-codec"), add_arbitrary_tests(compact, rlp))]
 pub struct TxL1Message {
     /// The queue index of the message in the L1 contract queue.
-    #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
     pub queue_index: u64,
     /// The gas limit for the transaction. Gas is paid for when message is sent from the L1.
-    #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity", rename = "gas"))]
     pub gas_limit: u64,
     /// The destination for the transaction. `Address` is used in place of `TxKind` since contract
     /// creations aren't allowed via L1 message transactions.
@@ -300,6 +301,55 @@ impl Sealable for TxL1Message {
     }
 }
 
+#[cfg(any(test, feature = "serde"))]
+mod msg_serde {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    /// Helper struct to serialize/deserialize the `TxL1Message` with a `nonce` field.
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct L1MsgSerdeHelper {
+        #[serde(with = "alloy_serde::quantity")]
+        queue_index: u64,
+        #[serde(with = "alloy_serde::quantity", rename = "gas")]
+        gas_limit: u64,
+        to: Address,
+        value: U256,
+        sender: Address,
+        input: Bytes,
+        #[serde(default, with = "alloy_serde::quantity")]
+        nonce: u64,
+    }
+
+    impl From<L1MsgSerdeHelper> for TxL1Message {
+        fn from(helper: L1MsgSerdeHelper) -> Self {
+            Self {
+                queue_index: helper.queue_index,
+                gas_limit: helper.gas_limit,
+                to: helper.to,
+                value: helper.value,
+                sender: helper.sender,
+                input: helper.input,
+            }
+        }
+    }
+
+    impl From<TxL1Message> for L1MsgSerdeHelper {
+        fn from(helper: TxL1Message) -> Self {
+            Self {
+                queue_index: helper.queue_index,
+                gas_limit: helper.gas_limit,
+                to: helper.to,
+                value: helper.value,
+                sender: helper.sender,
+                input: helper.input,
+                nonce: 0,
+            }
+        }
+    }
+}
+
 /// Scroll specific transaction fields
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(any(test, feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
@@ -346,6 +396,24 @@ mod tests {
     use arbitrary::Arbitrary;
     use rand::Rng;
     use reth_codecs::{test_utils::UnusedBits, validate_bitflag_backwards_compat};
+
+    #[test]
+    fn test_serde_roundtrip() {
+        let original = TxL1Message {
+            queue_index: 100,
+            gas_limit: 1234,
+            to: Address::random(),
+            value: U256::random(),
+            sender: Address::random(),
+            input: bytes!("deadbeef"),
+        };
+        let json = serde_json::to_value(&original).expect("Failed to serialize");
+        assert_eq!(json.get("nonce"), Some(&serde_json::Value::String("0x0".to_string())));
+
+        let deserialized: TxL1Message =
+            serde_json::from_value(json).expect("Failed to deserialize");
+        assert_eq!(original, deserialized);
+    }
 
     #[test]
     fn test_rlp_roundtrip() {
