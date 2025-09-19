@@ -4,7 +4,7 @@ use super::ScrollPayloadBuilderError;
 use crate::config::{PayloadBuildingBreaker, ScrollBuilderConfig};
 
 use alloy_consensus::{Transaction, Typed2718};
-use alloy_primitives::{B256, U256};
+use alloy_primitives::U256;
 use alloy_rlp::Encodable;
 use core::fmt::Debug;
 use reth_basic_payload_builder::{
@@ -22,9 +22,7 @@ use reth_execution_types::ExecutionOutcome;
 use reth_payload_builder::PayloadId;
 use reth_payload_primitives::{PayloadBuilderAttributes, PayloadBuilderError};
 use reth_payload_util::{BestPayloadTransactions, NoopPayloadTransactions, PayloadTransactions};
-use reth_primitives_traits::{
-    NodePrimitives, RecoveredBlock, SealedHeader, SignedTransaction, TxTy,
-};
+use reth_primitives_traits::{RecoveredBlock, SealedHeader, SignedTransaction, TxTy};
 use reth_revm::{cancelled::CancelOnDrop, database::StateProviderDatabase, db::State};
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_engine_primitives::{ScrollBuiltPayload, ScrollPayloadBuilderAttributes};
@@ -440,7 +438,7 @@ where
         let block_gas_limit = builder.evm().block().gas_limit;
         let mut gas_spent_by_transactions = Vec::new();
 
-        for (i, sequencer_tx) in self.attributes().transactions.iter().enumerate() {
+        for sequencer_tx in &self.attributes().transactions {
             // A sequencer's block should never contain blob transactions.
             if sequencer_tx.value().is_eip4844() {
                 return Err(PayloadBuilderError::other(
@@ -458,9 +456,9 @@ where
             let tx_gas = sequencer_tx.gas_limit();
             // check we don't go over the block gas limit
             if info.cumulative_gas_used + tx_gas > block_gas_limit {
-                gas_spent_by_transactions.push((i as u64, tx_gas));
+                gas_spent_by_transactions.push(tx_gas);
                 return Err(PayloadBuilderError::other(
-                    ScrollPayloadBuilderError::SequencerBlockGasUsedMismatch {
+                    ScrollPayloadBuilderError::BlockGasLimitExceededBySequencerTransactions {
                         gas_spent_by_tx: gas_spent_by_transactions,
                         gas: block_gas_limit,
                     },
@@ -489,7 +487,7 @@ where
 
             // add gas used by the transaction to cumulative gas used
             info.cumulative_gas_used += gas_used;
-            gas_spent_by_transactions.push((i as u64, gas_used));
+            gas_spent_by_transactions.push(gas_used);
         }
 
         Ok(info)

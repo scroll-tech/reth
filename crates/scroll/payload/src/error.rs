@@ -10,9 +10,9 @@ pub enum ScrollPayloadBuilderError {
     BlobTransactionRejected,
     /// Thrown when sequencer transaction gas limit exceeds remaining block gas.
     #[error("Sequencer transactions over gas limit: {gas}; gas spent by each transaction: {gas_spent_by_tx:?}")]
-    SequencerBlockGasUsedMismatch {
+    BlockGasLimitExceededBySequencerTransactions {
         /// The gas used by each transaction in the block.
-        gas_spent_by_tx: Vec<(u64, u64)>,
+        gas_spent_by_tx: Vec<u64>,
         /// The block gas limit.
         gas: u64,
     },
