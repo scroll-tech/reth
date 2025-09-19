@@ -438,7 +438,7 @@ where
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
         let block_gas_limit = builder.evm().block().gas_limit;
-        let mut gas_spent_by_transaction = Vec::new();
+        let mut gas_spent_by_transactions = Vec::new();
 
         for (i, sequencer_tx) in self.attributes().transactions.iter().enumerate() {
             // A sequencer's block should never contain blob transactions.
@@ -456,12 +456,12 @@ where
             })?;
 
             let tx_gas = sequencer_tx.gas_limit();
-            // check if there's enough gas in the gas left
+            // check we don't go over the block gas limit
             if info.cumulative_gas_used + tx_gas > block_gas_limit {
-                gas_spent_by_transaction.push((i as u64, tx_gas));
+                gas_spent_by_transactions.push((i as u64, tx_gas));
                 return Err(PayloadBuilderError::other(
                     ScrollPayloadBuilderError::SequencerBlockGasUsedMismatch {
-                        gas_spent_by_tx: gas_spent_by_transaction,
+                        gas_spent_by_tx: gas_spent_by_transactions,
                         gas: block_gas_limit,
                     },
                 ));
@@ -487,9 +487,9 @@ where
             let gas_used =
                 if sequencer_tx.is_l1_message() { sequencer_tx.gas_limit() } else { gas_used };
 
-            // add gas used by the transaction to cumulative gas used, before creating the receipt
+            // add gas used by the transaction to cumulative gas used
             info.cumulative_gas_used += gas_used;
-            gas_spent_by_transaction.push((i as u64, gas_used));
+            gas_spent_by_transactions.push((i as u64, gas_used));
         }
 
         Ok(info)
