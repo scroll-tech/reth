@@ -15,3 +15,15 @@ pub mod sequencer;
 pub use error::{ScrollEthApiError, SequencerClientError};
 pub use eth::{ScrollEthApi, ScrollReceiptBuilder};
 pub use sequencer::SequencerClient;
+
+/// Gives mutable access to the fields of an RPC block header.
+pub trait RpcBlockHeaderMut {
+    /// Mutable reference to the total difficulty.
+    fn total_difficulty_mut(&mut self) -> &mut Option<alloy_primitives::U256>;
+}
+
+impl RpcBlockHeaderMut for alloy_rpc_types_eth::Header {
+    fn total_difficulty_mut(&mut self) -> &mut Option<alloy_primitives::U256> {
+        &mut self.total_difficulty
+    }
+}
