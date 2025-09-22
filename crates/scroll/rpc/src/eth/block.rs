@@ -1,7 +1,6 @@
 //! Loads and formats Scroll block RPC response.
 
 use crate::{RpcBlockHeaderMut, ScrollEthApi, ScrollEthApiError};
-use std::future::Future;
 
 use alloy_consensus::BlockHeader;
 use alloy_eips::BlockId;
@@ -18,34 +17,32 @@ where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
     Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
-    <<ScrollEthApi<N, Rpc> as EthApiTypes>::NetworkTypes as RpcTypes>::Header: RpcBlockHeaderMut,
+    <<Self as EthApiTypes>::NetworkTypes as RpcTypes>::Header: RpcBlockHeaderMut,
 {
-    fn rpc_block(
+    async fn rpc_block(
         &self,
         block_id: BlockId,
         full: bool,
-    ) -> impl Future<Output = Result<Option<RpcBlock<Self::NetworkTypes>>, Self::Error>> + Send
+    ) -> Result<Option<RpcBlock<Self::NetworkTypes>>, Self::Error>
     where
         Self: FullEthApiTypes,
     {
-        async move {
-            let Some(block) = self.recovered_block(block_id).await? else { return Ok(None) };
+        let Some(block) = self.recovered_block(block_id).await? else { return Ok(None) };
 
-            let td = self
-                .provider()
-                .header_td_by_number(block.number())
-                .map_err(Self::Error::from_eth_err)?;
+        let td = self
+            .provider()
+            .header_td_by_number(block.number())
+            .map_err(Self::Error::from_eth_err)?;
 
-            let mut block = block.clone_into_rpc_block(
-                full.into(),
-                |tx, tx_info| self.tx_resp_builder().fill(tx, tx_info),
-                |header, size| self.tx_resp_builder().convert_header(header, size),
-            )?;
+        let mut block = block.clone_into_rpc_block(
+            full.into(),
+            |tx, tx_info| self.tx_resp_builder().fill(tx, tx_info),
+            |header, size| self.tx_resp_builder().convert_header(header, size),
+        )?;
 
-            *block.header.total_difficulty_mut() = td;
+        *block.header.total_difficulty_mut() = td;
 
-            Ok(Some(block))
-        }
+        Ok(Some(block))
     }
 }
 
