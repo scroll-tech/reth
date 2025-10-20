@@ -486,7 +486,7 @@ reth-ress-protocol = { path = "crates/ress/protocol" }
 reth-ress-provider = { path = "crates/ress/provider" }
 
 # revm
-revm = { git = "https://github.com/scroll-tech/revm", default-features = false, features = ["enable_eip7702", "enable_eip7623"] }
+revm = { git = "https://github.com/scroll-tech/revm", default-features = false, features = ["enable_eip7702", "enable_eip7623", "enable_eip7939"] }
 revm-bytecode = { git = "https://github.com/scroll-tech/revm", default-features = false }
 revm-database = { git = "https://github.com/scroll-tech/revm", default-features = false }
 revm-state = { git = "https://github.com/scroll-tech/revm", default-features = false }

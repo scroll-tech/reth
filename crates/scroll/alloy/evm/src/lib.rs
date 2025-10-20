@@ -4,6 +4,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
 mod block;
 pub use block::{
     curie, feynman, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
@@ -17,8 +18,6 @@ pub use tx::{
 };
 
 mod system_caller;
-
-extern crate alloc;
 
 use alloy_evm::{precompiles::PrecompilesMap, Database, Evm, EvmEnv, EvmFactory};
 use alloy_primitives::{Address, Bytes};
@@ -36,8 +35,8 @@ use revm::{
 };
 use revm_scroll::{
     builder::{
-        DefaultScrollContext, EuclidEipActivations, FeynmanEipActivations, ScrollBuilder,
-        ScrollContext,
+        DefaultScrollContext, EuclidEipActivations, FeynmanEipActivations, GalileoEipActivations,
+        ScrollBuilder, ScrollContext,
     },
     instructions::ScrollInstructions,
     precompile::ScrollPrecompileProvider,
@@ -46,6 +45,7 @@ use revm_scroll::{
 
 /// Re-export `TX_L1_FEE_PRECISION_U256` from `revm-scroll` for convenience.
 pub use revm_scroll::l1block::TX_L1_FEE_PRECISION_U256;
+
 
 /// Scroll EVM implementation.
 #[allow(missing_debug_implementations)]
@@ -221,6 +221,7 @@ impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
                 .with_cfg(input.cfg_env)
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
+                .maybe_with_eip_7939()
                 .build_scroll_with_inspector(NoOpInspector {})
                 .with_precompiles(P::with_spec(spec_id)),
             inspect: false,
@@ -241,6 +242,7 @@ impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
                 .with_cfg(input.cfg_env)
                 .maybe_with_eip_7702()
                 .maybe_with_eip_7623()
+                .maybe_with_eip_7939()
                 .build_scroll_with_inspector(inspector)
                 .with_precompiles(P::with_spec(spec_id)),
             inspect: true,
