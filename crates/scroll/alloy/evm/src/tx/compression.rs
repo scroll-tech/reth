@@ -153,7 +153,14 @@ impl FromTxWithCompressionRatio<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv
                     kind: TxKind::Call(*to),
                     value: *value,
                     data: input.clone(),
-                    ..Default::default()
+                    gas_price: 0,
+                    gas_priority_fee: None,
+                    chain_id: None,
+                    nonce: 0,
+                    access_list: Default::default(),
+                    blob_hashes: Default::default(),
+                    max_fee_per_blob_gas: Default::default(),
+                    authorization_list: Default::default(),
                 }
             }
         };
