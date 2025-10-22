@@ -184,7 +184,7 @@ where
     /// Returns the [`EngineApiClient`] interface for the authenticated engine API.
     ///
     /// This will send authenticated http requests to the node's auth server.
-    pub fn engine_http_client(&self) -> impl EngineApiClient<Engine> {
+    pub fn engine_http_client(&self) -> impl EngineApiClient<Engine> + use<Engine, Node, AddOns> {
         self.auth_server_handle().http_client()
     }
 
