@@ -10745,6 +10745,7 @@ dependencies = [
  "reth-transaction-pool",
  "revm-scroll",
  "scroll-alloy-consensus",
+ "tracing",
 ]
 
 [[package]]

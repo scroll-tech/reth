@@ -153,6 +153,9 @@ where
         }
 
         let outcome = self.inner.validate_one(origin, transaction);
+        if outcome.is_invalid() || outcome.is_error() {
+            tracing::trace!(target: "scroll_txpool", ?outcome, "tx pool validation failed")
+        }
 
         if !self.requires_l1_data_gas_fee() {
             // no need to check L1 gas fee
