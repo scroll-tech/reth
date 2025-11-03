@@ -198,7 +198,7 @@ This significant upgrade will reduce gas fees on the Scroll chain by 1.5x. Highl
   algorithm. This compression reduces the data size, allowing each blob to store more transactions, thereby reducing
   data availability cost per transaction.
 - Adopts a modified version of the EIP-1559 pricing model which is compatible with the EIP-1559 transaction interface,
-  bringing beneftis such as more accurate transaction pricing and a more predictable and stable fee structure.
+  bringing benefits such as more accurate transaction pricing and a more predictable and stable fee structure.
 - Support for new EVM opcodes `TLOAD`, `TSTORE`, and `MCOPY`. Users can safely use the latest Solidity compiler version
   `0.8.26` to build the contracts.
 - Introduces a dynamic block time. During periods of traffic congestion, a block will be packed when the number of
@@ -226,9 +226,9 @@ The code changes for this upgrade are documented in the following PRs:
 The main changes are as follows:
 
 - The rollup contract (`ScrollChain`) will now accept batches with both versions 1 and
-  2. [Version 1](https://github.com/scroll-tech/da-codec/tree/main/encoding/codecv1) is used for uncompressed blobs (
-  pre-Curie), while [version 2](https://github.com/scroll-tech/da-codec/tree/main/encoding/codecv2) is used for
-  compressed blobs (post-Curie).
+    2. [Version 1](https://github.com/scroll-tech/da-codec/tree/main/encoding/codecv1) is used for uncompressed blobs (
+       pre-Curie), while [version 2](https://github.com/scroll-tech/da-codec/tree/main/encoding/codecv2) is used for
+       compressed blobs (post-Curie).
 - The `L1GasPriceOracle` contract will be updated to change the data fee formula to account for blob DA, providing a
   more accurate estimation of DA costs:
     - Original formula: `(l1GasUsed(txRlp) + overhead) * l1BaseFee * scalar`
