@@ -633,7 +633,7 @@ mod tests {
                 ),
                 (
                     Head { number: 4740239, timestamp: 1753167600, ..Default::default() },
-                    ForkId { hash: ForkHash([0x19, 0xbb, 0x92, 0xc6]), next: 0 },
+                    ForkId { hash: ForkHash([0x19, 0xbb, 0x92, 0xc6]), next: u64::MAX },
                 ),
             ],
         );
