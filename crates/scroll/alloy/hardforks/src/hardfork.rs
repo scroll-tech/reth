@@ -21,13 +21,15 @@ hardfork!(
         /// EuclidV2 <https://docs.scroll.io/en/technology/overview/scroll-upgrades/euclid-upgrade/>
         EuclidV2,
         /// Feynman <https://docs.scroll.io/en/technology/overview/scroll-upgrades/feynman-upgrade/>
-        Feynman
+        Feynman,
+        /// Galileo <https://docs.scroll.io/en/technology/overview/scroll-upgrades/galileo-upgrade/>
+        Galileo,
     }
 );
 
 impl ScrollHardfork {
     /// Scroll mainnet list of hardforks.
-    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 8] {
+    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 9] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(5220340)),
@@ -37,11 +39,12 @@ impl ScrollHardfork {
             (Self::Euclid, ForkCondition::Timestamp(1744815600)),
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
             (Self::Feynman, ForkCondition::Timestamp(1755576000)),
+            (Self::Galileo, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 
     /// Scroll sepolia list of hardforks.
-    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 8] {
+    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 9] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(3747132)),
@@ -51,6 +54,7 @@ impl ScrollHardfork {
             (Self::Euclid, ForkCondition::Timestamp(1741680000)),
             (Self::EuclidV2, ForkCondition::Timestamp(1741852800)),
             (Self::Feynman, ForkCondition::Timestamp(1753167600)),
+            (Self::Galileo, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 }
@@ -63,7 +67,7 @@ mod tests {
     #[test]
     fn check_scroll_hardfork_from_str() {
         let hardfork_str =
-            ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2", "EUcliD", "eUClidv2", "FEYnmaN"];
+            ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2", "EUcliD", "eUClidv2", "FEYnmaN", "gaLiLEo"];
         let expected_hardforks = [
             ScrollHardfork::Bernoulli,
             ScrollHardfork::Curie,
@@ -72,6 +76,7 @@ mod tests {
             ScrollHardfork::Euclid,
             ScrollHardfork::EuclidV2,
             ScrollHardfork::Feynman,
+            ScrollHardfork::Galileo,
         ];
 
         let hardforks: Vec<ScrollHardfork> =
