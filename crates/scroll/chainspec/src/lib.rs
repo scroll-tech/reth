@@ -431,6 +431,7 @@ impl From<Genesis> for ScrollChainSpec {
             (ScrollHardfork::Euclid.boxed(), hard_fork_info.euclid_time),
             (ScrollHardfork::EuclidV2.boxed(), hard_fork_info.euclid_v2_time),
             (ScrollHardfork::Feynman.boxed(), hard_fork_info.feynman_time),
+            (ScrollHardfork::Galileo.boxed(), hard_fork_info.galileo_time),
         ];
 
         let mut time_hardforks = time_hardfork_opts
@@ -545,7 +546,11 @@ mod tests {
                 ),
                 (
                     Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
-                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: 0 },
+                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: u64::MAX },
+                ),
+                (
+                    Head { number: 7096836, timestamp: u64::MAX, ..Default::default() },
+                    ForkId { hash: ForkHash([0x50, 0xe7, 0xe6, 0xd5]), next: 0 },
                 ),
             ],
         );
@@ -634,6 +639,10 @@ mod tests {
                 (
                     Head { number: 4740239, timestamp: 1753167600, ..Default::default() },
                     ForkId { hash: ForkHash([0x19, 0xbb, 0x92, 0xc6]), next: u64::MAX },
+                ),
+                (
+                    Head { number: 4740239, timestamp: u64::MAX, ..Default::default() },
+                    ForkId { hash: ForkHash([0xf8, 0x27, 0xe0, 0xfc]), next: 0 },
                 ),
             ],
         );
@@ -734,6 +743,7 @@ mod tests {
                     (String::from("darwinTime"), 0.into()),
                     (String::from("darwinV2Time"), 0.into()),
                     (String::from("feynmanTime"), 0.into()),
+                    (String::from("galileoTime"), 0.into()),
                     (
                         String::from("scroll"),
                         serde_json::json!({
@@ -777,6 +787,7 @@ mod tests {
             ScrollHardfork::Darwin.boxed(),
             ScrollHardfork::DarwinV2.boxed(),
             ScrollHardfork::Feynman.boxed(),
+            ScrollHardfork::Galileo.boxed(),
         ];
 
         assert!(expected_hardforks
