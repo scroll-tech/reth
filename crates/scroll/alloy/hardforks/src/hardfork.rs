@@ -66,8 +66,16 @@ mod tests {
 
     #[test]
     fn check_scroll_hardfork_from_str() {
-        let hardfork_str =
-            ["BernOulLi", "CUrie", "DaRwIn", "DaRwInV2", "EUcliD", "eUClidv2", "FEYnmaN", "gaLiLEo"];
+        let hardfork_str = [
+            "BernOulLi",
+            "CUrie",
+            "DaRwIn",
+            "DaRwInV2",
+            "EUcliD",
+            "eUClidv2",
+            "FEYnmaN",
+            "gaLiLEo",
+        ];
         let expected_hardforks = [
             ScrollHardfork::Bernoulli,
             ScrollHardfork::Curie,
