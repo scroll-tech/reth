@@ -7,13 +7,13 @@
 mod block;
 pub use block::{
     curie, feynman, EvmExt, ReceiptBuilderCtx, ScrollBlockExecutionCtx, ScrollBlockExecutor,
-    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionRatios,
+    ScrollBlockExecutorFactory, ScrollReceiptBuilder, ScrollTxCompressionInfos,
 };
 
 mod tx;
 pub use tx::{
-    compute_compression_ratio, FromTxWithCompressionRatio, ScrollTransactionIntoTxEnv,
-    ToTxWithCompressionRatio, WithCompressionRatio,
+    compute_compression_ratio, compute_compressed_size, FromTxWithCompressionInfo, ScrollTransactionIntoTxEnv,
+    ToTxWithCompressionInfo, WithCompressionInfo,
 };
 
 mod system_caller;

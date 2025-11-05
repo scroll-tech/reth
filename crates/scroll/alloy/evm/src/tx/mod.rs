@@ -13,8 +13,8 @@ use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTI
 
 mod compression;
 pub use compression::{
-    compute_compression_ratio, FromTxWithCompressionRatio, ToTxWithCompressionRatio,
-    WithCompressionRatio,
+    compute_compression_ratio, compute_compressed_size, FromTxWithCompressionInfo, ToTxWithCompressionInfo,
+    WithCompressionInfo,
 };
 
 /// This structure wraps around a [`ScrollTransaction`] and allows us to implement the [`IntoTxEnv`]
@@ -27,8 +27,8 @@ pub struct ScrollTransactionIntoTxEnv<T: Transaction>(ScrollTransaction<T>);
 
 impl<T: Transaction> ScrollTransactionIntoTxEnv<T> {
     /// Returns a new [`ScrollTransactionIntoTxEnv`].
-    pub fn new(base: T, rlp_bytes: Option<Bytes>, compression_ratio: Option<U256>) -> Self {
-        Self(ScrollTransaction::new(base, rlp_bytes, compression_ratio))
+    pub fn new(base: T, rlp_bytes: Option<Bytes>, compression_ratio: Option<U256>, compressed_size: Option<usize>) -> Self {
+        Self(ScrollTransaction::new(base, rlp_bytes, compression_ratio, compressed_size))
     }
 }
 
@@ -166,11 +166,16 @@ impl FromTxWithEncoded<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
             }
         };
 
-        let encoded = (!tx.is_l1_message()).then_some(encoded);
-        // Note: We compute the transaction ratio on tx.data, not on the full encoded transaction.
-        let compression_ratio =
-            (!tx.is_l1_message()).then(|| compute_compression_ratio(base.input()));
-        Self::new(base, encoded, compression_ratio)
+        let (encoded, compression_ratio, compressed_size) = match tx {
+            ScrollTxEnvelope::L1Message(_) => (None, None, None),
+            _ => {
+                let ratio = compute_compression_ratio(base.input()); // compute on tx data
+                let size = compute_compressed_size(&encoded); // compute on rlp-encoded tx
+                (Some(encoded), Some(ratio), Some(size))
+            }
+        };
+
+        Self::new(base, encoded, compression_ratio, compressed_size)
     }
 }
 
@@ -276,11 +281,16 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
             },
         };
 
-        let encoded = (!tx.is_l1_message()).then_some(envelope.into());
-        // Note: We compute the transaction ratio on tx.data, not on the full encoded transaction.
-        let compression_ratio =
-            (!tx.is_l1_message()).then(|| compute_compression_ratio(base.input()));
+        let (encoded, compression_ratio, compressed_size) = match tx {
+            ScrollTxEnvelope::L1Message(_) => (None, None, None),
+            _ => {
+                let encoded = envelope.into();
+                let ratio = compute_compression_ratio(base.input()); // compute on tx data
+                let size = compute_compressed_size(&encoded); // compute on rlp-encoded tx
+                (Some(encoded), Some(ratio), Some(size))
+            }
+        };
 
-        Self::new(base, encoded, compression_ratio)
+        Self::new(base, encoded, compression_ratio, compressed_size)
     }
 }

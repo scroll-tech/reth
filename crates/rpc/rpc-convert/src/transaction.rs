@@ -1066,6 +1066,7 @@ pub mod scroll {
                 self.as_ref().clone().try_into_tx_env(cfg_env, block_env)?,
                 Some(Bytes::new()),
                 Some(TX_L1_FEE_PRECISION_U256),
+                Some(0),
             ))
         }
     }

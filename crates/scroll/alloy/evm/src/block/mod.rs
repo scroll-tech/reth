@@ -10,8 +10,8 @@ use crate::{
         feynman::apply_feynman_hard_fork,
     },
     system_caller::ScrollSystemCaller,
-    FromTxWithCompressionRatio, ScrollDefaultPrecompilesFactory, ScrollEvm, ScrollEvmFactory,
-    ScrollPrecompilesFactory, ScrollTransactionIntoTxEnv, ToTxWithCompressionRatio,
+    FromTxWithCompressionInfo, ScrollDefaultPrecompilesFactory, ScrollEvm, ScrollEvmFactory,
+    ScrollPrecompilesFactory, ScrollTransactionIntoTxEnv, ToTxWithCompressionInfo,
 };
 use alloc::{boxed::Box, format, vec::Vec};
 
@@ -39,8 +39,8 @@ use revm_scroll::builder::ScrollContext;
 use scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
-/// A cache for transaction compression ratios.
-pub type ScrollTxCompressionRatios = Vec<U256>;
+/// A cache for transaction compression infos, i.e. (compression ratio, compressed size) pairs.
+pub type ScrollTxCompressionInfos = Vec<(U256, usize)>;
 
 /// Context for Scroll Block Execution.
 #[derive(Debug, Default, Clone)]
@@ -102,30 +102,30 @@ where
         DB = &'db mut State<DB>,
         Tx: FromRecoveredTx<R::Transaction>
                 + FromTxWithEncoded<R::Transaction>
-                + FromTxWithCompressionRatio<R::Transaction>,
+                + FromTxWithCompressionInfo<R::Transaction>,
     >,
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
     Spec: ScrollHardforks,
 {
     /// Executes all transactions in a block, applying pre and post execution changes. The provided
-    /// transaction compression ratios are expected to be in the same order as the
+    /// transaction compression infos are expected to be in the same order as the
     /// transactions.
     pub fn execute_block_with_compression_cache(
         mut self,
         transactions: impl IntoIterator<
             Item = impl ExecutableTx<Self>
-                       + ToTxWithCompressionRatio<<Self as BlockExecutor>::Transaction>,
+                       + ToTxWithCompressionInfo<<Self as BlockExecutor>::Transaction>,
         >,
-        compression_ratios: impl IntoIterator<Item = U256>,
+        compression_infos: impl IntoIterator<Item = (U256, usize)>,
     ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
     where
         Self: Sized,
     {
         self.apply_pre_execution_changes()?;
 
-        for (tx, compression_ratio) in transactions.into_iter().zip(compression_ratios.into_iter())
+        for (tx, (compression_ratio, compressed_size)) in transactions.into_iter().zip(compression_infos.into_iter())
         {
-            let tx = tx.with_compression_ratio(compression_ratio);
+            let tx = tx.with_compression_info(compression_ratio, compressed_size);
             self.execute_transaction(&tx)?;
         }
 
@@ -335,10 +335,12 @@ where
         let l1_block_info = &self.ctx().chain;
         let transaction_rlp_bytes = self.ctx().tx.rlp_bytes.as_ref()?;
         let compression_ratio = self.ctx().tx.compression_ratio;
+        let compressed_size = self.ctx().tx.compressed_size;
         Some(l1_block_info.calculate_tx_l1_cost(
             transaction_rlp_bytes,
             self.ctx().cfg.spec,
             compression_ratio,
+            compressed_size,
         ))
     }
 }

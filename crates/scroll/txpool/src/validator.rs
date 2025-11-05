@@ -8,7 +8,7 @@ use reth_primitives_traits::{
 use reth_revm::database::StateProviderDatabase;
 use reth_scroll_consensus::MAX_ROLLUP_FEE;
 use reth_scroll_evm::{
-    compute_compression_ratio, spec_id_at_timestamp_and_number, RethL1BlockInfo,
+    compute_compression_ratio, compute_compressed_size, spec_id_at_timestamp_and_number, RethL1BlockInfo,
 };
 use reth_scroll_forks::ScrollHardforks;
 use reth_storage_api::{BlockReaderIdExt, StateProviderFactory};
@@ -177,7 +177,11 @@ where
             let mut encoded = Vec::with_capacity(valid_tx.transaction().encoded_length());
             let tx = valid_tx.transaction().clone_into_consensus();
             tx.encode_2718(&mut encoded);
+
+            // Note, compression ratio is computed on tx.input,
+            // while compressed size is computed on the full encoded transaction.
             let compression_ratio = compute_compression_ratio(valid_tx.transaction().input());
+            let compressed_size = compute_compressed_size(&encoded);
 
             let cost_addition = match l1_block_info.l1_tx_data_fee(
                 self.chain_spec(),
@@ -185,6 +189,7 @@ where
                 self.block_number(),
                 &encoded,
                 Some(compression_ratio),
+                Some(compressed_size),
                 false,
             ) {
                 Ok(cost) => cost,
