@@ -12,8 +12,8 @@ pub use block::{
 
 mod tx;
 pub use tx::{
-    compute_compression_ratio, compute_compressed_size, FromTxWithCompressionInfo, ScrollTransactionIntoTxEnv,
-    ToTxWithCompressionInfo, WithCompressionInfo,
+    compute_compressed_size, compute_compression_ratio, FromTxWithCompressionInfo,
+    ScrollTransactionIntoTxEnv, ToTxWithCompressionInfo, WithCompressionInfo,
 };
 
 mod system_caller;

@@ -123,7 +123,8 @@ where
     {
         self.apply_pre_execution_changes()?;
 
-        for (tx, (compression_ratio, compressed_size)) in transactions.into_iter().zip(compression_infos.into_iter())
+        for (tx, (compression_ratio, compressed_size)) in
+            transactions.into_iter().zip(compression_infos.into_iter())
         {
             let tx = tx.with_compression_info(compression_ratio, compressed_size);
             self.execute_transaction(&tx)?;

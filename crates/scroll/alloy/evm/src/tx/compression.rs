@@ -6,7 +6,7 @@ use alloy_evm::{RecoveredTx, ToTxEnv};
 use alloy_primitives::{Address, Bytes, TxKind, U256};
 use revm::context::TxEnv;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
-pub use zstd_compression::{compute_compression_ratio, compute_compressed_size};
+pub use zstd_compression::{compute_compressed_size, compute_compression_ratio};
 
 #[cfg(feature = "zstd_compression")]
 mod zstd_compression {
@@ -41,7 +41,11 @@ mod zstd_compression {
         let result = compressor.finish().expect("failed to finish compression");
         let encoded_bytes_len = result.len();
 
-        if encoded_bytes_len > original_bytes_len { original_bytes_len } else { encoded_bytes_len }
+        if encoded_bytes_len > original_bytes_len {
+            original_bytes_len
+        } else {
+            encoded_bytes_len
+        }
     }
 
     /// Computes the compression ratio for the provided bytes.
@@ -127,13 +131,17 @@ where
         compression_ratio: Option<U256>,
         compressed_size: Option<usize>,
     ) -> Self {
-        TxEnv::from_tx_with_compression_info(tx, sender, encoded, compression_ratio, compressed_size)
+        TxEnv::from_tx_with_compression_info(
+            tx,
+            sender,
+            encoded,
+            compression_ratio,
+            compressed_size,
+        )
     }
 }
 
-impl<T, TxEnv: FromTxWithCompressionInfo<T>> ToTxEnv<TxEnv>
-    for WithCompressionInfo<Recovered<T>>
-{
+impl<T, TxEnv: FromTxWithCompressionInfo<T>> ToTxEnv<TxEnv> for WithCompressionInfo<Recovered<T>> {
     fn to_tx_env(&self) -> TxEnv {
         let recovered = &self.value;
         TxEnv::from_tx_with_compression_info(
@@ -146,9 +154,7 @@ impl<T, TxEnv: FromTxWithCompressionInfo<T>> ToTxEnv<TxEnv>
     }
 }
 
-impl<T, TxEnv: FromTxWithCompressionInfo<T>> ToTxEnv<TxEnv>
-    for WithCompressionInfo<&Recovered<T>>
-{
+impl<T, TxEnv: FromTxWithCompressionInfo<T>> ToTxEnv<TxEnv> for WithCompressionInfo<&Recovered<T>> {
     fn to_tx_env(&self) -> TxEnv {
         let recovered = &self.value;
         TxEnv::from_tx_with_compression_info(
@@ -241,7 +247,7 @@ mod tests {
     use crate::compute_compressed_size;
 
     use super::compute_compression_ratio;
-    use alloy_primitives::{bytes, U256, uint};
+    use alloy_primitives::{bytes, uint, U256};
 
     #[test]
     fn test_compute_compression_ratio() -> eyre::Result<()> {
@@ -286,7 +292,8 @@ mod tests {
 
         // etherfi-stargate
         // https://scrollscan.com/tx/0x08bf18e860d4770920ba838fe709ca202227aa9afea1b0c11314e7f41fc5f578
-        let bytes = bytes!("0x5988e7a1000000000000000000000000388325dd7c76e37cfda1ed6d8a97849a46b5512a");
+        let bytes =
+            bytes!("0x5988e7a1000000000000000000000000388325dd7c76e37cfda1ed6d8a97849a46b5512a");
         let ratio = compute_compression_ratio(&bytes);
         let size = compute_compressed_size(&bytes);
         assert_eq!(ratio, U256::from(1_000_000_000)); // 1x

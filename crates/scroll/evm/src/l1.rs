@@ -14,6 +14,8 @@ pub trait RethL1BlockInfo {
     /// - `timestamp`: The timestamp of the current block.
     /// - `block`: The block number of the current block.
     /// - `input`: The calldata of the transaction.
+    /// - `compression_info`: An optional tuple containing the compression ratio and compressed
+    ///   size.
     /// - `is_l1_message`: Whether or not the transaction is a l1 message.
     fn l1_tx_data_fee(
         &mut self,
@@ -21,8 +23,7 @@ pub trait RethL1BlockInfo {
         timestamp: u64,
         block: u64,
         input: &[u8],
-        compression_ratio: Option<U256>,
-        compressed_size: Option<usize>,
+        compression_info: Option<(U256, usize)>,
         is_l1_message: bool,
     ) -> Result<U256, BlockExecutionError>;
 }
@@ -34,13 +35,17 @@ impl RethL1BlockInfo for L1BlockInfo {
         timestamp: u64,
         block_number: u64,
         input: &[u8],
-        compression_ratio: Option<U256>,
-        compressed_size: Option<usize>,
+        compression_info: Option<(U256, usize)>,
         is_l1_message: bool,
     ) -> Result<U256, BlockExecutionError> {
         if is_l1_message {
             return Ok(U256::ZERO);
         }
+
+        let (compression_ratio, compressed_size) = match compression_info {
+            Some((ratio, size)) => (Some(ratio), Some(size)),
+            None => (None, None),
+        };
 
         let spec_id = spec_id_at_timestamp_and_number(timestamp, block_number, chain_spec);
         Ok(self.calculate_tx_l1_cost(input, spec_id, compression_ratio, compressed_size))

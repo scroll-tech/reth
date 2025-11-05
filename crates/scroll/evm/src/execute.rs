@@ -49,7 +49,8 @@ mod tests {
         Block, BlockBody, Header, SignableTransaction, Signed, Transaction, TxLegacy,
     };
     use alloy_eips::{
-        Encodable2718, Typed2718, eip7702::{Authorization, SignedAuthorization, constants::PER_EMPTY_ACCOUNT_COST}
+        eip7702::{constants::PER_EMPTY_ACCOUNT_COST, Authorization, SignedAuthorization},
+        Encodable2718, Typed2718,
     };
     use alloy_evm::{
         block::{BlockExecutionResult, BlockExecutor},
@@ -76,8 +77,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
-        compute_compression_ratio,
-        compute_compressed_size,
+        compute_compressed_size, compute_compression_ratio,
         curie::{
             BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
             CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
@@ -222,7 +222,8 @@ mod tests {
         transactions: Vec<ScrollTxEnvelope>,
         block_number: u64,
         block_timestamp: u64,
-        compression_infos: Option<Vec<(U256, usize)>>, // (compression ratio, compressed size) pairs
+        compression_infos: Option<Vec<(U256, usize)>>, /* (compression ratio, compressed size)
+                                                        * pairs */
     ) -> eyre::Result<BlockExecutionResult<ScrollReceipt>> {
         let block = block(block_number, block_timestamp, transactions);
 
@@ -654,8 +655,12 @@ mod tests {
             transaction(ScrollTxType::Eip1559, MIN_TRANSACTION_GAS),
             transaction(ScrollTxType::Eip7702, MIN_TRANSACTION_GAS),
         ];
-        let compression_infos =
-            transactions.iter().map(|tx| (compute_compression_ratio(tx.input()), compute_compressed_size(&tx.encoded_2718()))).collect::<Vec<_>>();
+        let compression_infos = transactions
+            .iter()
+            .map(|tx| {
+                (compute_compression_ratio(tx.input()), compute_compressed_size(&tx.encoded_2718()))
+            })
+            .collect::<Vec<_>>();
         let with_compression_infos = execute_block(
             transactions.clone(),
             CURIE_BLOCK_NUMBER + 1,

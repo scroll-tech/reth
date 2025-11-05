@@ -8,7 +8,8 @@ use reth_primitives_traits::{
 use reth_revm::database::StateProviderDatabase;
 use reth_scroll_consensus::MAX_ROLLUP_FEE;
 use reth_scroll_evm::{
-    compute_compression_ratio, compute_compressed_size, spec_id_at_timestamp_and_number, RethL1BlockInfo,
+    compute_compressed_size, compute_compression_ratio, spec_id_at_timestamp_and_number,
+    RethL1BlockInfo,
 };
 use reth_scroll_forks::ScrollHardforks;
 use reth_storage_api::{BlockReaderIdExt, StateProviderFactory};
@@ -188,8 +189,7 @@ where
                 self.block_timestamp(),
                 self.block_number(),
                 &encoded,
-                Some(compression_ratio),
-                Some(compressed_size),
+                Some((compression_ratio, compressed_size)),
                 false,
             ) {
                 Ok(cost) => cost,

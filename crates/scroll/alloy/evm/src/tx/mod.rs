@@ -13,8 +13,8 @@ use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTI
 
 mod compression;
 pub use compression::{
-    compute_compression_ratio, compute_compressed_size, FromTxWithCompressionInfo, ToTxWithCompressionInfo,
-    WithCompressionInfo,
+    compute_compressed_size, compute_compression_ratio, FromTxWithCompressionInfo,
+    ToTxWithCompressionInfo, WithCompressionInfo,
 };
 
 /// This structure wraps around a [`ScrollTransaction`] and allows us to implement the [`IntoTxEnv`]
@@ -27,7 +27,12 @@ pub struct ScrollTransactionIntoTxEnv<T: Transaction>(ScrollTransaction<T>);
 
 impl<T: Transaction> ScrollTransactionIntoTxEnv<T> {
     /// Returns a new [`ScrollTransactionIntoTxEnv`].
-    pub fn new(base: T, rlp_bytes: Option<Bytes>, compression_ratio: Option<U256>, compressed_size: Option<usize>) -> Self {
+    pub fn new(
+        base: T,
+        rlp_bytes: Option<Bytes>,
+        compression_ratio: Option<U256>,
+        compressed_size: Option<usize>,
+    ) -> Self {
         Self(ScrollTransaction::new(base, rlp_bytes, compression_ratio, compressed_size))
     }
 }
