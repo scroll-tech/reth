@@ -11471,7 +11471,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm#c87b934962b84bcb6fda0fe49bd248d87ff6766e"
+source = "git+https://github.com/scroll-tech/scroll-revm#f5ae93d909f185461af8d0263b2549081e9781c8"
 dependencies = [
  "auto_impl",
  "enumn",
