@@ -84,7 +84,7 @@ mod tests {
             L1_GAS_PRICE_ORACLE_ADDRESS,
         },
         feynman::{IS_FEYNMAN_SLOT, PENALTY_FACTOR_SLOT, PENALTY_THRESHOLD_SLOT},
-        ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm,
+        ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm, ScrollTxCompressionInfos,
     };
     use scroll_alloy_hardforks::ScrollHardforks;
 
@@ -222,8 +222,7 @@ mod tests {
         transactions: Vec<ScrollTxEnvelope>,
         block_number: u64,
         block_timestamp: u64,
-        compression_infos: Option<Vec<(U256, usize)>>, /* (compression ratio, compressed size)
-                                                        * pairs */
+        compression_infos: Option<ScrollTxCompressionInfos>,
     ) -> eyre::Result<BlockExecutionResult<ScrollReceipt>> {
         let block = block(block_number, block_timestamp, transactions);
 

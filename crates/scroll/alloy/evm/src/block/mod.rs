@@ -39,8 +39,11 @@ use revm_scroll::builder::ScrollContext;
 use scroll_alloy_consensus::L1_MESSAGE_TRANSACTION_TYPE;
 use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
+/// Compression info is a pair of (compression ratio, compressed size).
+pub type ScrollTxCompressionInfo = (U256, usize);
+
 /// A cache for transaction compression infos, i.e. (compression ratio, compressed size) pairs.
-pub type ScrollTxCompressionInfos = Vec<(U256, usize)>;
+pub type ScrollTxCompressionInfos = Vec<ScrollTxCompressionInfo>;
 
 /// Context for Scroll Block Execution.
 #[derive(Debug, Default, Clone)]
@@ -116,7 +119,7 @@ where
             Item = impl ExecutableTx<Self>
                        + ToTxWithCompressionInfo<<Self as BlockExecutor>::Transaction>,
         >,
-        compression_infos: impl IntoIterator<Item = (U256, usize)>,
+        compression_infos: impl IntoIterator<Item = ScrollTxCompressionInfo>,
     ) -> Result<BlockExecutionResult<R::Receipt>, BlockExecutionError>
     where
         Self: Sized,
