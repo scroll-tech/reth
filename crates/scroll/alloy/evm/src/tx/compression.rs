@@ -250,7 +250,13 @@ mod tests {
     use alloy_primitives::{bytes, uint, U256};
 
     #[test]
-    fn test_compute_compression_ratio() -> eyre::Result<()> {
+    fn test_compression() -> eyre::Result<()> {
+        // Compute compression ratio and compressed size for each test case.
+        // These test cases are meant to be shared between the Go and Rust implementations.
+        // Note: Feynman's compression ratio is computed on the transaction payload,
+        // while Galileo's compressed size is computed on the full RLP-encoded transaction.
+        // In these compression tests we ignore this distinction.
+
         // eth-transfer
         let bytes = bytes!("0x");
         let ratio = compute_compression_ratio(&bytes);
