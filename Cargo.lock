@@ -11995,6 +11995,7 @@ dependencies = [
  "alloy-transport",
  "alloy-transport-http",
  "async-trait",
+ "auto_impl",
  "derive_more",
  "eyre",
  "futures-util",

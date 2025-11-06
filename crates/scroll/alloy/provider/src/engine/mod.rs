@@ -21,6 +21,7 @@ pub type ScrollEngineApiResult<T> = Result<T, ScrollEngineApiError>;
 /// Note:
 /// > The provider should use a JWT authentication layer.
 #[async_trait::async_trait]
+#[auto_impl::auto_impl(Arc, &, Box)]
 pub trait ScrollEngineApi {
     /// See also <https://github.com/ethereum/execution-apis/blob/6709c2a795b707202e93c4f2867fa0bf2640a84f/src/engine/paris.md#engine_newpayloadv1>
     /// Caution: This should not accept the `withdrawals` field
