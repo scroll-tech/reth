@@ -40,7 +40,7 @@ pub static SCROLL_MAINNET_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(||
         (ScrollHardfork::Euclid.boxed(), ForkCondition::Timestamp(1744815600)),
         (ScrollHardfork::EuclidV2.boxed(), ForkCondition::Timestamp(1745305200)),
         (ScrollHardfork::Feynman.boxed(), ForkCondition::Timestamp(1755576000)),
-        (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1761875363)),
+        (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1762506265)),
     ])
 });
 
@@ -65,7 +65,7 @@ pub static SCROLL_SEPOLIA_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(||
         (ScrollHardfork::Euclid.boxed(), ForkCondition::Timestamp(1741680000)),
         (ScrollHardfork::EuclidV2.boxed(), ForkCondition::Timestamp(1741852800)),
         (ScrollHardfork::Feynman.boxed(), ForkCondition::Timestamp(1753167600)),
-        (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1761875363)),
+        (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1762506265)),
     ])
 });
 
