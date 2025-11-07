@@ -39,9 +39,9 @@
 use crate::{
     stages::{
         AccountHashingStage, BodyStage, EraImportSource, EraStage, ExecutionStage, FinishStage,
-        HeaderStage, IndexAccountHistoryStage, IndexStorageHistoryStage, MerkleStage,
-        PruneSenderRecoveryStage, PruneStage, SenderRecoveryStage, StorageHashingStage,
-        TransactionLookupStage,
+        HeaderStage, IndexAccountHistoryStage, IndexStorageHistoryStage, MerkleChangeSets,
+        MerkleStage, PruneSenderRecoveryStage, PruneStage, SenderRecoveryStage,
+        StorageHashingStage, TransactionLookupStage,
     },
     StageSet, StageSetBuilder,
 };
@@ -54,7 +54,7 @@ use reth_primitives_traits::{Block, NodePrimitives};
 use reth_provider::HeaderSyncGapProvider;
 use reth_prune_types::PruneModes;
 use reth_stages_api::Stage;
-use std::{ops::Not, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::watch;
 
 /// A set containing all stages to run a fully syncing instance of reth.
@@ -75,6 +75,7 @@ use tokio::sync::watch;
 /// - [`AccountHashingStage`]
 /// - [`StorageHashingStage`]
 /// - [`MerkleStage`] (execute)
+/// - [`MerkleChangeSets`]
 /// - [`TransactionLookupStage`]
 /// - [`IndexStorageHistoryStage`]
 /// - [`IndexAccountHistoryStage`]
@@ -269,8 +270,14 @@ where
         Stage<Provider>,
 {
     fn builder(self) -> StageSetBuilder<Provider> {
-        StageSetBuilder::default()
-            .add_stage(EraStage::new(self.era_import_source, self.stages_config.etl.clone()))
+        let mut builder = StageSetBuilder::default();
+
+        if self.era_import_source.is_some() {
+            builder = builder
+                .add_stage(EraStage::new(self.era_import_source, self.stages_config.etl.clone()));
+        }
+
+        builder
             .add_stage(HeaderStage::new(
                 self.provider,
                 self.header_downloader,
@@ -339,12 +346,12 @@ where
                 stages_config: self.stages_config.clone(),
                 prune_modes: self.prune_modes.clone(),
             })
-            // If any prune modes are set, add the prune stage.
-            .add_stage_opt(self.prune_modes.is_empty().not().then(|| {
-                // Prune stage should be added after all hashing stages, because otherwise it will
-                // delete
-                PruneStage::new(self.prune_modes.clone(), self.stages_config.prune.commit_threshold)
-            }))
+            // Prune stage should be added after all hashing stages, because otherwise it will
+            // delete
+            .add_stage(PruneStage::new(
+                self.prune_modes.clone(),
+                self.stages_config.prune.commit_threshold,
+            ))
     }
 }
 
@@ -390,7 +397,14 @@ where
 }
 
 /// A set containing all stages that hash account state.
-#[derive(Debug)]
+///
+/// This includes:
+/// - [`MerkleStage`] (unwind)
+/// - [`AccountHashingStage`]
+/// - [`StorageHashingStage`]
+/// - [`MerkleStage`] (execute)
+/// - [`MerkleChangeSets`]
+#[derive(Debug, Default)]
 #[non_exhaustive]
 pub struct HashingStages<P: NodePrimitives> {
     /// Configuration for each stage in the pipeline
@@ -405,6 +419,7 @@ where
     MerkleStage<P>: Stage<Provider>,
     AccountHashingStage: Stage<Provider>,
     StorageHashingStage: Stage<Provider>,
+    MerkleChangeSets: Stage<Provider>,
 {
     fn builder(self) -> StageSetBuilder<Provider> {
         StageSetBuilder::default()
@@ -422,6 +437,7 @@ where
                 self.stages_config.merkle.incremental_threshold,
                 self.consensus,
             ))
+            .add_stage(MerkleChangeSets::new())
     }
 }
 
