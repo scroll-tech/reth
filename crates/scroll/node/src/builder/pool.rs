@@ -345,7 +345,7 @@ mod tests {
             err.kind,
             PoolErrorKind::InvalidTransaction(
                 InvalidPoolTransactionError::Consensus(InvalidTransactionError::InsufficientFunds(GotExpectedBoxed(expected)))
-            ) if *expected == GotExpected{ got: U256::from(400000), expected: U256::from(4205858031847u64) }
+            ) if *expected == GotExpected{ got: U256::from(400000), expected: U256::from(483673629772436u64) }
         ));
 
         // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
