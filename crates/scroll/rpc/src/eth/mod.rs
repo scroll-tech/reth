@@ -16,8 +16,8 @@ use reth_rpc::eth::{core::EthApiInner, DevSigner};
 use reth_rpc_convert::{RpcConvert, RpcConverter, RpcTypes, SignableTxRequest};
 use reth_rpc_eth_api::{
     helpers::{
-        pending_block::BuildPendingEnv, AddDevSigners, EthApiSpec, EthState, LoadFee,
-        LoadPendingBlock, LoadState, SpawnBlocking, Trace,
+        pending_block::BuildPendingEnv, EthApiSpec, EthState, LoadFee, LoadPendingBlock, LoadState,
+        SpawnBlocking, Trace,
     },
     EthApiTypes, FullEthApiServer, RpcNodeCore, RpcNodeCoreExt,
 };

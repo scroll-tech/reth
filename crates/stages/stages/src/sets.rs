@@ -404,7 +404,7 @@ where
 /// - [`StorageHashingStage`]
 /// - [`MerkleStage`] (execute)
 /// - [`MerkleChangeSets`]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub struct HashingStages<P: NodePrimitives> {
     /// Configuration for each stage in the pipeline

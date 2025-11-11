@@ -112,6 +112,7 @@ where
     type Error = EVMError<DB::Error>;
     type HaltReason = HaltReason;
     type Spec = ScrollSpecId;
+    type BlockEnv = BlockEnv;
     type Precompiles = P;
     type Inspector = I;
 
@@ -207,6 +208,7 @@ impl<P: ScrollPrecompilesFactory> EvmFactory for ScrollEvmFactory<P> {
     type Error<DBError: core::error::Error + Send + Sync + 'static> = EVMError<DBError>;
     type HaltReason = HaltReason;
     type Spec = ScrollSpecId;
+    type BlockEnv = BlockEnv;
     type Precompiles = PrecompilesMap;
 
     fn create_evm<DB: Database>(

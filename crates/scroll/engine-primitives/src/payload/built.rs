@@ -10,8 +10,7 @@ use alloy_rpc_types_engine::{
     ExecutionPayloadEnvelopeV4, ExecutionPayloadFieldV2, ExecutionPayloadV1, ExecutionPayloadV3,
     PayloadId,
 };
-use reth_chain_state::ExecutedBlockWithTrieUpdates;
-use reth_payload_primitives::BuiltPayload;
+use reth_payload_primitives::{BuiltPayload, BuiltPayloadExecutedBlock};
 use reth_primitives_traits::SealedBlock;
 use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
 
@@ -23,7 +22,7 @@ pub struct ScrollBuiltPayload {
     /// Sealed block
     pub(crate) block: Arc<SealedBlock<ScrollBlock>>,
     /// Block execution data for the payload
-    pub(crate) executed_block: Option<ExecutedBlockWithTrieUpdates<ScrollPrimitives>>,
+    pub(crate) executed_block: Option<BuiltPayloadExecutedBlock<ScrollPrimitives>>,
     /// The fees of the block
     pub(crate) fees: U256,
 }
@@ -33,7 +32,7 @@ impl ScrollBuiltPayload {
     pub const fn new(
         id: PayloadId,
         block: Arc<SealedBlock<ScrollBlock>>,
-        executed_block: Option<ExecutedBlockWithTrieUpdates<ScrollPrimitives>>,
+        executed_block: Option<BuiltPayloadExecutedBlock<ScrollPrimitives>>,
         fees: U256,
     ) -> Self {
         Self { id, block, executed_block, fees }
@@ -71,7 +70,7 @@ impl BuiltPayload for ScrollBuiltPayload {
         self.fees
     }
 
-    fn executed_block(&self) -> Option<ExecutedBlockWithTrieUpdates<Self::Primitives>> {
+    fn executed_block(&self) -> Option<BuiltPayloadExecutedBlock<Self::Primitives>> {
         self.executed_block.clone()
     }
 

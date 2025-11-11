@@ -4,8 +4,8 @@ use crate::{BuilderContext, FullNodeTypes};
 
 use alloy_primitives::Address;
 use reth_chain_state::CanonStateSubscriptions;
-use reth_chainspec::ChainSpecProvider;
-use reth_node_api::TxTy;
+use reth_chainspec::{ChainSpecProvider, EthereumHardforks};
+use reth_node_api::{NodeTypes, TxTy};
 use reth_transaction_pool::{
     blobstore::DiskFileBlobStore, CoinbaseTipOrdering, PoolConfig, PoolTransaction, SubPoolLimit,
     TransactionPool, TransactionValidationTaskExecutor, TransactionValidator,

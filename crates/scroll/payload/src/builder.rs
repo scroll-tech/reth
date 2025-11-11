@@ -3,7 +3,7 @@
 use super::ScrollPayloadBuilderError;
 use crate::config::{PayloadBuildingBreaker, ScrollBuilderConfig};
 
-use alloy_consensus::{Transaction, Typed2718};
+use alloy_consensus::{BlockHeader, Transaction, Typed2718};
 use alloy_primitives::U256;
 use alloy_rlp::Encodable;
 use core::fmt::Debug;
@@ -11,7 +11,6 @@ use reth_basic_payload_builder::{
     is_better_payload, BuildArguments, BuildOutcome, BuildOutcomeKind, MissingPayloadBehaviour,
     PayloadBuilder, PayloadConfig,
 };
-use reth_chain_state::{ExecutedBlock, ExecutedBlockWithTrieUpdates, ExecutedTrieUpdates};
 use reth_chainspec::{ChainSpecProvider, EthChainSpec};
 use reth_evm::{
     block::{BlockExecutionError, BlockValidationError},
@@ -20,17 +19,21 @@ use reth_evm::{
 };
 use reth_execution_types::ExecutionOutcome;
 use reth_payload_builder::PayloadId;
-use reth_payload_primitives::{PayloadBuilderAttributes, PayloadBuilderError};
+use reth_payload_primitives::{
+    BuiltPayloadExecutedBlock, PayloadBuilderAttributes, PayloadBuilderError,
+};
 use reth_payload_util::{BestPayloadTransactions, NoopPayloadTransactions, PayloadTransactions};
 use reth_primitives_traits::{RecoveredBlock, SealedHeader, SignedTransaction, TxTy};
-use reth_revm::{cancelled::CancelOnDrop, database::StateProviderDatabase, db::State};
+use reth_revm::{
+    cancelled::CancelOnDrop, context::either, database::StateProviderDatabase, db::State,
+};
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_engine_primitives::{ScrollBuiltPayload, ScrollPayloadBuilderAttributes};
 use reth_scroll_evm::{ScrollBaseFeeProvider, ScrollNextBlockEnvAttributes};
 use reth_scroll_primitives::{ScrollPrimitives, ScrollTransactionSigned};
 use reth_storage_api::{BaseFeeProvider, StateProvider, StateProviderFactory};
 use reth_transaction_pool::{BestTransactionsAttributes, PoolTransaction, TransactionPool};
-use revm::context::{Block, BlockEnv};
+use revm::context::Block;
 use scroll_alloy_hardforks::ScrollHardforks;
 use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
@@ -308,20 +311,17 @@ impl<Txs> ScrollBuilder<'_, Txs> {
         let execution_outcome = ExecutionOutcome::new(
             db.take_bundle(),
             vec![execution_result.receipts],
-            block.number,
+            block.number(),
             Vec::new(),
         );
 
         // create the executed block data
-        let executed: ExecutedBlockWithTrieUpdates<ScrollPrimitives> =
-            ExecutedBlockWithTrieUpdates {
-                block: ExecutedBlock {
-                    recovered_block: Arc::new(block),
-                    execution_output: Arc::new(execution_outcome),
-                    hashed_state: Arc::new(hashed_state),
-                },
-                trie: ExecutedTrieUpdates::Present(Arc::new(trie_updates)),
-            };
+        let executed: BuiltPayloadExecutedBlock<ScrollPrimitives> = BuiltPayloadExecutedBlock {
+            recovered_block: Arc::new(block),
+            execution_output: Arc::new(execution_outcome),
+            hashed_state: either::Either::Left(Arc::new(hashed_state)),
+            trie_updates: either::Either::Left(Arc::new(trie_updates)),
+        };
 
         let no_tx_pool = ctx.attributes().no_tx_pool;
 
@@ -376,9 +376,9 @@ where
     }
 
     /// Returns the current fee settings for transactions from the mempool
-    pub fn best_transaction_attributes(&self, block_env: &BlockEnv) -> BestTransactionsAttributes {
+    pub fn best_transaction_attributes(&self, block_env: impl Block) -> BestTransactionsAttributes {
         BestTransactionsAttributes::new(
-            block_env.basefee,
+            block_env.basefee(),
             block_env.blob_gasprice().map(|p| p as u64),
         )
     }
@@ -435,7 +435,7 @@ where
         builder: &mut impl BlockBuilder<Primitives = Evm::Primitives>,
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
-        let block_gas_limit = builder.evm().block().gas_limit;
+        let block_gas_limit = builder.evm().block().gas_limit();
         let mut gas_spent_by_transactions = Vec::new();
 
         for sequencer_tx in &self.attributes().transactions {
@@ -506,8 +506,8 @@ where
         builder_config: &ScrollBuilderConfig,
         breaker: PayloadBuildingBreaker,
     ) -> Result<Option<()>, PayloadBuilderError> {
-        let block_gas_limit = builder.evm_mut().block().gas_limit;
-        let base_fee = builder.evm_mut().block().basefee;
+        let block_gas_limit = builder.evm_mut().block().gas_limit();
+        let base_fee = builder.evm_mut().block().basefee();
 
         while let Some(tx) = best_txs.next(()) {
             let tx = tx.into_consensus();
