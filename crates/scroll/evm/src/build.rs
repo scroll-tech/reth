@@ -7,6 +7,7 @@ use reth_evm::execute::{BlockAssembler, BlockAssemblerInput};
 use reth_execution_types::BlockExecutionResult;
 use reth_primitives_traits::SignedTransaction;
 use reth_scroll_primitives::ScrollReceipt;
+use revm::context::Block;
 use scroll_alloy_evm::ScrollBlockExecutionCtx;
 use scroll_alloy_hardforks::ScrollHardforks;
 
@@ -53,7 +54,7 @@ where
             ..
         } = input;
 
-        let timestamp = evm_env.block_env.timestamp;
+        let timestamp = evm_env.block_env.timestamp();
 
         let transactions_root = proofs::calculate_transaction_root(&transactions);
         let receipts_root = ScrollReceipt::calculate_receipt_root_no_memo(receipts);
@@ -69,15 +70,15 @@ where
             withdrawals_root: None,
             logs_bloom,
             timestamp: timestamp.to(),
-            mix_hash: evm_env.block_env.prevrandao.unwrap_or_default(),
+            mix_hash: evm_env.block_env.prevrandao().unwrap_or_default(),
             nonce: BEACON_NONCE.into(),
             base_fee_per_gas: self
                 .chain_spec
-                .is_curie_active_at_block(evm_env.block_env.number.to())
-                .then_some(evm_env.block_env.basefee),
-            number: evm_env.block_env.number.to(),
-            gas_limit: evm_env.block_env.gas_limit,
-            difficulty: evm_env.block_env.difficulty,
+                .is_curie_active_at_block(evm_env.block_env.number().to())
+                .then_some(evm_env.block_env.basefee()),
+            number: evm_env.block_env.number().to(),
+            gas_limit: evm_env.block_env.gas_limit(),
+            difficulty: evm_env.block_env.difficulty(),
             gas_used: *gas_used,
             extra_data: Default::default(),
             parent_beacon_block_root: None,

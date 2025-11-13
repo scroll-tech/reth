@@ -280,7 +280,7 @@ where
                 })?;
             match progress {
                 StateRootProgress::Progress(state, hashed_entries_walked, updates) => {
-                    provider.write_trie_updates(&updates)?;
+                    provider.write_trie_updates(updates)?;
 
                     let mut checkpoint = MerkleCheckpoint::new(
                         to_block,
@@ -323,7 +323,7 @@ where
                     })
                 }
                 StateRootProgress::Complete(root, hashed_entries_walked, updates) => {
-                    provider.write_trie_updates(&updates)?;
+                    provider.write_trie_updates(updates)?;
 
                     entities_checkpoint.processed += hashed_entries_walked as u64;
 
@@ -350,7 +350,7 @@ where
                         error!(target: "sync::stages::merkle", %e, ?current_block_number, ?to_block, "Incremental state root failed! {INVALID_STATE_ROOT_ERROR_MESSAGE}");
                         StageError::Fatal(Box::new(e))
                     })?;
-                provider.write_trie_updates(&updates)?;
+                provider.write_trie_updates(updates)?;
                 final_root = Some(root);
             }
 
@@ -445,7 +445,7 @@ where
             )?;
 
             // Validation passed, apply unwind changes to the database.
-            provider.write_trie_updates(&updates)?;
+            provider.write_trie_updates(updates)?;
 
             // Update entities checkpoint to reflect the unwind operation
             // Since we're unwinding, we need to recalculate the total entities at the target block
@@ -782,7 +782,7 @@ mod tests {
             let hash = last_header.hash_slow();
             writer.prune_headers(1).unwrap();
             writer.commit().unwrap();
-            writer.append_header(&last_header, U256::ZERO, &hash).unwrap();
+            writer.append_header(&last_header, &hash).unwrap();
             writer.commit().unwrap();
 
             Ok(blocks)

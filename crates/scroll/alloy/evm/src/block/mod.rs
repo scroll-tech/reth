@@ -28,7 +28,7 @@ use alloy_primitives::{B256, U256};
 use revm::{
     context::{
         result::{InvalidTransaction, ResultAndState},
-        TxEnv,
+        Block, TxEnv,
     },
     database::State,
     handler::PrecompileProvider,
@@ -154,7 +154,7 @@ where
     fn apply_pre_execution_changes(&mut self) -> Result<(), BlockExecutionError> {
         // set state clear flag if the block is after the Spurious Dragon hardfork.
         let state_clear_flag =
-            self.spec.is_spurious_dragon_active_at_block(self.evm.block().number.to());
+            self.spec.is_spurious_dragon_active_at_block(self.evm.block().number().to());
         self.evm.db_mut().set_state_clear_flag(state_clear_flag);
 
         // load the l1 gas oracle contract in cache.
@@ -169,7 +169,7 @@ where
         if self
             .spec
             .scroll_fork_activation(ScrollHardfork::Curie)
-            .transitions_at_block(self.evm.block().number.to())
+            .transitions_at_block(self.evm.block().number().to())
         {
             if let Err(err) = apply_curie_hard_fork(self.evm.db_mut()) {
                 return Err(BlockExecutionError::msg(format!(
@@ -183,7 +183,7 @@ where
         if self
             .spec
             .scroll_fork_activation(ScrollHardfork::Feynman)
-            .active_at_timestamp(self.evm.block().timestamp.to())
+            .active_at_timestamp(self.evm.block().timestamp().to())
         {
             if let Err(err) = apply_feynman_hard_fork(self.evm.db_mut()) {
                 return Err(BlockExecutionError::msg(format!(
@@ -206,7 +206,7 @@ where
         let is_l1_message = tx.tx().ty() == L1_MESSAGE_TRANSACTION_TYPE;
         // The sum of the transaction’s gas limit and the gas utilized in this block prior,
         // must be no greater than the block’s gasLimit.
-        let block_available_gas = self.evm.block().gas_limit - self.gas_used;
+        let block_available_gas = self.evm.block().gas_limit() - self.gas_used;
         if tx.tx().gas_limit() > block_available_gas {
             return Err(BlockValidationError::TransactionGasLimitMoreThanAvailableBlockGas {
                 transaction_gas_limit: tx.tx().gas_limit(),
@@ -219,14 +219,14 @@ where
 
         let block = self.evm.block();
         // verify the transaction type is accepted by the current fork.
-        if tx.tx().is_eip2930() && !chain_spec.is_curie_active_at_block(block.number.to()) {
+        if tx.tx().is_eip2930() && !chain_spec.is_curie_active_at_block(block.number().to()) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip2930NotSupported),
             }
             .into())
         }
-        if tx.tx().is_eip1559() && !chain_spec.is_curie_active_at_block(block.number.to()) {
+        if tx.tx().is_eip1559() && !chain_spec.is_curie_active_at_block(block.number().to()) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip1559NotSupported),
@@ -241,7 +241,7 @@ where
             .into())
         }
         if tx.tx().is_eip7702() &&
-            !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp.to())
+            !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp().to())
         {
             return Err(BlockValidationError::InvalidTx {
                 hash,
@@ -296,6 +296,7 @@ where
                 receipts: self.receipts,
                 requests: Default::default(),
                 gas_used: self.gas_used,
+                blob_gas_used: 0,
             },
         ))
     }
