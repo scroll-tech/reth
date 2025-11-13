@@ -71,4 +71,4 @@ op = [
     "reth-rpc-convert/op",
     "alloy-evm/op",
 ]
-scroll = ["reth-scroll-evm"]
+scroll = ["reth-scroll-evm", "reth-rpc-convert/scroll"]

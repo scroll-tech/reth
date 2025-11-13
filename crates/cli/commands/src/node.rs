@@ -307,25 +307,40 @@ mod tests {
 
     #[test]
     fn parse_metrics_port() {
-        let cmd: NodeCommand<EthereumChainSpecParser> =
-            NodeCommand::try_parse_args_from(["reth", "--metrics", "9001",            "--builder.gaslimit",
-                "10000000",]).unwrap();
+        let cmd: NodeCommand<EthereumChainSpecParser> = NodeCommand::try_parse_args_from([
+            "reth",
+            "--metrics",
+            "9001",
+            "--builder.gaslimit",
+            "10000000",
+        ])
+        .unwrap();
         assert_eq!(
             cmd.metrics.prometheus,
             Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 9001))
         );
 
-        let cmd: NodeCommand<EthereumChainSpecParser> =
-            NodeCommand::try_parse_args_from(["reth", "--metrics", ":9001",            "--builder.gaslimit",
-                "10000000",]).unwrap();
+        let cmd: NodeCommand<EthereumChainSpecParser> = NodeCommand::try_parse_args_from([
+            "reth",
+            "--metrics",
+            ":9001",
+            "--builder.gaslimit",
+            "10000000",
+        ])
+        .unwrap();
         assert_eq!(
             cmd.metrics.prometheus,
             Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 9001))
         );
 
-        let cmd: NodeCommand<EthereumChainSpecParser> =
-            NodeCommand::try_parse_args_from(["reth", "--metrics", "localhost:9001",            "--builder.gaslimit",
-                "10000000",]).unwrap();
+        let cmd: NodeCommand<EthereumChainSpecParser> = NodeCommand::try_parse_args_from([
+            "reth",
+            "--metrics",
+            "localhost:9001",
+            "--builder.gaslimit",
+            "10000000",
+        ])
+        .unwrap();
         assert_eq!(
             cmd.metrics.prometheus,
             Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 9001))

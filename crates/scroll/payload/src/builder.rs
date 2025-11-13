@@ -30,7 +30,7 @@ use reth_scroll_evm::{ScrollBaseFeeProvider, ScrollNextBlockEnvAttributes};
 use reth_scroll_primitives::{ScrollPrimitives, ScrollTransactionSigned};
 use reth_storage_api::{BaseFeeProvider, StateProvider, StateProviderFactory};
 use reth_transaction_pool::{BestTransactionsAttributes, PoolTransaction, TransactionPool};
-use revm::context::{Block, BlockEnv};
+use revm::context::Block;
 use scroll_alloy_hardforks::ScrollHardforks;
 use std::{boxed::Box, sync::Arc, vec, vec::Vec};
 
@@ -376,9 +376,9 @@ where
     }
 
     /// Returns the current fee settings for transactions from the mempool
-    pub fn best_transaction_attributes(&self, block_env: &BlockEnv) -> BestTransactionsAttributes {
+    pub fn best_transaction_attributes(&self, block_env: impl Block) -> BestTransactionsAttributes {
         BestTransactionsAttributes::new(
-            block_env.basefee,
+            block_env.basefee(),
             block_env.blob_gasprice().map(|p| p as u64),
         )
     }
@@ -435,7 +435,7 @@ where
         builder: &mut impl BlockBuilder<Primitives = Evm::Primitives>,
     ) -> Result<ExecutionInfo, PayloadBuilderError> {
         let mut info = ExecutionInfo::new();
-        let block_gas_limit = builder.evm().block().gas_limit;
+        let block_gas_limit = builder.evm().block().gas_limit();
         let mut gas_spent_by_transactions = Vec::new();
 
         for sequencer_tx in &self.attributes().transactions {
@@ -506,8 +506,8 @@ where
         builder_config: &ScrollBuilderConfig,
         breaker: PayloadBuildingBreaker,
     ) -> Result<Option<()>, PayloadBuilderError> {
-        let block_gas_limit = builder.evm_mut().block().gas_limit;
-        let base_fee = builder.evm_mut().block().basefee;
+        let block_gas_limit = builder.evm_mut().block().gas_limit();
+        let base_fee = builder.evm_mut().block().basefee();
 
         while let Some(tx) = best_txs.next(()) {
             let tx = tx.into_consensus();

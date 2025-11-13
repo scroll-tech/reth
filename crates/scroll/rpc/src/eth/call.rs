@@ -1,6 +1,5 @@
 use crate::{ScrollEthApi, ScrollEthApiError};
 
-use reth_evm::{SpecFor, TxEnvFor};
 use reth_rpc_eth_api::{
     helpers::{estimate::EstimateCall, Call, EthCall},
     RpcConvert, RpcNodeCore,
@@ -11,12 +10,7 @@ impl<N, Rpc> EthCall for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<
-        Primitives = N::Primitives,
-        Error = ScrollEthApiError,
-        TxEnv = TxEnvFor<N::Evm>,
-        Spec = SpecFor<N::Evm>,
-    >,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, Evm = N::Evm>,
 {
 }
 
@@ -24,12 +18,7 @@ impl<N, Rpc> EstimateCall for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<
-        Primitives = N::Primitives,
-        Error = ScrollEthApiError,
-        TxEnv = TxEnvFor<N::Evm>,
-        Spec = SpecFor<N::Evm>,
-    >,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, Evm = N::Evm>,
 {
 }
 
@@ -37,12 +26,7 @@ impl<N, Rpc> Call for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<
-        Primitives = N::Primitives,
-        Error = ScrollEthApiError,
-        TxEnv = TxEnvFor<N::Evm>,
-        Spec = SpecFor<N::Evm>,
-    >,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, Evm = N::Evm>,
 {
     #[inline]
     fn call_gas_limit(&self) -> u64 {

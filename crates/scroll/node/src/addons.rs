@@ -12,6 +12,7 @@ use reth_node_builder::{
     FullNodeComponents,
 };
 use reth_node_types::NodeTypes;
+use reth_revm::context::BlockEnv;
 use reth_rpc_eth_types::error::FromEvmError;
 use reth_scroll_chainspec::ScrollChainSpec;
 use reth_scroll_engine_primitives::ScrollEngineTypes;
@@ -98,7 +99,7 @@ where
         >,
     >,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>>,
+    EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>, BlockEnv = BlockEnv>,
     RpcMiddleware: RethRpcMiddleware,
 {
     type Handle = RpcHandle<N, <ScrollEthApiBuilder as EthApiBuilder<N>>::EthApi>;
@@ -124,7 +125,7 @@ where
         >,
     >,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>>,
+    EvmFactoryFor<N::Evm>: EvmFactory<Tx = ScrollTransactionIntoTxEnv<TxEnv>, BlockEnv = BlockEnv>,
     RpcMiddleware: RethRpcMiddleware,
 {
     type EthApi = <ScrollEthApiBuilder as EthApiBuilder<N>>::EthApi;

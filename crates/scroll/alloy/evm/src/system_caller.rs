@@ -6,7 +6,10 @@ use alloy_evm::{
     Evm,
 };
 use alloy_primitives::B256;
-use revm::{context::result::ResultAndState, DatabaseCommit};
+use revm::{
+    context::{result::ResultAndState, Block},
+    DatabaseCommit,
+};
 use scroll_alloy_hardforks::ScrollHardforks;
 
 /// An ephemeral helper type for executing system calls.
@@ -62,13 +65,13 @@ fn transact_blockhashes_contract_call<Halt>(
     evm: &mut impl Evm<HaltReason = Halt>,
 ) -> Result<Option<ResultAndState<Halt>>, BlockExecutionError> {
     // if Feynman is not active at timestamp then no system transaction occurs.
-    if !spec.is_feynman_active_at_timestamp(evm.block().timestamp.to()) {
+    if !spec.is_feynman_active_at_timestamp(evm.block().timestamp().to()) {
         return Ok(None);
     }
 
     // if the block number is zero (genesis block) then no system transaction may occur as per
     // EIP-2935
-    if evm.block().number.to::<u64>() == 0u64 {
+    if evm.block().number().to::<u64>() == 0u64 {
         return Ok(None);
     }
 
