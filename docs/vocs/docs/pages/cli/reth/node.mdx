@@ -39,7 +39,7 @@ Options:
           Print help (see a summary with '-h')
 
 Metrics:
-      --metrics <SOCKET>
+      --metrics <PROMETHEUS>
           Enable Prometheus metrics.
 
           The metrics will be served at the given interface and port.
@@ -247,6 +247,9 @@ Networking:
 
       --required-block-hashes <REQUIRED_BLOCK_HASHES>
           Comma separated list of required block hashes. Peers that don't have these blocks will be filtered out
+
+      --network-id <NETWORK_ID>
+          Optional network ID to override the chain specification's network ID for P2P connections
 
 RPC:
       --http
@@ -864,6 +867,12 @@ Engine:
       --engine.allow-unwind-canonical-header
           Allow unwinding canonical header to ancestor during forkchoice updates. See `TreeConfig::unwind_canonical_header` for more details
 
+      --engine.storage-worker-count <STORAGE_WORKER_COUNT>
+          Configure the number of storage proof workers in the Tokio blocking pool. If not specified, defaults to 2x available parallelism, clamped between 2 and 64
+
+      --engine.account-worker-count <ACCOUNT_WORKER_COUNT>
+          Configure the number of account proof workers in the Tokio blocking pool. If not specified, defaults to the same count as storage workers
+
 ERA:
       --era.enable
           Enable import from ERA1 files
@@ -984,4 +993,21 @@ Display:
 
   -q, --quiet
           Silence all log output
+
+Tracing:
+      --tracing-otlp[=<URL>]
+          Enable `Opentelemetry` tracing export to an OTLP endpoint.
+
+          If no value provided, defaults to `http://localhost:4318/v1/traces`.
+
+          Example: --tracing-otlp=http://collector:4318/v1/traces
+
+      --tracing-otlp-level <LEVEL>
+          Set the minimum log level for OTLP traces.
+
+          Valid values: ERROR, WARN, INFO, DEBUG, TRACE
+
+          Defaults to TRACE if not specified.
+
+          [default: TRACE]
 ```

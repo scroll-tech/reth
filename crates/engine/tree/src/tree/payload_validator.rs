@@ -43,6 +43,7 @@ use reth_revm::db::State;
 use reth_trie::{updates::TrieUpdates, HashedPostState, KeccakKeyHasher, TrieInput};
 use reth_trie_db::DatabaseHashedPostState;
 use reth_trie_parallel::root::{ParallelStateRoot, ParallelStateRootError};
+use revm::context::Block;
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tracing::{debug, debug_span, error, info, trace, warn};
 
@@ -492,13 +493,15 @@ where
                     ctx.state(),
                 ) {
                     Ok(result) => {
+                        let elapsed = root_time.elapsed();
                         info!(
                             target: "engine::tree",
                             block = ?block_num_hash,
                             regular_state_root = ?result.0,
+                            ?elapsed,
                             "Regular root task finished"
                         );
-                        maybe_state_root = Some((result.0, result.1, root_time.elapsed()));
+                        maybe_state_root = Some((result.0, result.1, elapsed));
                     }
                     Err(error) => {
                         debug!(target: "engine::tree", %error, "Parallel state root computation failed");
@@ -640,7 +643,7 @@ where
         T: PayloadTypes<BuiltPayload: BuiltPayload<Primitives = N>>,
         Evm: ConfigureEngineEvm<T::ExecutionData, Primitives = N>,
     {
-        let num_hash = NumHash::new(env.evm_env.block_env.number.to(), env.hash);
+        let num_hash = NumHash::new(env.evm_env.block_env.number().to(), env.hash);
 
         let span = debug_span!(target: "engine::tree", "execute_block", num = ?num_hash.number, hash = ?num_hash.hash);
         let _enter = span.enter();
@@ -877,17 +880,36 @@ where
                 // too expensive because it requires walking all paths in every proof.
                 let spawn_start = Instant::now();
                 let (handle, strategy) = if trie_input.prefix_sets.is_empty() {
-                    (
-                        self.payload_processor.spawn(
-                            env,
-                            txs,
-                            provider_builder,
-                            consistent_view,
-                            trie_input,
-                            &self.config,
-                        ),
-                        StateRootStrategy::StateRootTask,
-                    )
+                    match self.payload_processor.spawn(
+                        env,
+                        txs,
+                        provider_builder,
+                        consistent_view,
+                        trie_input,
+                        &self.config,
+                    ) {
+                        Ok(handle) => {
+                            // Successfully spawned with state root task support
+                            (handle, StateRootStrategy::StateRootTask)
+                        }
+                        Err((error, txs, env, provider_builder)) => {
+                            // Failed to spawn proof workers, fallback to parallel state root
+                            error!(
+                                target: "engine::tree",
+                                block=?block_num_hash,
+                                ?error,
+                                "Failed to spawn proof workers, falling back to parallel state root"
+                            );
+                            (
+                                self.payload_processor.spawn_cache_exclusive(
+                                    env,
+                                    txs,
+                                    provider_builder,
+                                ),
+                                StateRootStrategy::Parallel,
+                            )
+                        }
+                    }
                 // if prefix sets are not empty, we spawn a task that exclusively handles cache
                 // prewarming for transaction execution
                 } else {

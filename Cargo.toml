@@ -473,7 +473,8 @@ reth-storage-errors = { path = "crates/storage/errors", default-features = false
 reth-tasks = { path = "crates/tasks" }
 reth-testing-utils = { path = "testing/testing-utils" }
 reth-tokio-util = { path = "crates/tokio-util" }
-reth-tracing = { path = "crates/tracing" }
+reth-tracing = { path = "crates/tracing", default-features = false }
+reth-tracing-otlp = { path = "crates/tracing-otlp" }
 reth-transaction-pool = { path = "crates/transaction-pool" }
 reth-trie = { path = "crates/trie/trie", default-features = false }
 reth-trie-common = { path = "crates/trie/common", default-features = false }
@@ -498,20 +499,20 @@ revm-context-interface = { git = "https://github.com/scroll-tech/revm", default-
 revm-database-interface = { git = "https://github.com/scroll-tech/revm", default-features = false }
 op-revm = { git = "https://github.com/scroll-tech/revm", default-features = false }
 revm-scroll = { git = "https://github.com/scroll-tech/scroll-revm", default-features = false }
-revm-inspectors = "0.29.0"
+revm-inspectors = "0.31.0"
 
 # eth
 alloy-chains = { version = "0.2.5", default-features = false }
 alloy-dyn-abi = "1.4.1"
 alloy-eip2124 = { version = "0.2.0", default-features = false }
-alloy-evm = { version = "0.21.2", default-features = false }
-alloy-primitives = { version = "1.3.1", default-features = false, features = ["map-foldhash"] }
+alloy-evm = { version = "0.22.0", default-features = false }
+alloy-primitives = { version = "1.4.1", default-features = false, features = ["map-foldhash"] }
 alloy-rlp = { version = "0.3.10", default-features = false, features = ["core-net"] }
-alloy-sol-macro = "1.3.1"
-alloy-sol-types = { version = "1.3.1", default-features = false }
+alloy-sol-macro = "1.4.1"
+alloy-sol-types = { version = "1.4.1", default-features = false }
 alloy-trie = { version = "0.9.1", default-features = false }
 
-alloy-hardforks = "0.3.5"
+alloy-hardforks = "0.4.0"
 
 alloy-consensus = { version = "1.0.37", default-features = false }
 alloy-contract = { version = "1.0.37", default-features = false }
@@ -563,8 +564,8 @@ reth-scroll-trie = { path = "crates/scroll/trie" }
 reth-scroll-txpool = { path = "crates/scroll/txpool" }
 
 # op
-alloy-op-evm = { version = "0.21.2", default-features = false }
-alloy-op-hardforks = "0.3.5"
+alloy-op-evm = { version = "0.22.0", default-features = false }
+alloy-op-hardforks = "0.4.0"
 op-alloy-rpc-types = { version = "0.20.0", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.20.0", default-features = false }
 op-alloy-network = { version = "0.20.0", default-features = false }
@@ -690,6 +691,13 @@ c-kzg = "2.1.4"
 
 # config
 toml = "0.8"
+
+# otlp obs
+opentelemetry_sdk = "0.31"
+opentelemetry = "0.31"
+opentelemetry-otlp = "0.31"
+opentelemetry-semantic-conventions = "0.31"
+tracing-opentelemetry = "0.32"
 
 # misc-testing
 arbitrary = "1.3"
