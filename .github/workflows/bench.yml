@@ -28,7 +28,7 @@ jobs:
       - name: Install cargo-codspeed
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-codspeed
+          tool: cargo-codspeed@4.0.5
       - name: Build the benchmark target(s)
         run: ./.github/scripts/codspeed-build.sh
       - name: Run the benchmarks
