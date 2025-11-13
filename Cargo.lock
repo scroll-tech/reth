@@ -2981,7 +2981,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.61.1",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3278,7 +3278,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.1",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4596,7 +4596,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.1",
+ "windows-core 0.58.0",
 ]
 
 [[package]]
@@ -6235,7 +6235,7 @@ dependencies = [
 [[package]]
 name = "op-revm"
 version = "11.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "auto_impl",
  "revm",
@@ -7010,7 +7010,7 @@ dependencies = [
  "once_cell",
  "socket2 0.6.0",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11276,7 +11276,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "30.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "revm-bytecode",
  "revm-context",
@@ -11294,7 +11294,7 @@ dependencies = [
 [[package]]
 name = "revm-bytecode"
 version = "7.0.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "bitvec",
  "phf 0.13.1",
@@ -11305,7 +11305,7 @@ dependencies = [
 [[package]]
 name = "revm-context"
 version = "10.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "bitvec",
  "cfg-if",
@@ -11321,7 +11321,7 @@ dependencies = [
 [[package]]
 name = "revm-context-interface"
 version = "11.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -11336,7 +11336,7 @@ dependencies = [
 [[package]]
 name = "revm-database"
 version = "9.0.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "alloy-eips",
  "revm-bytecode",
@@ -11349,7 +11349,7 @@ dependencies = [
 [[package]]
 name = "revm-database-interface"
 version = "8.0.2"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "auto_impl",
  "either",
@@ -11361,7 +11361,7 @@ dependencies = [
 [[package]]
 name = "revm-handler"
 version = "11.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "auto_impl",
  "derive-where",
@@ -11379,7 +11379,7 @@ dependencies = [
 [[package]]
 name = "revm-inspector"
 version = "11.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "auto_impl",
  "either",
@@ -11416,7 +11416,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "27.0.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "revm-bytecode",
  "revm-context-interface",
@@ -11428,7 +11428,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "28.1.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -11452,7 +11452,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "21.0.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "alloy-primitives",
  "num_enum",
@@ -11463,7 +11463,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
-source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Fv88#d5cd004999ad90d781ae6a7e9529a407c951fefd"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Fv88#ae062484bda09e638a4b576dcdfac11dba1823d1"
 dependencies = [
  "auto_impl",
  "enumn",
@@ -11477,7 +11477,7 @@ dependencies = [
 [[package]]
 name = "revm-state"
 version = "8.0.1"
-source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#1f100e1530413270e7334a45ae628bb01535153a"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv88#852d0f9fbfdd579898bc19085b720cc202b68541"
 dependencies = [
  "bitflags 2.9.4",
  "revm-bytecode",
@@ -11735,7 +11735,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.61.1",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -12774,7 +12774,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix 1.1.2",
- "windows-sys 0.61.1",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -13473,7 +13473,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "319c70195101a93f56db4c74733e272d720768e13471f400c78406a326b172b0"
 dependencies = [
  "cc",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -14029,7 +14029,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.1",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -14116,19 +14116,6 @@ dependencies = [
  "windows-link 0.1.3",
  "windows-result 0.3.4",
  "windows-strings 0.4.2",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.62.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6844ee5416b285084d3d3fffd743b925a6c9385455f64f6d4fa3031c4c2749a9"
-dependencies = [
- "windows-implement 0.60.1",
- "windows-interface 0.59.2",
- "windows-link 0.2.0",
- "windows-result 0.4.0",
- "windows-strings 0.5.0",
 ]
 
 [[package]]
@@ -14269,15 +14256,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "windows-result"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7084dcc306f89883455a206237404d3eaf961e5bd7e0f312f7c91f57eb44167f"
-dependencies = [
- "windows-link 0.2.0",
-]
-
-[[package]]
 name = "windows-strings"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14294,15 +14272,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57"
 dependencies = [
  "windows-link 0.1.3",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7218c655a553b0bed4426cf54b20d7ba363ef543b52d515b3e48d7fd55318dda"
-dependencies = [
- "windows-link 0.2.0",
 ]
 
 [[package]]
