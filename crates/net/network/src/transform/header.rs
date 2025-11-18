@@ -2,17 +2,17 @@
 
 use reth_primitives_traits::BlockHeader;
 
-/// An instance of the trait applies a mapping to the input header.
+/// An instance of the trait applies a mapping to the input headers.
 #[async_trait::async_trait]
 pub trait HeaderTransform<H: BlockHeader>: std::fmt::Debug + Send + Sync {
-    /// Applies a mapping to the input header.
-    async fn map(&self, header: H) -> H;
+    /// Applies a mapping to the input headers.
+    async fn map(&self, headers: Vec<H>) -> Vec<H>;
 }
 
 #[async_trait::async_trait]
 impl<H: BlockHeader> HeaderTransform<H> for () {
-    async fn map(&self, header: H) -> H {
-        header
+    async fn map(&self, headers: Vec<H>) -> Vec<H> {
+        headers
     }
 }
 

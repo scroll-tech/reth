@@ -6,7 +6,7 @@ pub use client::FetchClient;
 
 use crate::{message::BlockRequest, session::BlockRangeInfo, transform::header::HeaderTransform};
 use alloy_primitives::B256;
-use futures::{future::join_all, StreamExt};
+use futures::StreamExt;
 use reth_eth_wire::{EthNetworkPrimitives, GetBlockBodies, GetBlockHeaders, NetworkPrimitives};
 use reth_network_api::test_utils::PeersHandle;
 use reth_network_p2p::{
@@ -282,9 +282,7 @@ impl<N: NetworkPrimitives> StateFetcher<N> {
             let header_transform = self.header_transform.clone();
             tokio::spawn(async move {
                 let res = match res {
-                    Ok(headers) => {
-                        Ok(join_all(headers.into_iter().map(|h| header_transform.map(h))).await)
-                    }
+                    Ok(headers) => Ok(header_transform.map(headers).await),
                     Err(e) => Err(e),
                 };
 
