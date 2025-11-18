@@ -3,13 +3,15 @@
 use reth_primitives_traits::BlockHeader;
 
 /// An instance of the trait applies a mapping to the input header.
+#[async_trait::async_trait]
 pub trait HeaderTransform<H: BlockHeader>: std::fmt::Debug + Send + Sync {
     /// Applies a mapping to the input header.
-    fn map(&self, header: H) -> H;
+    async fn map(&self, header: H) -> H;
 }
 
+#[async_trait::async_trait]
 impl<H: BlockHeader> HeaderTransform<H> for () {
-    fn map(&self, header: H) -> H {
+    async fn map(&self, header: H) -> H {
         header
     }
 }

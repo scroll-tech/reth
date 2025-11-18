@@ -56,7 +56,7 @@ pub struct StateFetcher<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// Sender for download requests, used to detach a [`FetchClient`]
     download_requests_tx: UnboundedSender<DownloadRequest<N>>,
     /// A transformation hook applied to the downloaded headers.
-    header_transform: Box<dyn HeaderTransform<N::BlockHeader>>,
+    header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
 }
 
 // === impl StateSyncer ===
@@ -65,7 +65,7 @@ impl<N: NetworkPrimitives> StateFetcher<N> {
     pub(crate) fn new(
         peers_handle: PeersHandle,
         num_active_peers: Arc<AtomicUsize>,
-        header_transform: Box<dyn HeaderTransform<N::BlockHeader>>,
+        header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
     ) -> Self {
         let (download_requests_tx, download_requests_rx) = mpsc::unbounded_channel();
         Self {
@@ -279,10 +279,22 @@ impl<N: NetworkPrimitives> StateFetcher<N> {
             resp.as_ref().is_some_and(|r| res.is_likely_bad_headers_response(&r.request));
 
         if let Some(resp) = resp {
-            // apply the header transform and delegate the response
-            let _ = resp.response.send(res.map(|h| {
-                (peer_id, h.into_iter().map(|h| self.header_transform.map(h)).collect()).into()
-            }));
+            let header_transform = self.header_transform.clone();
+            tokio::spawn(async move {
+                let res = match res {
+                    Ok(headers) => {
+                        let mut transformed_headers = Vec::with_capacity(headers.len());
+                        for header in headers {
+                            let transformed = header_transform.map(header).await;
+                            transformed_headers.push(transformed);
+                        }
+                        Ok(transformed_headers)
+                    }
+                    Err(e) => Err(e),
+                };
+
+                let _ = resp.response.send(res.map(|h| (peer_id, h).into()));
+            });
         }
 
         if let Some(peer) = self.peers.get_mut(&peer_id) {
@@ -496,7 +508,7 @@ mod tests {
         let mut fetcher = StateFetcher::<EthNetworkPrimitives>::new(
             manager.handle(),
             Default::default(),
-            Box::new(()),
+            Arc::new(()),
         );
 
         poll_fn(move |cx| {
@@ -521,7 +533,7 @@ mod tests {
         let mut fetcher = StateFetcher::<EthNetworkPrimitives>::new(
             manager.handle(),
             Default::default(),
-            Box::new(()),
+            Arc::new(()),
         );
         // Add a few random peers
         let peer1 = B512::random();
@@ -548,7 +560,7 @@ mod tests {
         let mut fetcher = StateFetcher::<EthNetworkPrimitives>::new(
             manager.handle(),
             Default::default(),
-            Box::new(()),
+            Arc::new(()),
         );
         // Add a few random peers
         let peer1 = B512::random();
@@ -577,7 +589,7 @@ mod tests {
         let mut fetcher = StateFetcher::<EthNetworkPrimitives>::new(
             manager.handle(),
             Default::default(),
-            Box::new(()),
+            Arc::new(()),
         );
         let peer_id = B512::random();
 
@@ -611,7 +623,7 @@ mod tests {
         let mut fetcher = StateFetcher::<EthNetworkPrimitives>::new(
             manager.handle(),
             Default::default(),
-            Box::new(()),
+            Arc::new(()),
         );
         let peer_id = B512::random();
 

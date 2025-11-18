@@ -102,7 +102,7 @@ impl<N: NetworkPrimitives> NetworkState<N> {
         discovery: Discovery,
         peers_manager: PeersManager,
         num_active_peers: Arc<AtomicUsize>,
-        header_transform: Box<dyn HeaderTransform<N::BlockHeader>>,
+        header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
     ) -> Self {
         let state_fetcher =
             StateFetcher::new(peers_manager.handle(), num_active_peers, header_transform);
@@ -582,7 +582,7 @@ mod tests {
             queued_messages: Default::default(),
             client: BlockNumReader(Box::new(NoopProvider::default())),
             discovery: Discovery::noop(),
-            state_fetcher: StateFetcher::new(handle, Default::default(), Box::new(())),
+            state_fetcher: StateFetcher::new(handle, Default::default(), Arc::new(())),
         }
     }
 

@@ -99,7 +99,7 @@ pub struct NetworkConfig<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     /// If non-empty, peers that don't have these blocks will be filtered out.
     pub required_block_hashes: Vec<B256>,
     /// A transformation hook applied to the downloaded headers.
-    pub header_transform: Box<dyn HeaderTransform<N::BlockHeader>>,
+    pub header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
 }
 
 // === impl NetworkConfig ===
@@ -232,7 +232,7 @@ pub struct NetworkConfigBuilder<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// Optional network id
     network_id: Option<u64>,
     /// The header transform type.
-    header_transform: Option<Box<dyn HeaderTransform<N::BlockHeader>>>,
+    header_transform: Option<Arc<dyn HeaderTransform<N::BlockHeader>>>,
 }
 
 impl NetworkConfigBuilder<EthNetworkPrimitives> {
@@ -605,7 +605,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     /// Sets the header transform type.
     pub fn header_transform(
         mut self,
-        header_transform: Box<dyn HeaderTransform<N::BlockHeader>>,
+        header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
     ) -> Self {
         self.header_transform = Some(header_transform);
         self
@@ -717,7 +717,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             nat,
             handshake,
             required_block_hashes,
-            header_transform: header_transform.unwrap_or_else(|| Box::new(())),
+            header_transform: header_transform.unwrap_or_else(|| Arc::new(())),
         }
     }
 }
