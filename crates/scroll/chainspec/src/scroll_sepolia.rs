@@ -6,7 +6,7 @@ use crate::{
 };
 use alloc::{sync::Arc, vec};
 
-use alloy_chains::{Chain, NamedChain};
+use alloy_chains::Chain;
 use reth_chainspec::{BaseFeeParamsKind, ChainSpec, Hardfork};
 use reth_primitives_traits::SealedHeader;
 use reth_scroll_forks::SCROLL_SEPOLIA_HARDFORKS;
@@ -18,8 +18,7 @@ pub static SCROLL_SEPOLIA: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
         .expect("Can't deserialize Scroll Sepolia genesis json");
     ScrollChainSpec {
         inner: ChainSpec {
-            // TODO(scroll): migrate to Chain::scroll_sepolia() (introduced in https://github.com/alloy-rs/chains/pull/112) when alloy-chains is bumped to version 0.1.48
-            chain: Chain::from_named(NamedChain::ScrollSepolia),
+            chain: Chain::scroll_sepolia(),
             genesis_header: SealedHeader::new(
                 make_genesis_header(&genesis),
                 SCROLL_SEPOLIA_GENESIS_HASH,

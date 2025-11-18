@@ -174,6 +174,20 @@ impl ScrollChainSpecBuilder {
         self
     }
 
+    /// Enable `Feynman` at genesis
+    pub fn feynman_activated(mut self) -> Self {
+        self = self.euclid_v2_activated();
+        self.inner = self.inner.with_fork(ScrollHardfork::Feynman, ForkCondition::Timestamp(0));
+        self
+    }
+
+    /// Enable `Galileo` at genesis
+    pub fn galileo_activated(mut self) -> Self {
+        self = self.feynman_activated();
+        self.inner = self.inner.with_fork(ScrollHardfork::Galileo, ForkCondition::Timestamp(0));
+        self
+    }
+
     /// Build the resulting [`ScrollChainSpec`].
     ///
     /// # Panics
@@ -520,34 +534,42 @@ mod tests {
                     Head { number: 0, ..Default::default() },
                     ForkId { hash: ForkHash([0xea, 0x6b, 0x56, 0xca]), next: 5220340 },
                 ),
+                // Bernoulli
                 (
                     Head { number: 5220340, ..Default::default() },
                     ForkId { hash: ForkHash([0xee, 0x46, 0xae, 0x2a]), next: 7096836 },
                 ),
+                // Curie
                 (
                     Head { number: 7096836, ..Default::default() },
                     ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 1724227200 },
                 ),
+                // Darwin
                 (
                     Head { number: 7096836, timestamp: 1724227200, ..Default::default() },
                     ForkId { hash: ForkHash([0xcc, 0xeb, 0x09, 0xb0]), next: 1725264000 },
                 ),
+                // DarwinV2
                 (
                     Head { number: 7096836, timestamp: 1725264000, ..Default::default() },
                     ForkId { hash: ForkHash([0x21, 0xa2, 0x07, 0x54]), next: 1744815600 },
                 ),
+                // Euclid
                 (
                     Head { number: 7096836, timestamp: 1744815600, ..Default::default() },
                     ForkId { hash: ForkHash([0xca, 0xc5, 0x80, 0xca]), next: 1745305200 },
                 ),
+                // EuclidV2
                 (
                     Head { number: 7096836, timestamp: 1745305200, ..Default::default() },
                     ForkId { hash: ForkHash([0x0e, 0xcf, 0xb2, 0x31]), next: 1755576000 },
                 ),
+                // Feynman
                 (
                     Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
                     ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: u64::MAX },
                 ),
+                // Galileo
                 (
                     Head { number: 7096836, timestamp: u64::MAX, ..Default::default() },
                     ForkId { hash: ForkHash([0x50, 0xe7, 0xe6, 0xd5]), next: 0 },
@@ -558,17 +580,52 @@ mod tests {
 
     #[test]
     fn scroll_mainnet_forkids() {
+        // To maintain compatibility with l2geth, we need to ignore time-based forks in the ForkID.
+
         let cases = [
             (
                 Head { number: 0, ..Default::default() },
                 ForkId { hash: ForkHash([0xea, 0x6b, 0x56, 0xca]), next: 5220340 },
             ),
+            // Bernoulli
             (
                 Head { number: 5220340, ..Default::default() },
                 ForkId { hash: ForkHash([0xee, 0x46, 0xae, 0x2a]), next: 7096836 },
             ),
+            // Curie
             (
                 Head { number: 7096836, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // Note: The following time-based forks are ignored in the ForkID calculation.
+            // Darwin
+            (
+                Head { number: 7096836, timestamp: 1724227200, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // DarwinV2
+            (
+                Head { number: 7096836, timestamp: 1725264000, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // Euclid
+            (
+                Head { number: 7096836, timestamp: 1744815600, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // EuclidV2
+            (
+                Head { number: 7096836, timestamp: 1745305200, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // Feynman
+            (
+                Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // Galileo
+            (
+                Head { number: 7096836, timestamp: u64::MAX, ..Default::default() },
                 ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
             ),
         ];
@@ -612,37 +669,45 @@ mod tests {
                     Head { number: 0, ..Default::default() },
                     ForkId { hash: ForkHash([0x25, 0xfa, 0xe4, 0x54]), next: 3747132 },
                 ),
+                // Bernoulli
                 (
                     Head { number: 3747132, ..Default::default() },
                     ForkId { hash: ForkHash([0xda, 0x76, 0xc2, 0x2d]), next: 4740239 },
                 ),
+                // Curie
                 (
                     Head { number: 4740239, ..Default::default() },
                     ForkId { hash: ForkHash([0x9f, 0xb4, 0x75, 0xf1]), next: 1723622400 },
                 ),
+                // Darwin
                 (
                     Head { number: 4740239, timestamp: 1723622400, ..Default::default() },
                     ForkId { hash: ForkHash([0xe9, 0x26, 0xd4, 0x9b]), next: 1724832000 },
                 ),
+                // DarwinV2
                 (
                     Head { number: 4740239, timestamp: 1724832000, ..Default::default() },
                     ForkId { hash: ForkHash([0x69, 0xf3, 0x7e, 0xde]), next: 1741680000 },
                 ),
+                // Euclid
                 (
                     Head { number: 4740239, timestamp: 1741680000, ..Default::default() },
                     ForkId { hash: ForkHash([0xf7, 0xac, 0x7e, 0xfc]), next: 1741852800 },
                 ),
+                // EuclidV2
                 (
                     Head { number: 4740239, timestamp: 1741852800, ..Default::default() },
                     ForkId { hash: ForkHash([0x51, 0x7e, 0x0f, 0x1c]), next: 1753167600 },
                 ),
+                // Feynman
                 (
                     Head { number: 4740239, timestamp: 1753167600, ..Default::default() },
-                    ForkId { hash: ForkHash([0x19, 0xbb, 0x92, 0xc6]), next: u64::MAX },
+                    ForkId { hash: ForkHash([0x19, 0xbb, 0x92, 0xc6]), next: 1764054000 },
                 ),
+                // Galileo
                 (
-                    Head { number: 4740239, timestamp: u64::MAX, ..Default::default() },
-                    ForkId { hash: ForkHash([0xf8, 0x27, 0xe0, 0xfc]), next: 0 },
+                    Head { number: 4740239, timestamp: 1764054000, ..Default::default() },
+                    ForkId { hash: ForkHash([0xe8, 0xc2, 0x20, 0x80]), next: 0 },
                 ),
             ],
         );
@@ -664,6 +729,10 @@ mod tests {
               "curieBlock": 20,
               "darwinTime": 30,
               "darwinV2Time": 31,
+              "euclidTime": 32,
+              "euclidV2Time": 33,
+              "feynmanTime": 34,
+              "galileoTime": 35,
               "scroll": {
                   "feeVaultAddress": "0x5300000000000000000000000000000000000005",
                   "maxTxPayloadBytesPerBlock": 122880,
@@ -688,6 +757,15 @@ mod tests {
         assert_eq!(actual_darwin_timestamp, Some(serde_json::Value::from(30)).as_ref());
         let actual_darwin_v2_timestamp = genesis.config.extra_fields.get("darwinV2Time");
         assert_eq!(actual_darwin_v2_timestamp, Some(serde_json::Value::from(31)).as_ref());
+        let actual_euclid_timestamp = genesis.config.extra_fields.get("euclidTime");
+        assert_eq!(actual_euclid_timestamp, Some(serde_json::Value::from(32)).as_ref());
+        let actual_euclid_v2_timestamp = genesis.config.extra_fields.get("euclidV2Time");
+        assert_eq!(actual_euclid_v2_timestamp, Some(serde_json::Value::from(33)).as_ref());
+        let actual_feynman_timestamp = genesis.config.extra_fields.get("feynmanTime");
+        assert_eq!(actual_feynman_timestamp, Some(serde_json::Value::from(34)).as_ref());
+        let actual_galileo_timestamp = genesis.config.extra_fields.get("galileoTime");
+        assert_eq!(actual_galileo_timestamp, Some(serde_json::Value::from(35)).as_ref());
+
         let scroll_object = genesis.config.extra_fields.get("scroll").unwrap();
         assert_eq!(
             scroll_object,
@@ -711,11 +789,19 @@ mod tests {
         assert!(!chain_spec.is_fork_active_at_block(ScrollHardfork::Curie, 0));
         assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Darwin, 0));
         assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::DarwinV2, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Euclid, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::EuclidV2, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Feynman, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Galileo, 0));
 
         assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Bernoulli, 10));
         assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Curie, 20));
         assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Darwin, 30));
         assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::DarwinV2, 31));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Euclid, 32));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::EuclidV2, 33));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Feynman, 34));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Galileo, 35));
     }
 
     #[test]

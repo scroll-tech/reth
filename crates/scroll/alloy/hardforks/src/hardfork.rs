@@ -54,7 +54,7 @@ impl ScrollHardfork {
             (Self::Euclid, ForkCondition::Timestamp(1741680000)),
             (Self::EuclidV2, ForkCondition::Timestamp(1741852800)),
             (Self::Feynman, ForkCondition::Timestamp(1753167600)),
-            (Self::Galileo, ForkCondition::Timestamp(u64::MAX)),
+            (Self::Galileo, ForkCondition::Timestamp(1764054000)),
         ]
     }
 }

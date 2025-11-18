@@ -31,7 +31,7 @@ pub async fn setup(
     reth_e2e_test_utils::setup_engine(
         num_nodes,
         Arc::new(
-            ScrollChainSpecBuilder::scroll_mainnet().genesis(genesis).euclid_v2_activated().build(
+            ScrollChainSpecBuilder::scroll_mainnet().genesis(genesis).galileo_activated().build(
                 ScrollChainConfig {
                     max_tx_payload_bytes_per_block: 120 * 1024,
                     ..Default::default()
