@@ -4,7 +4,8 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc as std;
 
-use alloy_hardforks::{EthereumHardfork, EthereumHardforks, ForkCondition};
+pub use alloy_hardforks::ForkCondition;
+use alloy_hardforks::{EthereumHardfork, EthereumHardforks};
 use std::vec::Vec;
 
 pub use hardfork::ScrollHardfork;

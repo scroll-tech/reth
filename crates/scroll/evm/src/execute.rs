@@ -82,7 +82,7 @@ mod tests {
         gas_price_oracle::*,
         ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm, ScrollTxCompressionInfos,
     };
-    use scroll_alloy_hardforks::ScrollHardforks;
+    use scroll_alloy_hardforks::{ForkCondition, ScrollHardfork, ScrollHardforks};
 
     const BLOCK_GAS_LIMIT: u64 = 10_000_000;
     const SCROLL_CHAIN_ID: u64 = 534352;
@@ -91,6 +91,7 @@ mod tests {
     const EUCLID_V2_BLOCK_NUMBER: u64 = 14907015;
     const EUCLID_V2_BLOCK_TIMESTAMP: u64 = 1745305200;
     const FEYNMAN_BLOCK_TIMESTAMP: u64 = 1755576000;
+    const GALILEO_BLOCK_TIMESTAMP: u64 = 1755576001; // TODO(thegaram): update to actual timestamp
 
     fn state() -> State<EmptyDBTyped<Infallible>> {
         let db = EmptyDBTyped::<Infallible>::new();
@@ -106,8 +107,10 @@ mod tests {
         ScrollRethReceiptBuilder,
         Arc<ScrollChainSpec>,
     > {
-        let chain_spec =
-            Arc::new(ScrollChainSpecBuilder::scroll_mainnet().build(ScrollChainConfig::mainnet()));
+        // build chain spec based on mainnet config, with some fork overrides
+        let spec_builder = ScrollChainSpecBuilder::scroll_mainnet()
+            .with_fork(ScrollHardfork::Galileo, ForkCondition::Timestamp(GALILEO_BLOCK_TIMESTAMP));
+        let chain_spec = Arc::new(spec_builder.build(ScrollChainConfig::mainnet()));
         let evm_config = ScrollEvmConfig::scroll(chain_spec.clone());
 
         let evm =
@@ -223,7 +226,7 @@ mod tests {
 
         // determine l1 gas oracle storage
         let l1_gas_oracle_storage =
-            if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
+            if strategy.spec().is_galileo_active_at_timestamp(block_timestamp) {
                 vec![
                     (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
                     (GPO_OVERHEAD_SLOT, U256::from(1000)),
@@ -233,9 +236,9 @@ mod tests {
                     (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
                     (GPO_IS_CURIE_SLOT, U256::from(1)),
                     (GPO_PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
-                    (GPO_PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(5u64)), // apply high penalty
                     (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
-                    (GPO_IS_GALILEO_SLOT, U256::from(1)),
+                    (GPO_IS_GALILEO_SLOT, U256::from(0)), // only activated in `GalileoV2`
                 ]
             } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
@@ -310,7 +313,7 @@ mod tests {
 
         // determine l1 gas oracle storage
         let l1_gas_oracle_storage =
-            if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
+            if strategy.spec().is_galileo_active_at_timestamp(block_timestamp) {
                 vec![
                     (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
                     (GPO_OVERHEAD_SLOT, U256::from(1000)),
@@ -320,9 +323,10 @@ mod tests {
                     (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
                     (GPO_IS_CURIE_SLOT, U256::from(1)),
                     (GPO_PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
-                    (GPO_PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(5u64)),                /* apply high
+                                                                                 * penalty */
                     (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
-                    (GPO_IS_GALILEO_SLOT, U256::from(1)),
+                    (GPO_IS_GALILEO_SLOT, U256::from(0)), // only activated in `GalileoV2`
                 ]
             } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
@@ -520,6 +524,20 @@ mod tests {
     }
 
     #[test]
+    fn test_execute_transaction_l1_message_galileo_fork() -> eyre::Result<()> {
+        // Execute L1 message on galileo block
+        let expected_l1_fee = U256::ZERO;
+        execute_transaction(
+            ScrollTxType::L1Message,
+            CURIE_BLOCK_NUMBER + 1,
+            GALILEO_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
     fn test_execute_transactions_legacy_curie_fork() -> eyre::Result<()> {
         // Execute legacy transaction on curie block
         let expected_l1_fee = U256::from(10);
@@ -549,6 +567,20 @@ mod tests {
             ScrollTxType::Legacy,
             CURIE_BLOCK_NUMBER + 1,
             FEYNMAN_BLOCK_TIMESTAMP,
+            expected_l1_fee,
+            None,
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_execute_transactions_legacy_galileo_fork() -> eyre::Result<()> {
+        // Execute legacy transaction on galileo block
+        let expected_l1_fee = U256::from(182);
+        execute_transaction(
+            ScrollTxType::Legacy,
+            CURIE_BLOCK_NUMBER + 1,
+            GALILEO_BLOCK_TIMESTAMP,
             expected_l1_fee,
             None,
         )?;
