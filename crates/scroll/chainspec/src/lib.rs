@@ -190,7 +190,7 @@ impl ScrollChainSpecBuilder {
 
     /// Enable `GalileoV2` at genesis
     pub fn galileo_v2_activated(mut self) -> Self {
-        self = self.feynman_activated();
+        self = self.galileo_activated();
         self.inner = self.inner.with_fork(ScrollHardfork::GalileoV2, ForkCondition::Timestamp(0));
         self
     }

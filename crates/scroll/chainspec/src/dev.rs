@@ -20,6 +20,7 @@ use scroll_alloy_hardforks::ScrollHardfork;
 pub static SCROLL_DEV: LazyLock<Arc<ScrollChainSpec>> = LazyLock::new(|| {
     // In order to have Feynman activated at block 0, we set the `baseFeePerGas` field of the devnet
     // genesis to 0.
+    // TODO(thegaram): Update L1GasPriceOracle genesis account bytecode and storage.
     let genesis = serde_json::from_str(include_str!("../res/genesis/dev.json"))
         .expect("Can't deserialize Dev testnet genesis json");
 
