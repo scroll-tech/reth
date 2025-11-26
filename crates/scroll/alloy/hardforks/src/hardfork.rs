@@ -24,12 +24,14 @@ hardfork!(
         Feynman,
         /// Galileo <https://docs.scroll.io/en/technology/overview/scroll-upgrades/galileo-upgrade/>
         Galileo,
+        /// GalileoV2 <https://docs.scroll.io/en/technology/overview/scroll-upgrades/galileo-upgrade/>
+        GalileoV2,
     }
 );
 
 impl ScrollHardfork {
     /// Scroll mainnet list of hardforks.
-    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 9] {
+    pub const fn scroll_mainnet() -> [(Self, ForkCondition); 10] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(5220340)),
@@ -40,11 +42,12 @@ impl ScrollHardfork {
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
             (Self::Feynman, ForkCondition::Timestamp(1755576000)),
             (Self::Galileo, ForkCondition::Timestamp(u64::MAX)),
+            (Self::GalileoV2, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 
     /// Scroll sepolia list of hardforks.
-    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 9] {
+    pub const fn scroll_sepolia() -> [(Self, ForkCondition); 10] {
         [
             (Self::Archimedes, ForkCondition::Block(0)),
             (Self::Bernoulli, ForkCondition::Block(3747132)),
@@ -55,6 +58,7 @@ impl ScrollHardfork {
             (Self::EuclidV2, ForkCondition::Timestamp(1741852800)),
             (Self::Feynman, ForkCondition::Timestamp(1753167600)),
             (Self::Galileo, ForkCondition::Timestamp(1764054000)),
+            (Self::GalileoV2, ForkCondition::Timestamp(u64::MAX)),
         ]
     }
 }
@@ -75,6 +79,7 @@ mod tests {
             "eUClidv2",
             "FEYnmaN",
             "gaLiLEo",
+            "gaLiLEov2",
         ];
         let expected_hardforks = [
             ScrollHardfork::Bernoulli,
@@ -85,6 +90,7 @@ mod tests {
             ScrollHardfork::EuclidV2,
             ScrollHardfork::Feynman,
             ScrollHardfork::Galileo,
+            ScrollHardfork::GalileoV2,
         ];
 
         let hardforks: Vec<ScrollHardfork> =

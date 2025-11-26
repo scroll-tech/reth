@@ -71,6 +71,8 @@ pub struct ScrollHardforkInfo {
     pub feynman_time: Option<u64>,
     /// galileo hardfork timestamp
     pub galileo_time: Option<u64>,
+    /// galileoV2 hardfork timestamp
+    pub galileo_v2_time: Option<u64>,
 }
 
 impl ScrollHardforkInfo {
@@ -190,7 +192,8 @@ mod tests {
           "darwinTime": 0,
           "euclidTime": 11,
           "feynmanTime": 100,
-          "galileoTime": 110
+          "galileoTime": 110,
+          "galileoV2Time": 120
         }
         "#;
 
@@ -209,6 +212,7 @@ mod tests {
                 euclid_v2_time: None,
                 feynman_time: Some(100),
                 galileo_time: Some(110),
+                galileo_v2_time: Some(120),
             }
         );
     }
@@ -224,6 +228,7 @@ mod tests {
           "euclidTime": 11,
           "feynmanTime": 100,
           "galileoTime": 110,
+          "galileoV2Time": 120,
           "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
             "maxTxPayloadBytesPerBlock": 122880,
@@ -253,6 +258,7 @@ mod tests {
                 euclid_v2_time: None,
                 feynman_time: Some(100),
                 galileo_time: Some(110),
+                galileo_v2_time: Some(120),
             }),
             scroll_chain_config: ScrollChainConfig {
                 fee_vault_address: Some(address!("5300000000000000000000000000000000000005")),

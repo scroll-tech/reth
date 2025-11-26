@@ -84,6 +84,7 @@ mod tests {
             L1_GAS_PRICE_ORACLE_ADDRESS,
         },
         feynman::{IS_FEYNMAN_SLOT, PENALTY_FACTOR_SLOT, PENALTY_THRESHOLD_SLOT},
+        galileo_v2::IS_GALILEO_SLOT,
         ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm, ScrollTxCompressionInfos,
     };
     use scroll_alloy_hardforks::ScrollHardforks;
@@ -231,7 +232,21 @@ mod tests {
 
         // determine l1 gas oracle storage
         let l1_gas_oracle_storage =
-            if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
+            if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
+                    (PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
+                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                    (IS_GALILEO_SLOT, U256::from(1)),
+                ]
+            } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
                     (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
                     (OVER_HEAD_SLOT, U256::from(1000)),
@@ -304,7 +319,21 @@ mod tests {
 
         // determine l1 gas oracle storage
         let l1_gas_oracle_storage =
-            if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
+            if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
+                vec![
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (OVER_HEAD_SLOT, U256::from(1000)),
+                    (SCALAR_SLOT, U256::from(1000)),
+                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (IS_CURIE_SLOT, U256::from(1)),
+                    (PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
+                    (PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
+                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                    (IS_GALILEO_SLOT, U256::from(1)),
+                ]
+            } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
                     (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
                     (OVER_HEAD_SLOT, U256::from(1000)),

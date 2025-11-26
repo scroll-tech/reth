@@ -57,6 +57,12 @@ pub trait ScrollHardforks: EthereumHardforks {
     fn is_galileo_active_at_timestamp(&self, timestamp: u64) -> bool {
         self.scroll_fork_activation(ScrollHardfork::Galileo).active_at_timestamp(timestamp)
     }
+
+    /// Returns `true` if [`GalileoV2`](ScrollHardfork::GalileoV2) is active at given block
+    /// timestamp.
+    fn is_galileo_v2_active_at_timestamp(&self, timestamp: u64) -> bool {
+        self.scroll_fork_activation(ScrollHardfork::GalileoV2).active_at_timestamp(timestamp)
+    }
 }
 
 /// A type allowing to configure activation [`ForkCondition`]s for a given list of

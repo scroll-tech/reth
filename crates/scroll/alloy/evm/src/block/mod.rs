@@ -1,5 +1,6 @@
 pub mod curie;
 pub mod feynman;
+pub mod galileo_v2;
 
 pub use receipt_builder::{ReceiptBuilderCtx, ScrollReceiptBuilder};
 mod receipt_builder;
@@ -8,6 +9,7 @@ use crate::{
     block::{
         curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
         feynman::apply_feynman_hard_fork,
+        galileo_v2::apply_galileo_v2_hard_fork,
     },
     system_caller::ScrollSystemCaller,
     FromTxWithCompressionInfo, ScrollDefaultPrecompilesFactory, ScrollEvm, ScrollEvmFactory,
@@ -188,6 +190,20 @@ where
             if let Err(err) = apply_feynman_hard_fork(self.evm.db_mut()) {
                 return Err(BlockExecutionError::msg(format!(
                     "error occurred at Feynman fork: {err:?}"
+                )));
+            };
+        }
+
+        // apply gas oracle predeploy upgrade at GalileoV2 transition block.
+        #[allow(clippy::collapsible_if)]
+        if self
+            .spec
+            .scroll_fork_activation(ScrollHardfork::GalileoV2)
+            .active_at_timestamp(self.evm.block().timestamp().to())
+        {
+            if let Err(err) = apply_galileo_v2_hard_fork(self.evm.db_mut()) {
+                return Err(BlockExecutionError::msg(format!(
+                    "error occurred at GalileoV2 fork: {err:?}"
                 )));
             };
         }

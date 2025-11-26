@@ -188,6 +188,13 @@ impl ScrollChainSpecBuilder {
         self
     }
 
+    /// Enable `GalileoV2` at genesis
+    pub fn galileo_v2_activated(mut self) -> Self {
+        self = self.feynman_activated();
+        self.inner = self.inner.with_fork(ScrollHardfork::GalileoV2, ForkCondition::Timestamp(0));
+        self
+    }
+
     /// Build the resulting [`ScrollChainSpec`].
     ///
     /// # Panics
@@ -446,6 +453,7 @@ impl From<Genesis> for ScrollChainSpec {
             (ScrollHardfork::EuclidV2.boxed(), hard_fork_info.euclid_v2_time),
             (ScrollHardfork::Feynman.boxed(), hard_fork_info.feynman_time),
             (ScrollHardfork::Galileo.boxed(), hard_fork_info.galileo_time),
+            (ScrollHardfork::GalileoV2.boxed(), hard_fork_info.galileo_v2_time),
         ];
 
         let mut time_hardforks = time_hardfork_opts
@@ -765,6 +773,8 @@ mod tests {
         assert_eq!(actual_feynman_timestamp, Some(serde_json::Value::from(34)).as_ref());
         let actual_galileo_timestamp = genesis.config.extra_fields.get("galileoTime");
         assert_eq!(actual_galileo_timestamp, Some(serde_json::Value::from(35)).as_ref());
+        let actual_galileo_v2_timestamp = genesis.config.extra_fields.get("galileoV2Time");
+        assert_eq!(actual_galileo_v2_timestamp, Some(serde_json::Value::from(36)).as_ref());
 
         let scroll_object = genesis.config.extra_fields.get("scroll").unwrap();
         assert_eq!(
@@ -793,6 +803,7 @@ mod tests {
         assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::EuclidV2, 0));
         assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Feynman, 0));
         assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Galileo, 0));
+        assert!(!chain_spec.is_fork_active_at_timestamp(ScrollHardfork::GalileoV2, 0));
 
         assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Bernoulli, 10));
         assert!(chain_spec.is_fork_active_at_block(ScrollHardfork::Curie, 20));
@@ -802,6 +813,7 @@ mod tests {
         assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::EuclidV2, 33));
         assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Feynman, 34));
         assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::Galileo, 35));
+        assert!(chain_spec.is_fork_active_at_timestamp(ScrollHardfork::GalileoV2, 36));
     }
 
     #[test]
@@ -830,6 +842,7 @@ mod tests {
                     (String::from("darwinV2Time"), 0.into()),
                     (String::from("feynmanTime"), 0.into()),
                     (String::from("galileoTime"), 0.into()),
+                    (String::from("galileoV2Time"), 0.into()),
                     (
                         String::from("scroll"),
                         serde_json::json!({
@@ -874,6 +887,7 @@ mod tests {
             ScrollHardfork::DarwinV2.boxed(),
             ScrollHardfork::Feynman.boxed(),
             ScrollHardfork::Galileo.boxed(),
+            ScrollHardfork::GalileoV2.boxed(),
         ];
 
         assert!(expected_hardforks
