@@ -26,7 +26,7 @@ pub const IS_GALILEO_SLOT: U256 = U256::from_limbs([12, 0, 0, 0]);
 /// Galileo slot is set to 1 (true) after the GalileoV2 block fork.
 const IS_GALILEO: U256 = U256::from_limbs([1, 0, 0, 0]);
 
-/// Storage update of L1 gas price oracle at Feynman transition.
+/// Storage update of L1 gas price oracle at GalileoV2 transition.
 const GALILEO_V2_L1_GAS_PRICE_ORACLE_STORAGE: [(U256, U256); 1] = [(IS_GALILEO_SLOT, IS_GALILEO)];
 
 /// Applies the Scroll GalileoV2 hard fork to the state:
@@ -36,7 +36,7 @@ pub(super) fn apply_galileo_v2_hard_fork<DB: Database>(
     state: &mut State<DB>,
 ) -> Result<(), DB::Error> {
     // No-op if already applied.
-    // Note: This requires a storage read for every Feynman block, and it means this
+    // Note: This requires a storage read for every block after GalileoV2, and it means this
     // read needs to be included in the execution witness. Unfortunately, there is no
     // other reliable way to apply the change only at the transition block, since
     // `ScrollBlockExecutor` does not have access to the parent timestamp.
