@@ -7,10 +7,10 @@ mod receipt_builder;
 
 use crate::{
     block::{
-        curie::{apply_curie_hard_fork, L1_GAS_PRICE_ORACLE_ADDRESS},
-        feynman::apply_feynman_hard_fork,
+        curie::apply_curie_hard_fork, feynman::apply_feynman_hard_fork,
         galileo_v2::apply_galileo_v2_hard_fork,
     },
+    gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS,
     system_caller::ScrollSystemCaller,
     FromTxWithCompressionInfo, ScrollDefaultPrecompilesFactory, ScrollEvm, ScrollEvmFactory,
     ScrollPrecompilesFactory, ScrollTransactionIntoTxEnv, ToTxWithCompressionInfo,

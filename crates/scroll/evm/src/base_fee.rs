@@ -4,11 +4,8 @@ use alloy_primitives::U256;
 use reth_chainspec::EthChainSpec;
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_storage_api::{BaseFeeProvider, StorageProvider};
-use scroll_alloy_evm::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
+use scroll_alloy_evm::gas_price_oracle::{GPO_L1_BASE_FEE_SLOT, L1_GAS_PRICE_ORACLE_ADDRESS};
 use scroll_alloy_hardforks::ScrollHardforks;
-
-/// L1 gas price oracle base fee slot.
-pub const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
 
 /// Protocol-enforced maximum L2 base fee.
 pub const MAX_L2_BASE_FEE: u64 = 10_000_000_000;
@@ -82,7 +79,7 @@ where
             feynman_base_fee(chain_spec, parent_header, ts, overhead.saturating_to())
         } else {
             let parent_l1_base_fee =
-                provider.storage(L1_GAS_PRICE_ORACLE_ADDRESS, L1_BASE_FEE_SLOT)?;
+                provider.storage(L1_GAS_PRICE_ORACLE_ADDRESS, GPO_L1_BASE_FEE_SLOT)?;
             pre_feynman_base_fee(parent_l1_base_fee, scalar, overhead).saturating_to()
         };
 
@@ -190,7 +187,7 @@ mod tests {
         // helper closure to insert the l1 base fee in state.
         let insert_l1_base_fee = |state: &mut State<EmptyDB>, l1_base_fee: u64| {
             let oracle_storage_pre_fork =
-                PlainStorage::from_iter([(L1_BASE_FEE_SLOT, U256::from(l1_base_fee))]);
+                PlainStorage::from_iter([(GPO_L1_BASE_FEE_SLOT, U256::from(l1_base_fee))]);
             state.insert_account_with_storage(
                 L1_GAS_PRICE_ORACLE_ADDRESS,
                 Default::default(),

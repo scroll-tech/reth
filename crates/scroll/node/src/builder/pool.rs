@@ -162,7 +162,7 @@ mod tests {
         PoolConfig, TransactionOrigin, TransactionPool,
     };
     use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
-    use scroll_alloy_evm::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
+    use scroll_alloy_evm::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
 
     async fn pool() -> (
         ScrollTransactionPool<NoopProvider<ScrollChainSpec, ScrollPrimitives>, DiskFileBlobStore>,

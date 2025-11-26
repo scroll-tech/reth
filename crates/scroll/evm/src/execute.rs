@@ -78,13 +78,8 @@ mod tests {
     use scroll_alloy_consensus::{ScrollTransactionReceipt, ScrollTxEnvelope, ScrollTxType};
     use scroll_alloy_evm::{
         compute_compressed_size, compute_compression_ratio,
-        curie::{
-            BLOB_SCALAR_SLOT, COMMIT_SCALAR_SLOT, CURIE_L1_GAS_PRICE_ORACLE_BYTECODE,
-            CURIE_L1_GAS_PRICE_ORACLE_STORAGE, IS_CURIE_SLOT, L1_BLOB_BASE_FEE_SLOT,
-            L1_GAS_PRICE_ORACLE_ADDRESS,
-        },
-        feynman::{IS_FEYNMAN_SLOT, PENALTY_FACTOR_SLOT, PENALTY_THRESHOLD_SLOT},
-        galileo_v2::IS_GALILEO_SLOT,
+        curie::{CURIE_L1_GAS_PRICE_ORACLE_BYTECODE, CURIE_L1_GAS_PRICE_ORACLE_STORAGE},
+        gas_price_oracle::*,
         ScrollBlockExecutionCtx, ScrollBlockExecutor, ScrollEvm, ScrollTxCompressionInfos,
     };
     use scroll_alloy_hardforks::ScrollHardforks;
@@ -96,10 +91,6 @@ mod tests {
     const EUCLID_V2_BLOCK_NUMBER: u64 = 14907015;
     const EUCLID_V2_BLOCK_TIMESTAMP: u64 = 1745305200;
     const FEYNMAN_BLOCK_TIMESTAMP: u64 = 1755576000;
-
-    const L1_BASE_FEE_SLOT: U256 = U256::from_limbs([1, 0, 0, 0]);
-    const OVER_HEAD_SLOT: U256 = U256::from_limbs([2, 0, 0, 0]);
-    const SCALAR_SLOT: U256 = U256::from_limbs([3, 0, 0, 0]);
 
     fn state() -> State<EmptyDBTyped<Infallible>> {
         let db = EmptyDBTyped::<Infallible>::new();
@@ -234,46 +225,46 @@ mod tests {
         let l1_gas_oracle_storage =
             if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
-                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
-                    (PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
-                    (IS_FEYNMAN_SLOT, U256::from(1)),
-                    (IS_GALILEO_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
+                    (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
+                    (GPO_IS_GALILEO_SLOT, U256::from(1)),
                 ]
             } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
-                    (PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
-                    (PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
-                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_PENALTY_THRESHOLD_SLOT, U256::from(1_000_000_000u64)),
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(1_000_000_000u64)),
+                    (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
                 ]
             } else if strategy.spec().is_curie_active_at_block(block_number) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
                 ]
             } else {
                 vec![
-                    (L1_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
                 ]
             }
             .into_iter()
@@ -321,46 +312,46 @@ mod tests {
         let l1_gas_oracle_storage =
             if strategy.spec().is_galileo_v2_active_at_timestamp(block_timestamp) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
-                    (PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
-                    (PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
-                    (IS_FEYNMAN_SLOT, U256::from(1)),
-                    (IS_GALILEO_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
+                    (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
+                    (GPO_IS_GALILEO_SLOT, U256::from(1)),
                 ]
             } else if strategy.spec().is_feynman_active_at_timestamp(block_timestamp) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
-                    (PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
-                    (PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
-                    (IS_FEYNMAN_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_PENALTY_THRESHOLD_SLOT, U256::from(2_000_000_000u64)), // penalty if <2x
+                    (GPO_PENALTY_FACTOR_SLOT, U256::from(10_000_000_000u64)),   // 10x penalty
+                    (GPO_IS_FEYNMAN_SLOT, U256::from(1)),
                 ]
             } else if strategy.spec().is_curie_active_at_block(block_number) {
                 vec![
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
-                    (L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
-                    (COMMIT_SCALAR_SLOT, U256::from(1000)),
-                    (BLOB_SCALAR_SLOT, U256::from(10000)),
-                    (IS_CURIE_SLOT, U256::from(1)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BLOB_BASE_FEE_SLOT, U256::from(10000)),
+                    (GPO_COMMIT_SCALAR_SLOT, U256::from(1000)),
+                    (GPO_BLOB_SCALAR_SLOT, U256::from(10000)),
+                    (GPO_IS_CURIE_SLOT, U256::from(1)),
                 ]
             } else {
                 vec![
-                    (L1_BASE_FEE_SLOT, U256::from(1000)),
-                    (OVER_HEAD_SLOT, U256::from(1000)),
-                    (SCALAR_SLOT, U256::from(1000)),
+                    (GPO_L1_BASE_FEE_SLOT, U256::from(1000)),
+                    (GPO_OVERHEAD_SLOT, U256::from(1000)),
+                    (GPO_SCALAR_SLOT, U256::from(1000)),
                 ]
             }
             .into_iter()

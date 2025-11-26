@@ -741,6 +741,7 @@ mod tests {
               "euclidV2Time": 33,
               "feynmanTime": 34,
               "galileoTime": 35,
+              "galileoV2Time": 36,
               "scroll": {
                   "feeVaultAddress": "0x5300000000000000000000000000000000000005",
                   "maxTxPayloadBytesPerBlock": 122880,

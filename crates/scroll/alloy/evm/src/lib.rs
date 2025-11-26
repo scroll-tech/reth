@@ -11,6 +11,8 @@ pub use block::{
     ScrollTxCompressionInfos,
 };
 
+pub mod gas_price_oracle;
+
 mod tx;
 pub use tx::{
     compute_compressed_size, compute_compression_ratio, FromTxWithCompressionInfo,

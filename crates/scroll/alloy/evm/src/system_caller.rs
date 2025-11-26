@@ -94,7 +94,7 @@ mod tests {
     use super::*;
     use std::{convert::Infallible, sync::Arc};
 
-    use crate::curie::L1_GAS_PRICE_ORACLE_ADDRESS;
+    use crate::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
     use alloy_consensus::{Block, BlockBody, Header};
     use alloy_eips::eip2935::HISTORY_STORAGE_CODE;
     use alloy_hardforks::ForkCondition;

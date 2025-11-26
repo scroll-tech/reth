@@ -17,7 +17,7 @@ pub use l1::RethL1BlockInfo;
 mod base_fee;
 pub use base_fee::{
     ScrollBaseFeeProvider, DEFAULT_BASE_FEE_OVERHEAD, DEFAULT_BASE_FEE_SCALAR,
-    L1_BASE_FEE_PRECISION, L1_BASE_FEE_SLOT, MAX_L2_BASE_FEE,
+    L1_BASE_FEE_PRECISION, MAX_L2_BASE_FEE,
 };
 
 mod receipt;
@@ -115,12 +115,10 @@ pub fn spec_id_at_timestamp_and_number(
 ) -> ScrollSpecId {
     if chain_spec
         .scroll_fork_activation(ScrollHardfork::GalileoV2)
-        .active_at_timestamp_or_number(timestamp, number)
-    {
-        ScrollSpecId::GALILEO
-    } else if chain_spec
-        .scroll_fork_activation(ScrollHardfork::Galileo)
-        .active_at_timestamp_or_number(timestamp, number)
+        .active_at_timestamp_or_number(timestamp, number) ||
+        chain_spec
+            .scroll_fork_activation(ScrollHardfork::Galileo)
+            .active_at_timestamp_or_number(timestamp, number)
     {
         ScrollSpecId::GALILEO
     } else if chain_spec
