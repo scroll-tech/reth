@@ -63,7 +63,7 @@ pub const GPO_L1_BLOB_BASE_FEE_SLOT: U256 = U256::from_limbs([5, 0, 0, 0]);
 /// Added in the Curie fork.
 pub const GPO_COMMIT_SCALAR_SLOT: U256 = U256::from_limbs([6, 0, 0, 0]);
 
-/// Storage slot for `blobSclar` in the `L1GasPriceOracle` contract.
+/// Storage slot for `blobScalar` in the `L1GasPriceOracle` contract.
 /// Added in the Curie fork.
 pub const GPO_BLOB_SCALAR_SLOT: U256 = U256::from_limbs([7, 0, 0, 0]);
 
