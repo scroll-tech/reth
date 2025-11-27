@@ -42,8 +42,7 @@ impl ScrollHardfork {
             (Self::EuclidV2, ForkCondition::Timestamp(1745305200)),
             (Self::Feynman, ForkCondition::Timestamp(1755576000)),
             (Self::Galileo, ForkCondition::Timestamp(1762506265)),
-            // TODO: update GalileoV2 timestamp when devnet is prepared
-            (Self::GalileoV2, ForkCondition::Timestamp(u64::MAX)),
+            (Self::GalileoV2, ForkCondition::Timestamp(1764244000)),
         ]
     }
 

@@ -41,8 +41,7 @@ pub static SCROLL_MAINNET_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(||
         (ScrollHardfork::EuclidV2.boxed(), ForkCondition::Timestamp(1745305200)),
         (ScrollHardfork::Feynman.boxed(), ForkCondition::Timestamp(1755576000)),
         (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1762506265)),
-        // TODO: update GalileoV2 timestamp when devnet is prepared
-        (ScrollHardfork::GalileoV2.boxed(), ForkCondition::Timestamp(u64::MAX)),
+        (ScrollHardfork::GalileoV2.boxed(), ForkCondition::Timestamp(1764244000)),
     ])
 });
 
