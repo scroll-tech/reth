@@ -67,7 +67,7 @@ pub static SCROLL_SEPOLIA_HARDFORKS: LazyLock<ChainHardforks> = LazyLock::new(||
         (ScrollHardfork::EuclidV2.boxed(), ForkCondition::Timestamp(1741852800)),
         (ScrollHardfork::Feynman.boxed(), ForkCondition::Timestamp(1753167600)),
         (ScrollHardfork::Galileo.boxed(), ForkCondition::Timestamp(1764054000)),
-        (ScrollHardfork::GalileoV2.boxed(), ForkCondition::Timestamp(u64::MAX)),
+        (ScrollHardfork::GalileoV2.boxed(), ForkCondition::Timestamp(1764831600)),
     ])
 });
 

@@ -715,7 +715,12 @@ mod tests {
                 // Galileo
                 (
                     Head { number: 4740239, timestamp: 1764054000, ..Default::default() },
-                    ForkId { hash: ForkHash([0xe8, 0xc2, 0x20, 0x80]), next: u64::MAX },
+                    ForkId { hash: ForkHash([0xe8, 0xc2, 0x20, 0x80]), next: 1764831600 },
+                ),
+                // GalileoV2
+                (
+                    Head { number: 4740239, timestamp: 1764831600, ..Default::default() },
+                    ForkId { hash: ForkHash([0x48, 0xff, 0x11, 0x2e]), next: 0 },
                 ),
             ],
         );
