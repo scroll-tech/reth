@@ -49,6 +49,7 @@ This script will:
 - Use upstream dashboards as the base structure
 - Add K8s variables (env, service) to all dashboards - NO pod variable
 - Transform all PromQL queries to use service-only label selectors
+- Hardcode datasource UID `o59qe-zVz` in all panels
 - Preserve Scroll UIDs
 - Save updated dashboards to `etc/grafana/scroll/`
 
@@ -163,7 +164,24 @@ All Scroll dashboards must include these variables (2 only - NO pod variable):
 }
 ```
 
-**Important:** No `pod` variable - queries aggregate by service only, enabling data continuity when pods are replaced.
+**Important:**
+- No `pod` variable - queries aggregate by service only, enabling data continuity when pods are replaced
+- No `datasource` variable - datasource UID is hardcoded in all panels
+
+### Hardcoded Datasource
+
+All panels and targets use a hardcoded Prometheus datasource UID:
+
+```json
+{
+  "datasource": {
+    "type": "prometheus",
+    "uid": "o59qe-zVz"
+  }
+}
+```
+
+This matches the Scroll deployment's Prometheus datasource configuration.
 
 ### Query Transformation Rules
 
@@ -399,4 +417,7 @@ For questions about this process:
 
 **Last updated:** 2025-12-01
 **Last sync:** 2025-12-01 (Converged with upstream, service-only pattern for data continuity)
-**Pattern:** 2 variables (env, service) - NO pod variable - enables seamless pod replacement
+**Pattern:**
+- 2 variables only: `env`, `service` (NO pod variable)
+- Hardcoded datasource UID: `o59qe-zVz`
+- Enables seamless pod replacement with data continuity

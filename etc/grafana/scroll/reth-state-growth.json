@@ -63,7 +63,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -114,7 +114,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -132,7 +132,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -183,7 +183,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -201,7 +201,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -252,7 +252,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -270,7 +270,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -321,7 +321,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -339,7 +339,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -390,7 +390,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -408,7 +408,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -459,7 +459,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "builder",
           "exemplar": false,
@@ -490,7 +490,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -571,7 +571,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval]))",
@@ -584,7 +584,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval]))",
@@ -598,7 +598,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
@@ -612,7 +612,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval])) + avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval])) + avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
@@ -630,7 +630,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -711,7 +711,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"})",
@@ -724,7 +724,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"})",
@@ -738,7 +738,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"})",
@@ -752,7 +752,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=~\"PlainAccountState|PlainStorageState|Bytecodes\"})",
@@ -770,7 +770,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -849,7 +849,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval]))",
@@ -866,7 +866,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -945,7 +945,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval]))",
@@ -962,7 +962,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1041,7 +1041,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
@@ -1071,7 +1071,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1152,7 +1152,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"}[$interval]))",
@@ -1165,7 +1165,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"}[$interval]))",
@@ -1179,7 +1179,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"}[$interval]))",
@@ -1218,7 +1218,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1299,7 +1299,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Headers\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"})",
@@ -1312,7 +1312,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"})",
@@ -1326,7 +1326,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"})",
@@ -1360,7 +1360,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1439,7 +1439,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"}[$interval]))",
@@ -1456,7 +1456,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1535,7 +1535,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"}[$interval]))",
@@ -1552,7 +1552,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "o59qe-zVz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1631,7 +1631,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "o59qe-zVz"
           },
           "editorMode": "code",
           "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"}[$interval]))",

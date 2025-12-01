@@ -135,11 +135,32 @@ def transform_target(target: Dict) -> Dict:
         target['expr'] = transform_query(target['expr'])
     return target
 
+def set_hardcoded_datasource(obj: Any) -> Any:
+    """Replace all datasource references with hardcoded UID"""
+    if isinstance(obj, dict):
+        # If this is a datasource object, replace with hardcoded UID
+        if 'datasource' in obj:
+            obj['datasource'] = {
+                "type": "prometheus",
+                "uid": "o59qe-zVz"
+            }
+        # Recursively process all dict values
+        for key, value in obj.items():
+            obj[key] = set_hardcoded_datasource(value)
+    elif isinstance(obj, list):
+        # Recursively process all list items
+        return [set_hardcoded_datasource(item) for item in obj]
+
+    return obj
+
 def transform_panel(panel: Dict) -> Dict:
     """Transform all queries in a panel recursively"""
     # Transform targets in this panel
     if 'targets' in panel:
         panel['targets'] = [transform_target(t) for t in panel['targets']]
+
+    # Set hardcoded datasource for panel and all nested objects
+    panel = set_hardcoded_datasource(panel)
 
     # Recursively handle nested panels (rows with collapsed panels)
     if 'panels' in panel:
@@ -173,8 +194,10 @@ def sync_dashboard(upstream_path: str, scroll_uid: str = None, output_path: str 
     panel_count = 0
     target_count = 0
 
+    transformed_panels = []
     for panel in dashboard.get('panels', []):
         panel = transform_panel(panel)
+        transformed_panels.append(panel)
         panel_count += 1
         if 'targets' in panel:
             target_count += len(panel['targets'])
@@ -183,6 +206,8 @@ def sync_dashboard(upstream_path: str, scroll_uid: str = None, output_path: str 
                 panel_count += 1
                 if 'targets' in subpanel:
                     target_count += len(subpanel['targets'])
+
+    dashboard['panels'] = transformed_panels
 
     print(f"  Transformed panels: {panel_count}")
     print(f"  Transformed queries: {target_count}")
