@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""
+Grafana Dashboard K8s Transformation Script
+Syncs upstream dashboard structure with Scroll's Kubernetes customizations
+"""
+
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Dict, Any, List
+from copy import deepcopy
+
+def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
+    """Add standard K8s variables to dashboard templating"""
+    k8s_vars = [
+        {
+            "current": {
+                "selected": False,
+                "text": "default",
+                "value": "default"
+            },
+            "hide": 0,
+            "includeAll": False,
+            "label": "Environment",
+            "multi": False,
+            "name": "env",
+            "options": [],
+            "query": {
+                "qryType": 1,
+                "query": "label_values(env)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": False,
+            "sort": 0,
+            "type": "query"
+        },
+        {
+            "current": {
+                "selected": False,
+                "text": "All",
+                "value": "$__all"
+            },
+            "hide": 0,
+            "includeAll": True,
+            "label": "Pod",
+            "multi": True,
+            "name": "pod",
+            "options": [],
+            "query": {
+                "qryType": 1,
+                "query": "label_values(pod)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": False,
+            "sort": 0,
+            "type": "query"
+        },
+        {
+            "current": {
+                "selected": False,
+                "text": "",
+                "value": ""
+            },
+            "hide": 0,
+            "includeAll": False,
+            "label": "Service",
+            "multi": False,
+            "name": "service",
+            "options": [],
+            "query": {
+                "qryType": 1,
+                "query": "label_values(reth_info{namespace=\"$env\"},service)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": False,
+            "sort": 0,
+            "type": "query"
+        }
+    ]
+
+    if 'templating' not in dashboard:
+        dashboard['templating'] = {'list': []}
+
+    # Remove any existing env, pod, service variables to avoid duplicates
+    existing_vars = [v for v in dashboard['templating']['list']
+                     if v.get('name') not in ['env', 'pod', 'service']]
+
+    # Add K8s variables at the beginning
+    dashboard['templating']['list'] = k8s_vars + existing_vars
+
+    # Preserve scroll UID if provided
+    if preserve_uid:
+        dashboard['uid'] = preserve_uid
+
+    return dashboard
+
+def transform_query(query: str) -> str:
+    """
+    Transform PromQL query to use K8s labels
+    Handles various patterns of instance label usage
+    """
+    if not query or not isinstance(query, str):
+        return query
+
+    original = query
+
+    # Pattern 1: $instance_label="$instance" or $instance_label=~"$instance"
+    query = re.sub(
+        r'\$instance_label\s*=~?\s*["\']?\$instance["\']?',
+        'service=~"$service", pod="$pod"',
+        query
+    )
+
+    # Pattern 2: instance="$instance" or instance=~"$instance" (direct usage)
+    query = re.sub(
+        r'instance\s*=~?\s*["\']?\$instance["\']?',
+        'service="$service", pod="$pod"',
+        query
+    )
+
+    # Pattern 3: {$instance_label="$instance"} at start of label set
+    query = re.sub(
+        r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*,',
+        '{service=~"$service", pod="$pod",',
+        query
+    )
+
+    # Pattern 4: {instance="$instance"} at start of label set
+    query = re.sub(
+        r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*,',
+        '{service="$service", pod="$pod",',
+        query
+    )
+
+    # Pattern 5: , $instance_label="$instance"} at end of label set
+    query = re.sub(
+        r',\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
+        ', service=~"$service", pod="$pod"}',
+        query
+    )
+
+    # Pattern 6: , instance="$instance"} at end of label set
+    query = re.sub(
+        r',\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
+        ', service="$service", pod="$pod"}',
+        query
+    )
+
+    # Pattern 7: {$instance_label="$instance"} as only label
+    query = re.sub(
+        r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
+        '{service="$service", pod="$pod"}',
+        query
+    )
+
+    # Pattern 8: {instance="$instance"} as only label
+    query = re.sub(
+        r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
+        '{service="$service", pod="$pod"}',
+        query
+    )
+
+    return query
+
+def transform_target(target: Dict) -> Dict:
+    """Transform a single query target"""
+    if 'expr' in target and target['expr']:
+        target['expr'] = transform_query(target['expr'])
+    return target
+
+def transform_panel(panel: Dict) -> Dict:
+    """Transform all queries in a panel recursively"""
+    # Transform targets in this panel
+    if 'targets' in panel:
+        panel['targets'] = [transform_target(t) for t in panel['targets']]
+
+    # Recursively handle nested panels (rows with collapsed panels)
+    if 'panels' in panel:
+        panel['panels'] = [transform_panel(p) for p in panel['panels']]
+
+    return panel
+
+def sync_dashboard(upstream_path: str, scroll_uid: str = None, output_path: str = None) -> Dict:
+    """
+    Main sync function: takes upstream dashboard and applies K8s transformations
+
+    Args:
+        upstream_path: Path to upstream dashboard JSON
+        scroll_uid: UID to preserve from scroll version (optional)
+        output_path: Where to save the result (optional, defaults to print)
+
+    Returns:
+        Transformed dashboard dict
+    """
+    # Load upstream dashboard
+    with open(upstream_path, 'r') as f:
+        dashboard = json.load(f)
+
+    print(f"Processing: {dashboard.get('title', 'Unknown')}")
+    print(f"  Upstream panels: {len(dashboard.get('panels', []))}")
+
+    # Add K8s variables
+    dashboard = add_k8s_variables(dashboard, preserve_uid=scroll_uid)
+
+    # Transform all panels
+    panel_count = 0
+    target_count = 0
+
+    for panel in dashboard.get('panels', []):
+        panel = transform_panel(panel)
+        panel_count += 1
+        if 'targets' in panel:
+            target_count += len(panel['targets'])
+        if 'panels' in panel:  # Row with nested panels
+            for subpanel in panel['panels']:
+                panel_count += 1
+                if 'targets' in subpanel:
+                    target_count += len(subpanel['targets'])
+
+    print(f"  Transformed panels: {panel_count}")
+    print(f"  Transformed queries: {target_count}")
+    print(f"  Variables: {len(dashboard['templating']['list'])}")
+
+    # Save if output path provided
+    if output_path:
+        with open(output_path, 'w') as f:
+            json.dump(dashboard, f, indent=2)
+        print(f"  ✓ Saved to: {output_path}")
+
+    return dashboard
+
+def get_scroll_uid(scroll_path: str) -> str:
+    """Extract UID from existing scroll dashboard"""
+    try:
+        with open(scroll_path, 'r') as f:
+            data = json.load(f)
+            return data.get('uid')
+    except:
+        return None
+
+def main():
+    """Process all dashboards"""
+    upstream_dir = Path('etc/grafana/dashboards')
+    scroll_dir = Path('etc/grafana/scroll')
+
+    # Dashboards to sync
+    dashboards = [
+        'overview.json',
+        'reth-discovery.json',
+        'reth-mempool.json',
+        'reth-state-growth.json',
+    ]
+
+    print("=" * 80)
+    print("GRAFANA DASHBOARD SYNCHRONIZATION")
+    print("=" * 80)
+    print()
+
+    for filename in dashboards:
+        upstream_path = upstream_dir / filename
+        scroll_path = scroll_dir / filename
+        output_path = scroll_dir / filename
+
+        # Get scroll UID to preserve
+        scroll_uid = get_scroll_uid(scroll_path) if scroll_path.exists() else None
+
+        print(f"\n{'=' * 80}")
+        print(f"Dashboard: {filename}")
+        if scroll_uid:
+            print(f"  Preserving UID: {scroll_uid}")
+        print(f"{'=' * 80}")
+
+        # Sync and save
+        sync_dashboard(str(upstream_path), scroll_uid, str(output_path))
+
+    print("\n" + "=" * 80)
+    print("SYNCHRONIZATION COMPLETE")
+    print("=" * 80)
+    print("\nNext steps:")
+    print("  1. Review the updated dashboards")
+    print("  2. Validate JSON syntax")
+    print("  3. Test in Grafana")
+    print("  4. Commit changes")
+
+if __name__ == '__main__':
+    main()
