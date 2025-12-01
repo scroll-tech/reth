@@ -47,8 +47,8 @@ python3 claude/tools/sync_dashboard.py
 
 This script will:
 - Use upstream dashboards as the base structure
-- Add K8s variables (env, pod, service) to all dashboards
-- Transform all PromQL queries to use K8s label selectors
+- Add K8s variables (env, service) to all dashboards - NO pod variable
+- Transform all PromQL queries to use service-only label selectors
 - Preserve Scroll UIDs
 - Save updated dashboards to `etc/grafana/scroll/`
 
@@ -95,7 +95,7 @@ Before committing:
    ```
 
 2. **Test each dashboard:**
-   - [ ] Variables populate correctly (env, pod, service)
+   - [ ] Variables populate correctly (env, service) - only 2 variables
    - [ ] All panels display data
    - [ ] No query errors
    - [ ] New panels work as expected
@@ -135,32 +135,35 @@ git push
 
 ### Standard K8s Variables
 
-All Scroll dashboards must include these variables:
+All Scroll dashboards must include these variables (2 only - NO pod variable):
 
 ```json
 {
   "name": "env",
   "type": "query",
-  "query": "label_values(env)",
-  "label": "Environment"
-}
-
-{
-  "name": "pod",
-  "type": "query",
-  "query": "label_values(pod)",
-  "label": "Pod",
-  "multi": true,
-  "includeAll": true
+  "definition": "label_values(env)",
+  "query": {
+    "qryType": 1,
+    "query": "label_values(env)",
+    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+  },
+  "regex": "(sepolia|mainnet)-eks.*"
 }
 
 {
   "name": "service",
   "type": "query",
-  "query": "label_values(reth_info{namespace=\"$env\"},service)",
-  "label": "Service"
+  "definition": "label_values(reth_info{namespace=\"$env\"},service)",
+  "query": {
+    "qryType": 1,
+    "query": "label_values(reth_info{namespace=\"$env\"},service)",
+    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+  },
+  "regex": "(l[1|2]reth.*)"
 }
 ```
+
+**Important:** No `pod` variable - queries aggregate by service only, enabling data continuity when pods are replaced.
 
 ### Query Transformation Rules
 
@@ -168,9 +171,9 @@ The sync script applies these transformations:
 
 | Upstream Pattern | Scroll Pattern (K8s) |
 |------------------|----------------------|
-| `$instance_label="$instance"` | `service=~"$service", pod="$pod"` |
-| `instance="$instance"` | `service="$service", pod="$pod"` |
-| `instance=~"$instance"` | `service=~"$service", pod="$pod"` |
+| `$instance_label="$instance"` | `service=~"$service"` |
+| `instance="$instance"` | `service=~"$service"` |
+| `instance=~"$instance"` | `service=~"$service"` |
 
 **Example:**
 ```promql
@@ -178,8 +181,16 @@ The sync script applies these transformations:
 reth_database_operation_duration{$instance_label="$instance", quantile="0.99"}
 
 # Scroll (after transformation):
-reth_database_operation_duration{service=~"$service", pod="$pod", quantile="0.99"}
+reth_database_operation_duration{service=~"$service", quantile="0.99"}
 ```
+
+### Data Continuity Feature
+
+By using **service-only** filtering (no pod label), dashboards maintain historical data when pods are replaced:
+- Old pod dies → new pod starts with different name
+- Both pods share the same `service` label
+- Queries aggregate across all pods for that service
+- Historical data remains visible seamlessly
 
 ## Handling Special Cases
 
@@ -387,4 +398,5 @@ For questions about this process:
 ---
 
 **Last updated:** 2025-12-01
-**Last sync:** 2025-12-01 (Initial convergence with upstream)
+**Last sync:** 2025-12-01 (Converged with upstream, service-only pattern for data continuity)
+**Pattern:** 2 variables (env, service) - NO pod variable - enables seamless pod replacement

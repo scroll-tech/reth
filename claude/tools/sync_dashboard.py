@@ -12,18 +12,14 @@ from typing import Dict, Any, List
 from copy import deepcopy
 
 def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
-    """Add standard K8s variables to dashboard templating"""
+    """Add standard K8s variables to dashboard templating (env and service only)"""
     k8s_vars = [
         {
             "current": {
-                "selected": False,
-                "text": "default",
-                "value": "default"
+                "text": "mainnet",
+                "value": "mainnet"
             },
-            "hide": 0,
-            "includeAll": False,
-            "label": "Environment",
-            "multi": False,
+            "definition": "label_values(env)",
             "name": "env",
             "options": [],
             "query": {
@@ -32,44 +28,15 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
                 "refId": "PrometheusVariableQueryEditor-VariableQuery"
             },
             "refresh": 1,
-            "regex": "",
-            "skipUrlSync": False,
-            "sort": 0,
+            "regex": "(sepolia|mainnet)-eks.*",
             "type": "query"
         },
         {
             "current": {
-                "selected": False,
-                "text": "All",
-                "value": "$__all"
+                "text": "l1reth-el-0",
+                "value": "l1reth-el-0"
             },
-            "hide": 0,
-            "includeAll": True,
-            "label": "Pod",
-            "multi": True,
-            "name": "pod",
-            "options": [],
-            "query": {
-                "qryType": 1,
-                "query": "label_values(pod)",
-                "refId": "PrometheusVariableQueryEditor-VariableQuery"
-            },
-            "refresh": 1,
-            "regex": "",
-            "skipUrlSync": False,
-            "sort": 0,
-            "type": "query"
-        },
-        {
-            "current": {
-                "selected": False,
-                "text": "",
-                "value": ""
-            },
-            "hide": 0,
-            "includeAll": False,
-            "label": "Service",
-            "multi": False,
+            "definition": "label_values(reth_info{namespace=\"$env\"},service)",
             "name": "service",
             "options": [],
             "query": {
@@ -78,9 +45,7 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
                 "refId": "PrometheusVariableQueryEditor-VariableQuery"
             },
             "refresh": 1,
-            "regex": "",
-            "skipUrlSync": False,
-            "sort": 0,
+            "regex": "(l[1|2]reth.*)",
             "type": "query"
         }
     ]
@@ -88,12 +53,9 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
     if 'templating' not in dashboard:
         dashboard['templating'] = {'list': []}
 
-    # Remove any existing env, pod, service variables to avoid duplicates
-    existing_vars = [v for v in dashboard['templating']['list']
-                     if v.get('name') not in ['env', 'pod', 'service']]
-
-    # Add K8s variables at the beginning
-    dashboard['templating']['list'] = k8s_vars + existing_vars
+    # Replace ALL variables with ONLY K8s variables (env, pod, service)
+    # This ensures we only have the 3 required K8s variables
+    dashboard['templating']['list'] = k8s_vars
 
     # Preserve scroll UID if provided
     if preserve_uid:
@@ -103,67 +65,65 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
 
 def transform_query(query: str) -> str:
     """
-    Transform PromQL query to use K8s labels
-    Handles various patterns of instance label usage
+    Transform PromQL query to use K8s labels (service only, no pod)
+    This enables data continuity when pods are replaced
     """
     if not query or not isinstance(query, str):
         return query
 
-    original = query
-
     # Pattern 1: $instance_label="$instance" or $instance_label=~"$instance"
     query = re.sub(
         r'\$instance_label\s*=~?\s*["\']?\$instance["\']?',
-        'service=~"$service", pod="$pod"',
+        'service=~"$service"',
         query
     )
 
     # Pattern 2: instance="$instance" or instance=~"$instance" (direct usage)
     query = re.sub(
         r'instance\s*=~?\s*["\']?\$instance["\']?',
-        'service="$service", pod="$pod"',
+        'service=~"$service"',
         query
     )
 
     # Pattern 3: {$instance_label="$instance"} at start of label set
     query = re.sub(
         r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*,',
-        '{service=~"$service", pod="$pod",',
+        '{service=~"$service",',
         query
     )
 
     # Pattern 4: {instance="$instance"} at start of label set
     query = re.sub(
         r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*,',
-        '{service="$service", pod="$pod",',
+        '{service=~"$service",',
         query
     )
 
     # Pattern 5: , $instance_label="$instance"} at end of label set
     query = re.sub(
         r',\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        ', service=~"$service", pod="$pod"}',
+        ', service=~"$service"}',
         query
     )
 
     # Pattern 6: , instance="$instance"} at end of label set
     query = re.sub(
         r',\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        ', service="$service", pod="$pod"}',
+        ', service=~"$service"}',
         query
     )
 
     # Pattern 7: {$instance_label="$instance"} as only label
     query = re.sub(
         r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        '{service="$service", pod="$pod"}',
+        '{service=~"$service"}',
         query
     )
 
     # Pattern 8: {instance="$instance"} as only label
     query = re.sub(
         r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        '{service="$service", pod="$pod"}',
+        '{service=~"$service"}',
         query
     )
 
