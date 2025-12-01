@@ -118,7 +118,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{version}}",
           "range": false,
@@ -187,7 +187,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{build_timestamp}}",
           "range": false,
@@ -256,7 +256,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{git_sha}}",
           "range": false,
@@ -325,7 +325,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{build_profile}}",
           "range": false,
@@ -394,7 +394,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{target_triple}}",
           "range": false,
@@ -463,7 +463,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "reth_info{service=~\"$service\"}",
+          "expr": "reth_info{service=\"$service\"}",
           "instant": true,
           "legendFormat": "{{cargo_features}}",
           "range": false,
@@ -574,7 +574,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainAccountState\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "Account",
@@ -587,7 +587,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainStorageState\"}[$interval]))",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -601,7 +601,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Bytecodes\"}[$interval]))",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -615,7 +615,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval])) + avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval])) + avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainAccountState\"}[$interval])) + avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainStorageState\"}[$interval])) + avg(delta(reth_db_table_size{service=\"$service\", table=\"Bytecodes\"}[$interval]))",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -714,7 +714,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"PlainAccountState\"})",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "Account",
@@ -727,7 +727,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"PlainStorageState\"})",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -741,7 +741,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"Bytecodes\"})",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -755,7 +755,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=~\"PlainAccountState|PlainStorageState|Bytecodes\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=~\"PlainAccountState|PlainStorageState|Bytecodes\"})",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -852,7 +852,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainAccountState\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainAccountState\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",
@@ -948,7 +948,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"PlainStorageState\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"PlainStorageState\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",
@@ -1044,7 +1044,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Bytecodes\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Bytecodes\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",
@@ -1155,7 +1155,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"headers\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "Headers",
@@ -1168,7 +1168,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"receipts\"}[$interval]))",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -1182,7 +1182,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"transactions\"}[$interval]))",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -1302,7 +1302,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Headers\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"Headers\"}) + sum(reth_static_files_segment_size{service=\"$service\", segment=\"headers\"})",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "Headers",
@@ -1315,7 +1315,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"Receipts\"}) + sum(reth_static_files_segment_size{service=\"$service\", segment=\"receipts\"})",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -1329,7 +1329,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "sum(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}) + sum(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"})",
+          "expr": "sum(reth_db_table_size{service=\"$service\", table=\"Transactions\"}) + sum(reth_static_files_segment_size{service=\"$service\", segment=\"transactions\"})",
           "hide": false,
           "instant": false,
           "interval": "$interval",
@@ -1442,7 +1442,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"headers\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Headers\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"headers\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",
@@ -1538,7 +1538,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"receipts\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Receipts\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"receipts\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",
@@ -1634,7 +1634,7 @@
             "uid": "o59qe-zVz"
           },
           "editorMode": "code",
-          "expr": "avg(delta(reth_db_table_size{service=~\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=~\"$service\", segment=\"transactions\"}[$interval]))",
+          "expr": "avg(delta(reth_db_table_size{service=\"$service\", table=\"Transactions\"}[$interval])) + avg(delta(reth_static_files_segment_size{service=\"$service\", segment=\"transactions\"}[$interval]))",
           "instant": false,
           "interval": "$interval",
           "legendFormat": "__auto",

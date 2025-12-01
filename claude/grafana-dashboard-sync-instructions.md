@@ -189,9 +189,11 @@ The sync script applies these transformations:
 
 | Upstream Pattern | Scroll Pattern (K8s) |
 |------------------|----------------------|
-| `$instance_label="$instance"` | `service=~"$service"` |
-| `instance="$instance"` | `service=~"$service"` |
-| `instance=~"$instance"` | `service=~"$service"` |
+| `$instance_label="$instance"` | `service="$service"` |
+| `instance="$instance"` | `service="$service"` |
+| `instance=~"$instance"` | `service="$service"` |
+
+**Important:** Uses exact match (`=`) not regex match (`=~`) for precise service filtering.
 
 **Example:**
 ```promql
@@ -199,7 +201,7 @@ The sync script applies these transformations:
 reth_database_operation_duration{$instance_label="$instance", quantile="0.99"}
 
 # Scroll (after transformation):
-reth_database_operation_duration{service=~"$service", quantile="0.99"}
+reth_database_operation_duration{service="$service", quantile="0.99"}
 ```
 
 ### Data Continuity Feature
@@ -209,6 +211,7 @@ By using **service-only** filtering (no pod label), dashboards maintain historic
 - Both pods share the same `service` label
 - Queries aggregate across all pods for that service
 - Historical data remains visible seamlessly
+- **Exact match** ensures `service-0` only shows `service-0` data, not `service-1`
 
 ## Handling Special Cases
 
