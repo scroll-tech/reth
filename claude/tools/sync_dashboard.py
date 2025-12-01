@@ -65,8 +65,9 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
 
 def transform_query(query: str) -> str:
     """
-    Transform PromQL query to use K8s labels (service only, no pod)
+    Transform PromQL query to use K8s labels (service and namespace, no pod)
     Uses exact match (=) not regex (=~) for precise service filtering
+    Includes namespace filter to prevent cross-environment aggregation
     This enables data continuity when pods are replaced
     """
     if not query or not isinstance(query, str):
@@ -75,56 +76,56 @@ def transform_query(query: str) -> str:
     # Pattern 1: $instance_label="$instance" or $instance_label=~"$instance"
     query = re.sub(
         r'\$instance_label\s*=~?\s*["\']?\$instance["\']?',
-        'service="$service"',
+        'service="$service", namespace="$env"',
         query
     )
 
     # Pattern 2: instance="$instance" or instance=~"$instance" (direct usage)
     query = re.sub(
         r'instance\s*=~?\s*["\']?\$instance["\']?',
-        'service="$service"',
+        'service="$service", namespace="$env"',
         query
     )
 
     # Pattern 3: {$instance_label="$instance"} at start of label set
     query = re.sub(
         r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*,',
-        '{service="$service",',
+        '{service="$service", namespace="$env",',
         query
     )
 
     # Pattern 4: {instance="$instance"} at start of label set
     query = re.sub(
         r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*,',
-        '{service="$service",',
+        '{service="$service", namespace="$env",',
         query
     )
 
     # Pattern 5: , $instance_label="$instance"} at end of label set
     query = re.sub(
         r',\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        ', service="$service"}',
+        ', service="$service", namespace="$env"}',
         query
     )
 
     # Pattern 6: , instance="$instance"} at end of label set
     query = re.sub(
         r',\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        ', service="$service"}',
+        ', service="$service", namespace="$env"}',
         query
     )
 
     # Pattern 7: {$instance_label="$instance"} as only label
     query = re.sub(
         r'\{\s*\$instance_label\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        '{service="$service"}',
+        '{service="$service", namespace="$env"}',
         query
     )
 
     # Pattern 8: {instance="$instance"} as only label
     query = re.sub(
         r'\{\s*instance\s*=~?\s*["\']?\$instance["\']?\s*\}',
-        '{service="$service"}',
+        '{service="$service", namespace="$env"}',
         query
     )
 

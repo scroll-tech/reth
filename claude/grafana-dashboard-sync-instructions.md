@@ -189,11 +189,13 @@ The sync script applies these transformations:
 
 | Upstream Pattern | Scroll Pattern (K8s) |
 |------------------|----------------------|
-| `$instance_label="$instance"` | `service="$service"` |
-| `instance="$instance"` | `service="$service"` |
-| `instance=~"$instance"` | `service="$service"` |
+| `$instance_label="$instance"` | `service="$service", namespace="$env"` |
+| `instance="$instance"` | `service="$service", namespace="$env"` |
+| `instance=~"$instance"` | `service="$service", namespace="$env"` |
 
-**Important:** Uses exact match (`=`) not regex match (`=~`) for precise service filtering.
+**Important:**
+- Uses exact match (`=`) not regex match (`=~`) for precise service filtering
+- Includes `namespace="$env"` to prevent cross-environment data aggregation
 
 **Example:**
 ```promql
@@ -201,17 +203,18 @@ The sync script applies these transformations:
 reth_database_operation_duration{$instance_label="$instance", quantile="0.99"}
 
 # Scroll (after transformation):
-reth_database_operation_duration{service="$service", quantile="0.99"}
+reth_database_operation_duration{service="$service", namespace="$env", quantile="0.99"}
 ```
 
 ### Data Continuity Feature
 
-By using **service-only** filtering (no pod label), dashboards maintain historical data when pods are replaced:
+By using **service and namespace** filtering (no pod label), dashboards maintain historical data when pods are replaced:
 - Old pod dies → new pod starts with different name
-- Both pods share the same `service` label
-- Queries aggregate across all pods for that service
+- Both pods share the same `service` and `namespace` labels
+- Queries aggregate across all pods for that service in that environment
 - Historical data remains visible seamlessly
 - **Exact match** ensures `service-0` only shows `service-0` data, not `service-1`
+- **Namespace filter** prevents cross-environment data mixing (mainnet vs sepolia)
 
 ## Handling Special Cases
 
