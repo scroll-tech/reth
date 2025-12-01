@@ -53,9 +53,12 @@ def add_k8s_variables(dashboard: Dict, preserve_uid: str = None) -> Dict:
     if 'templating' not in dashboard:
         dashboard['templating'] = {'list': []}
 
-    # Replace ALL variables with ONLY K8s variables (env, pod, service)
-    # This ensures we only have the 3 required K8s variables
-    dashboard['templating']['list'] = k8s_vars
+    # Preserve dashboard-specific variables (like interval for reth-state-growth)
+    existing_vars = dashboard.get('templating', {}).get('list', [])
+    preserved_vars = [v for v in existing_vars if v.get('name') in ['interval']]
+
+    # Replace with K8s variables + preserved dashboard-specific variables
+    dashboard['templating']['list'] = k8s_vars + preserved_vars
 
     # Preserve scroll UID if provided
     if preserve_uid:

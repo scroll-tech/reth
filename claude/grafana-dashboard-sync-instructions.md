@@ -48,6 +48,7 @@ python3 claude/tools/sync_dashboard.py
 This script will:
 - Use upstream dashboards as the base structure
 - Add K8s variables (env, service) to all dashboards - NO pod variable
+- Preserve dashboard-specific variables (e.g., interval) alongside K8s variables
 - Transform all PromQL queries to use service-only label selectors
 - Hardcode datasource UID `o59qe-zVz` in all panels
 - Preserve Scroll UIDs
@@ -167,6 +168,7 @@ All Scroll dashboards must include these variables (2 only - NO pod variable):
 **Important:**
 - No `pod` variable - queries aggregate by service only, enabling data continuity when pods are replaced
 - No `datasource` variable - datasource UID is hardcoded in all panels
+- **Dashboard-specific variables are preserved:** Some dashboards have additional variables (e.g., `interval` in reth-state-growth.json) that must be preserved alongside the K8s variables
 
 ### Hardcoded Datasource
 
