@@ -91,7 +91,7 @@ mod tests {
     const EUCLID_V2_BLOCK_NUMBER: u64 = 14907015;
     const EUCLID_V2_BLOCK_TIMESTAMP: u64 = 1745305200;
     const FEYNMAN_BLOCK_TIMESTAMP: u64 = 1755576000;
-    const GALILEO_BLOCK_TIMESTAMP: u64 = 1755576001; // TODO(thegaram): update to actual timestamp
+    const GALILEO_BLOCK_TIMESTAMP: u64 = 1765868400;
 
     fn state() -> State<EmptyDBTyped<Infallible>> {
         let db = EmptyDBTyped::<Infallible>::new();

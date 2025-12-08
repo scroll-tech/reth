@@ -575,12 +575,17 @@ mod tests {
                 // Feynman
                 (
                     Head { number: 7096836, timestamp: 1755576000, ..Default::default() },
-                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: u64::MAX },
+                    ForkId { hash: ForkHash([0x38, 0x0f, 0x78, 0x5d]), next: 1765868400 },
                 ),
                 // Galileo
                 (
-                    Head { number: 7096836, timestamp: u64::MAX, ..Default::default() },
-                    ForkId { hash: ForkHash([0x50, 0xe7, 0xe6, 0xd5]), next: 0 },
+                    Head { number: 7096836, timestamp: 1765868400, ..Default::default() },
+                    ForkId { hash: ForkHash([0x58, 0xdf, 0x9b, 0x21]), next: 1766041200 },
+                ),
+                // GalileoV2
+                (
+                    Head { number: 7096836, timestamp: 1766041200, ..Default::default() },
+                    ForkId { hash: ForkHash([0xca, 0x90, 0x54, 0xd4]), next: 0 },
                 ),
             ],
         );
@@ -633,7 +638,12 @@ mod tests {
             ),
             // Galileo
             (
-                Head { number: 7096836, timestamp: u64::MAX, ..Default::default() },
+                Head { number: 7096836, timestamp: 1765868400, ..Default::default() },
+                ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
+            ),
+            // GalileoV2
+            (
+                Head { number: 7096836, timestamp: 1766041200, ..Default::default() },
                 ForkId { hash: ForkHash([0x18, 0xd3, 0xc8, 0xd9]), next: 0 },
             ),
         ];
