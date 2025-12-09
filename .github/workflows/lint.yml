@@ -277,7 +277,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo install --locked --git https://github.com/openvm-org/openvm.git --tag v1.4.0 cargo-openvm
+      - run: cargo install --locked --git https://github.com/openvm-org/openvm.git --tag v1.4.1 cargo-openvm
       - name: verify openvm compatibility
         env:
           OPENVM_RUST_TOOLCHAIN: nightly-2025-08-18
