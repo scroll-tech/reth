@@ -2,6 +2,7 @@
 
 use core::time::Duration;
 use reth_chainspec::MIN_TRANSACTION_GAS;
+use reth_primitives_traits::constants::GAS_LIMIT_BOUND_DIVISOR;
 use std::{fmt::Debug, time::Instant};
 
 /// Settings for the Scroll builder.
@@ -28,9 +29,11 @@ impl ScrollBuilderConfig {
         Self { gas_limit, time_limit, max_da_block_size }
     }
 
-    /// Returns the [`PayloadBuildingBreaker`] for the config.
-    pub(super) fn breaker(&self) -> PayloadBuildingBreaker {
-        PayloadBuildingBreaker::new(self.time_limit, self.gas_limit, self.max_da_block_size)
+    /// Returns the [`PayloadBuildingBreaker`] for the config with the actual gas limit used.
+    ///
+    /// The `actual_gas_limit` should be the gas limit after clamping based on parent's gas limit.
+    pub(super) fn breaker_with_gas_limit(&self, actual_gas_limit: u64) -> PayloadBuildingBreaker {
+        PayloadBuildingBreaker::new(self.time_limit, Some(actual_gas_limit), self.max_da_block_size)
     }
 }
 
@@ -76,6 +79,17 @@ impl PayloadBuildingBreaker {
 
         false
     }
+}
+
+/// Calculate the gas limit for the next block based on parent and desired gas limits.
+///
+/// The gas limit can only change by at most `parent_gas_limit / 1024` per block.
+/// Ref: <https://github.com/ethereum/go-ethereum/blob/88cbfab332c96edfbe99d161d9df6a40721bd786/core/block_validator.go#L166>
+pub fn calculate_block_gas_limit(parent_gas_limit: u64, desired_gas_limit: u64) -> u64 {
+    let delta = (parent_gas_limit / GAS_LIMIT_BOUND_DIVISOR).saturating_sub(1);
+    let min_gas_limit = parent_gas_limit.saturating_sub(delta);
+    let max_gas_limit = parent_gas_limit.saturating_add(delta);
+    desired_gas_limit.clamp(min_gas_limit, max_gas_limit)
 }
 
 #[cfg(test)]
@@ -127,5 +141,73 @@ mod tests {
         assert!(!breaker.should_break(MIN_TRANSACTION_GAS, u64::MAX));
         // But should still break on gas limit
         assert!(breaker.should_break(MIN_TRANSACTION_GAS + 1, u64::MAX));
+    }
+
+    #[test]
+    fn test_calculate_block_gas_limit_within_bounds() {
+        let parent_gas_limit = GAS_LIMIT_BOUND_DIVISOR * 10; // 10240
+        let delta = parent_gas_limit / GAS_LIMIT_BOUND_DIVISOR - 1; // 9
+
+        // Desired equals parent - should return parent
+        assert_eq!(calculate_block_gas_limit(parent_gas_limit, parent_gas_limit), parent_gas_limit);
+
+        // Small increase within bounds
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit + 5),
+            parent_gas_limit + 5
+        );
+
+        // Small decrease within bounds
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit - 5),
+            parent_gas_limit - 5
+        );
+
+        // Exactly at max allowed increase
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit + delta),
+            parent_gas_limit + delta
+        );
+
+        // Exactly at max allowed decrease
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit - delta),
+            parent_gas_limit - delta
+        );
+    }
+
+    #[test]
+    fn test_calculate_block_gas_limit_clamped_increase() {
+        let parent_gas_limit = GAS_LIMIT_BOUND_DIVISOR * 10; // 10240
+        let delta = parent_gas_limit / GAS_LIMIT_BOUND_DIVISOR - 1; // 9
+        let max_gas_limit = parent_gas_limit + delta;
+
+        // Desired exceeds max - should clamp to max
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit + delta + 1),
+            max_gas_limit
+        );
+
+        // Large increase - should clamp
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit * 2),
+            max_gas_limit
+        );
+    }
+
+    #[test]
+    fn test_calculate_block_gas_limit_clamped_decrease() {
+        let parent_gas_limit = GAS_LIMIT_BOUND_DIVISOR * 10; // 10240
+        let delta = parent_gas_limit / GAS_LIMIT_BOUND_DIVISOR - 1; // 9
+        let min_gas_limit = parent_gas_limit - delta;
+
+        // Desired below min - should clamp to min
+        assert_eq!(
+            calculate_block_gas_limit(parent_gas_limit, parent_gas_limit - delta - 1),
+            min_gas_limit
+        );
+
+        // Much lower than allowed - should clamp
+        assert_eq!(calculate_block_gas_limit(parent_gas_limit, 0), min_gas_limit);
     }
 }

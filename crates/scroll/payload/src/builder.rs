@@ -1,7 +1,7 @@
 //! Scroll's payload builder implementation.
 
 use super::ScrollPayloadBuilderError;
-use crate::config::{PayloadBuildingBreaker, ScrollBuilderConfig};
+use crate::config::{calculate_block_gas_limit, PayloadBuildingBreaker, ScrollBuilderConfig};
 
 use alloy_consensus::{Transaction, Typed2718};
 use alloy_primitives::U256;
@@ -239,11 +239,17 @@ impl<Txs> ScrollBuilder<'_, Txs> {
     {
         let Self { best } = self;
         tracing::debug!(target: "payload_builder", id=%ctx.payload_id(), parent_header = ?ctx.parent().hash(), parent_number = ctx.parent().number, "building new payload");
-        let breaker = builder_config.breaker();
-
         let mut db = State::builder().with_database(db).with_bundle_update().build();
 
         let mut builder = ctx.block_builder(&mut db, builder_config)?;
+
+        // Create the breaker with the actual block gas limit (after clamping based on parent).
+        // The configured gas_limit may differ from the actual block gas limit because it gets
+        // clamped to not exceed parent_gas_limit ± parent_gas_limit/1024. Using the actual
+        // block gas limit ensures the breaker exits the transaction loop at the right time,
+        // avoiding wasted work trying to add transactions that won't fit.
+        let block_gas_limit = builder.evm().block().gas_limit();
+        let breaker = builder_config.breaker_with_gas_limit(block_gas_limit);
 
         // 1. apply pre-execution changes
         builder.apply_pre_execution_changes().map_err(|err| {
@@ -394,6 +400,9 @@ where
     }
 
     /// Prepares a [`BlockBuilder`] for the next block.
+    ///
+    /// The gas limit is clamped based on the parent block's gas limit to ensure it does not
+    /// increase or decrease by more than `parent_gas_limit / 1024` per block.
     pub fn block_builder<'a, DB: Database>(
         &'a self,
         db: &'a mut State<DB>,
@@ -405,6 +414,17 @@ where
             .next_block_base_fee(db, self.parent().header(), self.attributes().timestamp())
             .map_err(|err| PayloadBuilderError::Other(Box::new(err)))?;
 
+        // Get the desired gas limit from attributes or config
+        let desired_gas_limit = self
+            .attributes()
+            .gas_limit
+            .unwrap_or_else(|| builder_config.gas_limit.unwrap_or_default());
+
+        // Clamp the gas limit based on parent's gas limit.
+        // The gas limit can only change by at most `parent_gas_limit / 1024` per block.
+        let parent_gas_limit = self.parent().gas_limit();
+        let gas_limit = calculate_block_gas_limit(parent_gas_limit, desired_gas_limit);
+
         self.evm_config
             .builder_for_next_block(
                 db,
@@ -412,10 +432,7 @@ where
                 ScrollNextBlockEnvAttributes {
                     timestamp: self.attributes().timestamp(),
                     suggested_fee_recipient: self.attributes().suggested_fee_recipient(),
-                    gas_limit: self
-                        .attributes()
-                        .gas_limit
-                        .unwrap_or_else(|| builder_config.gas_limit.unwrap_or_default()),
+                    gas_limit,
                     base_fee,
                 },
             )
