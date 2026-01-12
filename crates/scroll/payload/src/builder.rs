@@ -3,7 +3,7 @@
 use super::ScrollPayloadBuilderError;
 use crate::config::{calculate_block_gas_limit, PayloadBuildingBreaker, ScrollBuilderConfig};
 
-use alloy_consensus::{Transaction, Typed2718};
+use alloy_consensus::{BlockHeader, Transaction, Typed2718};
 use alloy_primitives::U256;
 use alloy_rlp::Encodable;
 use core::fmt::Debug;
