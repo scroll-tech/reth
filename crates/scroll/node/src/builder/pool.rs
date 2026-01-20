@@ -98,7 +98,8 @@ where
             let client = ctx.provider().clone();
             let transactions_backup_config =
                 reth_transaction_pool::maintain::LocalTransactionBackupConfig::with_local_txs_backup(transactions_path);
-            let base_fee_provider = ScrollBaseFeeProvider::new(ctx.chain_spec());
+            let base_fee_provider =
+                ScrollBaseFeeProvider::new(ctx.chain_spec(), ctx.config().builder.shadowfork);
 
             ctx.task_executor().spawn_critical_with_graceful_shutdown_signal(
                 "local transactions backup task",
