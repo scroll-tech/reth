@@ -118,7 +118,7 @@ where
             let mut rewards: Vec<Vec<u128>> = Vec::new();
 
             let chain_spec = self.provider().chain_spec();
-            let base_fee_provider = ScrollBaseFeeProvider::new(chain_spec.clone());
+            let base_fee_provider = ScrollBaseFeeProvider::new(chain_spec.clone(), false);
 
             // Check if the requested range is within the cache bounds
             let fee_entries = self.fee_history_cache().get_history(start_block, end_block).await;
