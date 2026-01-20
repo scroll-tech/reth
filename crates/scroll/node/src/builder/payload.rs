@@ -74,6 +74,7 @@ impl<Txs> ScrollPayloadBuilderBuilder<Txs> {
                 self.payload_building_time_limit,
                 self.block_da_size_limit,
             ),
+            ctx.config().builder.shadowfork,
         )
         .with_transactions(self.best_transactions);
 

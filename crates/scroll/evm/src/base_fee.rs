@@ -32,12 +32,15 @@ const INITIAL_BASE_FEE: u64 = 10_000_000;
 
 /// The Scroll base fee provider implementation.
 #[derive(Clone, Debug, Default)]
-pub struct ScrollBaseFeeProvider<ChainSpec>(ChainSpec);
+pub struct ScrollBaseFeeProvider<ChainSpec> {
+    chain_spec: ChainSpec,
+    shadowfork: bool,
+}
 
 impl<ChainSpec> ScrollBaseFeeProvider<ChainSpec> {
     /// Returns a new instance of a [`ScrollBaseFeeProvider`].
-    pub const fn new(chain_spec: ChainSpec) -> Self {
-        Self(chain_spec)
+    pub const fn new(chain_spec: ChainSpec, shadowfork: bool) -> Self {
+        ScrollBaseFeeProvider { chain_spec, shadowfork }
     }
 }
 
@@ -52,7 +55,12 @@ where
         parent_header: &H,
         ts: u64,
     ) -> Result<u64, P::Error> {
-        let chain_spec = &self.0;
+        // 1 wei - minimal gas price for devnet replaying mainnet txs
+        if self.shadowfork {
+            return Ok(1);
+        }
+
+        let chain_spec = &self.chain_spec;
 
         // Return early if Curie isn't active. This branch will be taken by the
         // `ScrollPayloadBuilder` when executing `PayloadAttributes` that were derived from the L1
@@ -176,7 +184,7 @@ mod tests {
             State::builder().with_database(db).with_bundle_update().without_state_clear().build();
 
         // init the provider and parent header.
-        let base_fee_provider = ScrollBaseFeeProvider::new(SCROLL_MAINNET.clone());
+        let base_fee_provider = ScrollBaseFeeProvider::new(SCROLL_MAINNET.clone(), false);
         let parent_header = alloy_consensus::Header {
             timestamp: CURIE_TIMESTAMP,
             number: CURIE_BLOCK,
