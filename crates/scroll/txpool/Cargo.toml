@@ -45,3 +45,4 @@ tracing.workspace = true
 [dev-dependencies]
 reth-scroll-chainspec.workspace = true
 reth-provider = { workspace = true, features = ["test-utils"] }
+scroll-alloy-evm.workspace = true

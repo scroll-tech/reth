@@ -45,6 +45,10 @@ pub struct ScrollTransactionValidator<Client, Tx> {
     /// If true, ensure that the transaction's sender has enough balance to cover the L1 gas fee
     /// derived from the tracked L1 block info.
     require_l1_data_gas_fee: bool,
+    /// If true, require additional L1 data fee buffer in balance check.
+    /// When enabled, validates balance >= `L2_cost` + 2*`L1_cost` but only charges `L2_cost` +
+    /// 1*`L1_cost`.
+    require_l1_data_fee_buffer: bool,
 }
 
 impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
@@ -82,6 +86,18 @@ impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
     pub const fn requires_l1_data_gas_fee(&self) -> bool {
         self.require_l1_data_gas_fee
     }
+
+    /// Enable L1 data fee buffer check (disabled by default).
+    /// When enabled, validates balance >= `L2_cost` + 2*`L1_cost` but only charges `L2_cost` +
+    /// 1*`L1_cost`.
+    pub fn require_l1_data_fee_buffer(self, require: bool) -> Self {
+        Self { require_l1_data_fee_buffer: require, ..self }
+    }
+
+    /// Returns whether this validator requires the L1 data fee buffer check.
+    pub const fn requires_l1_data_fee_buffer(&self) -> bool {
+        self.require_l1_data_fee_buffer
+    }
 }
 
 impl<Client, Tx> ScrollTransactionValidator<Client, Tx>
@@ -108,7 +124,12 @@ where
         inner: EthTransactionValidator<Client, Tx>,
         block_info: ScrollL1BlockInfo,
     ) -> Self {
-        Self { inner, block_info: Arc::new(block_info), require_l1_data_gas_fee: true }
+        Self {
+            inner,
+            block_info: Arc::new(block_info),
+            require_l1_data_gas_fee: true,
+            require_l1_data_fee_buffer: false,
+        }
     }
 
     /// Update the L1 block info for the given header and system transaction, if any.
@@ -184,7 +205,7 @@ where
             let compression_ratio = compute_compression_ratio(valid_tx.transaction().input());
             let compressed_size = compute_compressed_size(&encoded);
 
-            let cost_addition = match l1_block_info.l1_tx_data_fee(
+            let l1_data_fee = match l1_block_info.l1_tx_data_fee(
                 self.chain_spec(),
                 self.block_timestamp(),
                 self.block_number(),
@@ -198,14 +219,21 @@ where
                 }
             };
             // Check rollup fee is under u64::MAX.
-            if cost_addition >= MAX_ROLLUP_FEE {
+            if l1_data_fee >= MAX_ROLLUP_FEE {
                 return TransactionValidationOutcome::Invalid(
                     valid_tx.into_transaction(),
                     InvalidTransactionError::GasUintOverflow.into(),
                 )
             }
 
-            let cost = valid_tx.transaction().cost().saturating_add(cost_addition);
+            let cost = valid_tx.transaction().cost().saturating_add(l1_data_fee);
+
+            // Optionally add buffer (1 additional unit of L1 data fee)
+            let cost = if self.requires_l1_data_fee_buffer() {
+                cost.saturating_add(l1_data_fee)
+            } else {
+                cost
+            };
 
             // Checks for max cost
             if cost > balance {

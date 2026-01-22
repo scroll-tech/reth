@@ -223,17 +223,18 @@ impl<Cons: ScrollTransaction, Pooled> ScrollTransaction for ScrollPooledTransact
 #[cfg(test)]
 mod tests {
     use crate::{ScrollPooledTransaction, ScrollTransactionValidator};
-    use alloy_consensus::{transaction::Recovered, Signed};
+    use alloy_consensus::{transaction::Recovered, Header, Signed, TxLegacy};
     use alloy_eips::eip2718::Encodable2718;
-    use alloy_primitives::Signature;
-    use reth_provider::test_utils::MockEthProvider;
-    use reth_scroll_chainspec::SCROLL_MAINNET;
-    use reth_scroll_primitives::ScrollTransactionSigned;
+    use alloy_primitives::{private::rand::random_iter, Bytes, Signature, B256, U256};
+    use reth_provider::test_utils::{ExtendedAccount, MockEthProvider};
+    use reth_scroll_chainspec::{SCROLL_DEV, SCROLL_MAINNET};
+    use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives, ScrollTransactionSigned};
     use reth_transaction_pool::{
         blobstore::InMemoryBlobStore, validate::EthTransactionValidatorBuilder, TransactionOrigin,
         TransactionValidationOutcome,
     };
-    use scroll_alloy_consensus::{ScrollTypedTransaction, TxL1Message};
+    use scroll_alloy_consensus::{ScrollTxEnvelope, ScrollTypedTransaction, TxL1Message};
+    use scroll_alloy_evm::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
     #[test]
     fn validate_scroll_transaction() {
         let client = MockEthProvider::default().with_chain_spec(SCROLL_MAINNET.clone());
@@ -259,5 +260,103 @@ mod tests {
             _ => panic!("Expected invalid transaction"),
         };
         assert_eq!(err.to_string(), "transaction type not supported");
+    }
+
+    /// Helper function to create a test client with L1 gas price oracle storage configured.
+    /// Uses `u32::MAX` for storage values to produce significant L1 fees (similar to existing
+    /// tests).
+    fn create_test_client_with_l1_oracle(
+        signer: alloy_primitives::Address,
+        balance: U256,
+    ) -> MockEthProvider<ScrollPrimitives, std::sync::Arc<reth_scroll_chainspec::ScrollChainSpec>>
+    {
+        let client =
+            MockEthProvider::<ScrollPrimitives, _>::new().with_chain_spec(SCROLL_DEV.clone());
+        let hash = B256::random();
+
+        // Load a header, block, signer and the L1_GAS_PRICE_ORACLE_ADDRESS storage.
+        client.add_header(hash, Header::default());
+        client.add_block(hash, ScrollBlock::default());
+        client.add_account(signer, ExtendedAccount::new(0, balance));
+        // Use u32::MAX for storage values (same as test_validate_one_rollup_fee_exceeds_balance)
+        // This produces L1 fees around 483 trillion wei per the existing test
+        client.add_account(
+            L1_GAS_PRICE_ORACLE_ADDRESS,
+            ExtendedAccount::new(0, U256::ZERO).extend_storage(
+                (0u8..8).map(|k| (B256::from(U256::from(k)), U256::from(u32::MAX))),
+            ),
+        );
+        client
+    }
+
+    /// Creates a test legacy transaction with random input data.
+    fn create_test_legacy_tx(signer: alloy_primitives::Address) -> ScrollPooledTransaction {
+        let tx = ScrollTxEnvelope::Legacy(Signed::new_unchecked(
+            TxLegacy {
+                gas_limit: 55_000, // Need higher gas for tx with input data
+                gas_price: 7,
+                input: Bytes::from(random_iter::<u8>().take(100).collect::<Vec<_>>()),
+                ..Default::default()
+            },
+            Signature::new(U256::ZERO, U256::ZERO, false),
+            Default::default(),
+        ));
+        ScrollPooledTransaction::new(Recovered::new_unchecked(tx, signer), 200)
+    }
+
+    #[test]
+    fn test_validate_with_l1_data_fee_buffer() {
+        // This test verifies that when the L1 data fee buffer is enabled,
+        // a transaction that would pass without buffer fails because it requires 2x L1 cost.
+        let signer = Default::default();
+
+        // Balance covers L2_cost + 1*L1_cost but NOT L2_cost + 2*L1_cost
+        // With u32::MAX storage values, L1 cost is ~483 Twei (per existing test)
+        // L2_cost = 55,000 * 7 = 385,000 wei
+        // L2_cost + 1*L1_cost ≈ 483 Twei
+        // L2_cost + 2*L1_cost ≈ 967 Twei
+        // Balance of 500 Twei is between these values
+        let balance = U256::from(500_000_000_000_000u64);
+        let client = create_test_client_with_l1_oracle(signer, balance);
+
+        let validator = EthTransactionValidatorBuilder::new(client.clone())
+            .no_shanghai()
+            .no_cancun()
+            .build(InMemoryBlobStore::default());
+        let buffer_validator = ScrollTransactionValidator::new(validator)
+            .require_l1_data_gas_fee(true)
+            .require_l1_data_fee_buffer(true);
+
+        let validator = EthTransactionValidatorBuilder::new(client)
+            .no_shanghai()
+            .no_cancun()
+            .build(InMemoryBlobStore::default());
+        let no_buffer_validator = ScrollTransactionValidator::new(validator)
+            .require_l1_data_gas_fee(true)
+            .require_l1_data_fee_buffer(false);
+
+        let pool_tx = create_test_legacy_tx(signer);
+        let outcome = buffer_validator.validate_one(TransactionOrigin::External, pool_tx.clone());
+
+        // Should fail with InsufficientFunds because buffer requires 2x L1 cost
+        match &outcome {
+            TransactionValidationOutcome::Invalid(_, err) => {
+                let err_str = err.to_string().to_lowercase();
+                assert!(
+                    err_str.contains("not have enough funds") || err_str.contains("insufficient"),
+                    "Expected InsufficientFunds error, got: {err}"
+                );
+            }
+            _ => panic!("Expected Invalid outcome with buffer enabled, got: {outcome:?}"),
+        }
+
+        // Now validate the same transaction without buffer, which should succeed
+        let outcome = no_buffer_validator.validate_one(TransactionOrigin::External, pool_tx);
+
+        // Should succeed because without buffer, only 1x L1 cost is required
+        assert!(
+            matches!(outcome, TransactionValidationOutcome::Valid { .. }),
+            "Expected Valid outcome without buffer, got: {outcome:?}"
+        );
     }
 }
