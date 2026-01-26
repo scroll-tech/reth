@@ -23,4 +23,7 @@ pub trait EthWireProvider<N: NetworkPrimitives> {
 
     /// Announce a new block to the network over the eth wire protocol.
     fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256);
+
+    /// Announce a new block to the network over the eth wire protocol.
+    fn eth_wire_announce_block_to(&self, peer_id: PeerId, block: N::NewBlockPayload, hash: B256);
 }
