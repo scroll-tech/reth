@@ -224,7 +224,7 @@ impl<N: NetworkPrimitives> EthWireProvider<N> for NoopNetwork<N> {
         unreachable!()
     }
 
-    fn eth_wire_announce_block_to(
+    fn eth_wire_announce_block_to_peer(
         &self,
         _peer_id: PeerId,
         _block: <N as NetworkPrimitives>::NewBlockPayload,
