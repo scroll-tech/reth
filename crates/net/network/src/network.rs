@@ -1,6 +1,10 @@
 use crate::{
-    config::NetworkMode, message::PeerMessage, protocol::RlpxSubProtocol,
-    swarm::NetworkConnectionState, transactions::TransactionsHandle, FetchClient,
+    config::NetworkMode,
+    message::{NewBlockMessage, PeerMessage},
+    protocol::RlpxSubProtocol,
+    swarm::NetworkConnectionState,
+    transactions::TransactionsHandle,
+    FetchClient,
 };
 use alloy_primitives::B256;
 use enr::Enr;
@@ -236,6 +240,16 @@ impl<N: NetworkPrimitives> EthWireProvider<N> for NetworkHandle<N> {
 
     fn eth_wire_announce_block(&self, block: N::NewBlockPayload, hash: B256) {
         self.announce_block(block, hash)
+    }
+
+    fn eth_wire_announce_block_to_peer(
+        &self,
+        peer_id: PeerId,
+        block: N::NewBlockPayload,
+        hash: B256,
+    ) {
+        let msg = NewBlockMessage { hash, block: Arc::new(block) };
+        self.send_eth_message(peer_id, PeerMessage::NewBlock(msg))
     }
 }
 
