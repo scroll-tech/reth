@@ -446,7 +446,7 @@ mod tests {
 
         // check oracle contract contains storage changeset
         let mut storage = oracle.storage.into_iter().collect::<Vec<(U256, StorageSlot)>>();
-        storage.sort_by(|(a, _), (b, _)| a.cmp(b));
+        storage.sort_by_key(|(a, _)| *a);
         for (got, expected) in storage.into_iter().zip(CURIE_L1_GAS_PRICE_ORACLE_STORAGE) {
             assert_eq!(got.0, expected.0);
             assert_eq!(got.1, StorageSlot { present_value: expected.1, ..Default::default() });
