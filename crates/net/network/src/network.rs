@@ -242,7 +242,12 @@ impl<N: NetworkPrimitives> EthWireProvider<N> for NetworkHandle<N> {
         self.announce_block(block, hash)
     }
 
-    fn eth_wire_announce_block_to_peer(&self, peer_id: PeerId, block: N::NewBlockPayload, hash: B256) {
+    fn eth_wire_announce_block_to_peer(
+        &self,
+        peer_id: PeerId,
+        block: N::NewBlockPayload,
+        hash: B256,
+    ) {
         let msg = NewBlockMessage { hash, block: Arc::new(block) };
         self.send_eth_message(peer_id, PeerMessage::NewBlock(msg))
     }
