@@ -24,21 +24,13 @@ use scroll_alloy_hardforks::ScrollHardforks;
 pub struct ScrollPoolBuilder<T = reth_scroll_txpool::ScrollPooledTransaction> {
     /// Enforced overrides that are applied to the pool config.
     pub pool_config_overrides: PoolBuilderConfigOverrides,
-    /// Require L1 data fee buffer in balance check.
-    /// When enabled, validates balance >= `L2_cost` + 2*`L1_cost` but only charges `L2_cost` +
-    /// 1*`L1_cost`.
-    pub require_l1_data_fee_buffer: bool,
     /// Marker for the pooled transaction type.
     _pd: core::marker::PhantomData<T>,
 }
 
 impl<T> Default for ScrollPoolBuilder<T> {
     fn default() -> Self {
-        Self {
-            pool_config_overrides: Default::default(),
-            require_l1_data_fee_buffer: false,
-            _pd: Default::default(),
-        }
+        Self { pool_config_overrides: Default::default(), _pd: Default::default() }
     }
 }
 
@@ -49,14 +41,6 @@ impl<T> ScrollPoolBuilder<T> {
         pool_config_overrides: PoolBuilderConfigOverrides,
     ) -> Self {
         self.pool_config_overrides = pool_config_overrides;
-        self
-    }
-
-    /// Sets the require L1 data fee buffer flag.
-    /// When enabled, validates balance >= `L2_cost` + 2*`L1_cost` but only charges `L2_cost` +
-    /// 1*`L1_cost`. This matches geth's block validation behavior.
-    pub const fn with_require_l1_data_fee_buffer(mut self, require: bool) -> Self {
-        self.require_l1_data_fee_buffer = require;
         self
     }
 }
@@ -73,7 +57,7 @@ where
     type Pool = ScrollTransactionPool<Node::Provider, DiskFileBlobStore, T>;
 
     async fn build_pool(self, ctx: &BuilderContext<Node>) -> eyre::Result<Self::Pool> {
-        let Self { pool_config_overrides, require_l1_data_fee_buffer, .. } = self;
+        let Self { pool_config_overrides, .. } = self;
         let data_dir = ctx.config().datadir();
         let blob_store = DiskFileBlobStore::open(data_dir.blobstore(), Default::default())?;
 
@@ -96,7 +80,9 @@ where
                     // In --dev mode we can't require gas fees because we're unable to decode
                     // the L1 block info
                     .require_l1_data_gas_fee(!ctx.config().dev.dev)
-                    .require_l1_data_fee_buffer(require_l1_data_fee_buffer)
+                    .require_l1_data_fee_buffer(
+                        ctx.chain_spec().chain_config().l1_data_fee_buffer_check,
+                    )
             });
 
         let transaction_pool = reth_transaction_pool::Pool::new(
