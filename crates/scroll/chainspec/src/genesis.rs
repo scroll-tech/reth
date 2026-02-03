@@ -237,6 +237,7 @@ mod tests {
           "scroll": {
             "feeVaultAddress": "0x5300000000000000000000000000000000000005",
             "maxTxPayloadBytesPerBlock": 122880,
+            "l1DataFeeBufferCheck": false,
             "l1Config": {
                 "l1ChainId": 1,
                 "l1MessageQueueAddress": "0x0d7E906BD9cAFa154b048cFa766Cc1E54E39AF9B",
