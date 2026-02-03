@@ -27,6 +27,7 @@ use alloy_evm::{
     Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
 };
 use alloy_primitives::{B256, U256};
+use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use revm::{
     context::{
         result::{InvalidTransaction, ResultAndState},
@@ -84,7 +85,7 @@ impl<E, R, Spec> ScrollBlockExecutor<E, R, Spec>
 where
     E: EvmExt,
     R: ScrollReceiptBuilder,
-    Spec: ScrollHardforks + Clone,
+    Spec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig> + Clone,
 {
     /// Creates a new [`ScrollBlockExecutor`].
     pub fn new(evm: E, ctx: ScrollBlockExecutionCtx, spec: Spec, receipt_builder: R) -> Self {
@@ -110,7 +111,7 @@ where
                 + FromTxWithCompressionInfo<R::Transaction>,
     >,
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
-    Spec: ScrollHardforks,
+    Spec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig>,
 {
     /// Executes all transactions in a block, applying pre and post execution changes. The provided
     /// transaction compression infos are expected to be in the same order as the
@@ -147,7 +148,7 @@ where
         Tx: FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
     >,
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
-    Spec: ScrollHardforks,
+    Spec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig>,
 {
     type Transaction = R::Transaction;
     type Receipt = R::Receipt;
@@ -269,6 +270,7 @@ where
         // disable the base fee and nonce checks for l1 messages.
         self.evm.with_base_fee_check(!is_l1_message);
         self.evm.with_nonce_check(!is_l1_message);
+        self.evm.with_l1_data_fee_buffer_check(chain_spec.chain_config().l1_data_fee_buffer_check);
 
         // execute and return the result.
         self.evm.transact(&tx).map_err(move |err| BlockExecutionError::evm(err, hash))
@@ -334,6 +336,8 @@ pub trait EvmExt: Evm {
     fn with_base_fee_check(&mut self, enabled: bool);
     /// Sets whether the evm should enable or disable the nonce checks.
     fn with_nonce_check(&mut self, enabled: bool);
+    /// Sets whether the evm should enable or disable the l1 data fee buffer checks.
+    fn with_l1_data_fee_buffer_check(&mut self, enabled: bool);
     /// Returns the l1 fee for the transaction.
     fn l1_fee(&self) -> Option<U256>;
 }
@@ -352,6 +356,10 @@ where
         self.ctx_mut().cfg.disable_nonce_check = !enabled;
     }
 
+    fn with_l1_data_fee_buffer_check(&mut self, enabled: bool) {
+        self.ctx_mut().cfg.require_l1_data_fee_buffer = enabled;
+    }
+
     fn l1_fee(&self) -> Option<U256> {
         let l1_block_info = &self.ctx().chain;
         let transaction_rlp_bytes = self.ctx().tx.rlp_bytes.as_ref()?;
@@ -368,8 +376,7 @@ where
 
 /// Scroll block executor factory.
 #[derive(Debug, Clone, Default, Copy)]
-pub struct ScrollBlockExecutorFactory<R, Spec = ScrollHardfork, P = ScrollDefaultPrecompilesFactory>
-{
+pub struct ScrollBlockExecutorFactory<R, Spec, P = ScrollDefaultPrecompilesFactory> {
     /// Receipt builder.
     receipt_builder: R,
     /// Chain specification.
@@ -404,7 +411,7 @@ impl<R, Spec, P> ScrollBlockExecutorFactory<R, Spec, P> {
 impl<R, Spec, P> BlockExecutorFactory for ScrollBlockExecutorFactory<R, Spec, P>
 where
     R: ScrollReceiptBuilder<Transaction: Transaction + Encodable2718, Receipt: TxReceipt>,
-    Spec: ScrollHardforks,
+    Spec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig> + Clone,
     P: ScrollPrecompilesFactory,
     ScrollTransactionIntoTxEnv<TxEnv>:
         FromRecoveredTx<R::Transaction> + FromTxWithEncoded<R::Transaction>,
@@ -428,6 +435,6 @@ where
         DB: Database + 'a,
         I: Inspector<<Self::EvmFactory as EvmFactory>::Context<&'a mut State<DB>>> + 'a,
     {
-        ScrollBlockExecutor::new(evm, ctx, &self.spec, &self.receipt_builder)
+        ScrollBlockExecutor::new(evm, ctx, self.spec.clone(), &self.receipt_builder)
     }
 }

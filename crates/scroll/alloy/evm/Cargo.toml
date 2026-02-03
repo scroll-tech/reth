@@ -23,6 +23,7 @@ revm = { workspace = true, default-features = false, features = ["optional_no_ba
 
 # scroll
 revm-scroll = { workspace = true, default-features = false }
+reth-scroll-chainspec = { workspace = true, default-features = false }
 
 # scroll
 scroll-alloy-consensus = { workspace = true, default-features = false }

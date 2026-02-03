@@ -31,7 +31,7 @@ use alloc::sync::Arc;
 
 use alloy_primitives::{Address, BlockNumber, BlockTimestamp};
 use reth_primitives_traits::NodePrimitives;
-use reth_scroll_chainspec::ScrollChainSpec;
+use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig, ScrollChainSpec};
 use reth_scroll_primitives::ScrollPrimitives;
 use revm_scroll::ScrollSpecId;
 pub use scroll_alloy_evm::{
@@ -56,7 +56,9 @@ pub struct ScrollEvmConfig<
     _pd: core::marker::PhantomData<N>,
 }
 
-impl<ChainSpec: ScrollHardforks> ScrollEvmConfig<ChainSpec> {
+impl<ChainSpec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig>>
+    ScrollEvmConfig<ChainSpec>
+{
     /// Creates a new [`ScrollEvmConfig`] with the given chain spec for Scroll chains.
     pub fn scroll(chain_spec: Arc<ChainSpec>) -> Self {
         Self::new(chain_spec, ScrollRethReceiptBuilder::default())
@@ -75,8 +77,12 @@ impl<ChainSpec, N: NodePrimitives, R: Clone, P: Clone> Clone
     }
 }
 
-impl<ChainSpec: ScrollHardforks, N: NodePrimitives, R, P: Default>
-    ScrollEvmConfig<ChainSpec, N, R, P>
+impl<
+        ChainSpec: ScrollHardforks + ChainConfig<Config = ScrollChainConfig>,
+        N: NodePrimitives,
+        R,
+        P: Default,
+    > ScrollEvmConfig<ChainSpec, N, R, P>
 {
     /// Creates a new [`ScrollEvmConfig`] with the given chain spec.
     pub fn new(chain_spec: Arc<ChainSpec>, receipt_builder: R) -> Self {
