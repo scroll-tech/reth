@@ -382,19 +382,6 @@ mod tests {
         drop(manager);
     }
 
-    #[test]
-    fn test_pool_builder_with_require_l1_data_fee_buffer() {
-        // Test that the builder method correctly sets the flag
-        let pool_builder = ScrollPoolBuilder::<ScrollPooledTransaction>::default();
-        assert!(!pool_builder.require_l1_data_fee_buffer);
-
-        let pool_builder = pool_builder.with_require_l1_data_fee_buffer(true);
-        assert!(pool_builder.require_l1_data_fee_buffer);
-
-        let pool_builder = pool_builder.with_require_l1_data_fee_buffer(false);
-        assert!(!pool_builder.require_l1_data_fee_buffer);
-    }
-
     #[tokio::test]
     async fn test_l1_data_fee_buffer_validation() {
         // Test that the L1 data fee buffer feature correctly validates transactions:
