@@ -35,6 +35,10 @@ pub struct PayloadBuilderArgs {
     /// Maximum number of tasks to spawn for building a payload.
     #[arg(long = "builder.max-tasks", default_value = "3", value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
     pub max_payload_tasks: usize,
+
+    /// Enable the shadowfork
+    #[arg(long)]
+    pub shadowfork: bool,
 }
 
 impl Default for PayloadBuilderArgs {
@@ -45,6 +49,7 @@ impl Default for PayloadBuilderArgs {
             gas_limit: None,
             deadline: SLOT_DURATION,
             max_payload_tasks: 3,
+            shadowfork: false,
         }
     }
 }

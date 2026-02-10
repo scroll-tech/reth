@@ -68,6 +68,8 @@ pub struct ScrollPayloadBuilder<Pool, Client, Evm, Txs = ()> {
     pub best_transactions: Txs,
     /// Payload builder configuration.
     pub builder_config: ScrollBuilderConfig,
+    /// Enable shadow fork
+    pub shadowfork: bool,
 }
 
 impl<Pool, Evm, Client> ScrollPayloadBuilder<Pool, Client, Evm> {
@@ -77,8 +79,9 @@ impl<Pool, Evm, Client> ScrollPayloadBuilder<Pool, Client, Evm> {
         evm_config: Evm,
         client: Client,
         builder_config: ScrollBuilderConfig,
+        shadowfork: bool,
     ) -> Self {
-        Self { evm_config, pool, client, best_transactions: (), builder_config }
+        Self { evm_config, pool, client, best_transactions: (), builder_config, shadowfork }
     }
 }
 
@@ -89,8 +92,15 @@ impl<Pool, Client, Evm, Txs> ScrollPayloadBuilder<Pool, Client, Evm, Txs> {
         self,
         best_transactions: T,
     ) -> ScrollPayloadBuilder<Pool, Client, Evm, T> {
-        let Self { evm_config, pool, client, builder_config, .. } = self;
-        ScrollPayloadBuilder { evm_config, pool, client, best_transactions, builder_config }
+        let Self { evm_config, pool, client, builder_config, shadowfork, .. } = self;
+        ScrollPayloadBuilder {
+            evm_config,
+            pool,
+            client,
+            best_transactions,
+            builder_config,
+            shadowfork,
+        }
     }
 }
 
@@ -139,10 +149,16 @@ where
         let state = StateProviderDatabase::new(&state_provider);
 
         if ctx.attributes().no_tx_pool {
-            builder.build(state, &state_provider, ctx, &self.builder_config)
+            builder.build(state, &state_provider, ctx, &self.builder_config, self.shadowfork)
         } else {
             // sequencer mode we can reuse cachedreads from previous runs
-            builder.build(cached_reads.as_db_mut(state), &state_provider, ctx, &self.builder_config)
+            builder.build(
+                cached_reads.as_db_mut(state),
+                &state_provider,
+                ctx,
+                &self.builder_config,
+                self.shadowfork,
+            )
         }
         .map(|out| out.with_cached_reads(cached_reads))
     }
@@ -228,6 +244,7 @@ impl<Txs> ScrollBuilder<'_, Txs> {
         state_provider: impl StateProvider,
         ctx: ScrollPayloadBuilderCtx<EvmConfig, ChainSpec>,
         builder_config: &ScrollBuilderConfig,
+        shadowfork: bool,
     ) -> Result<BuildOutcomeKind<ScrollBuiltPayload>, PayloadBuilderError>
     where
         EvmConfig: ConfigureEvm<
@@ -243,7 +260,7 @@ impl<Txs> ScrollBuilder<'_, Txs> {
 
         let mut db = State::builder().with_database(db).with_bundle_update().build();
 
-        let mut builder = ctx.block_builder(&mut db, builder_config)?;
+        let mut builder = ctx.block_builder(&mut db, builder_config, shadowfork)?;
 
         // 1. apply pre-execution changes
         builder.apply_pre_execution_changes().map_err(|err| {
@@ -398,9 +415,10 @@ where
         &'a self,
         db: &'a mut State<DB>,
         builder_config: &ScrollBuilderConfig,
+        shadowfork: bool,
     ) -> Result<impl BlockBuilder<Primitives = Evm::Primitives> + 'a, PayloadBuilderError> {
         // get the base fee for the attributes.
-        let base_fee_provider = ScrollBaseFeeProvider::new(self.chain_spec.clone());
+        let base_fee_provider = ScrollBaseFeeProvider::new(self.chain_spec.clone(), shadowfork);
         let base_fee: u64 = base_fee_provider
             .next_block_base_fee(db, self.parent().header(), self.attributes().timestamp())
             .map_err(|err| PayloadBuilderError::Other(Box::new(err)))?;
