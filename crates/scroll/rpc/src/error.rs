@@ -8,7 +8,10 @@ use jsonrpsee_types::error::INTERNAL_ERROR_CODE;
 use reth_evm::execute::ProviderError;
 use reth_rpc_convert::EthTxEnvError;
 use reth_rpc_eth_api::{AsEthApiError, TransactionConversionError};
-use reth_rpc_eth_types::{error::api::{FromEvmHalt, FromRevert}, EthApiError};
+use reth_rpc_eth_types::{
+    error::api::{FromEvmHalt, FromRevert},
+    EthApiError,
+};
 use revm::context::result::{EVMError, HaltReason};
 use std::convert::Infallible;
 

@@ -7,11 +7,11 @@ use alloy_consensus::{Transaction, Typed2718};
 use alloy_primitives::U256;
 use alloy_rlp::Encodable;
 use core::fmt::Debug;
+use either::Either;
 use reth_basic_payload_builder::{
     is_better_payload, BuildArguments, BuildOutcome, BuildOutcomeKind, MissingPayloadBehaviour,
     PayloadBuilder, PayloadConfig,
 };
-use either::Either;
 use reth_chainspec::{ChainSpecProvider, EthChainSpec};
 use reth_evm::{
     block::{BlockExecutionError, BlockValidationError},
@@ -20,7 +20,9 @@ use reth_evm::{
 };
 use reth_execution_types::BlockExecutionOutput;
 use reth_payload_builder::PayloadId;
-use reth_payload_primitives::{BuiltPayloadExecutedBlock, PayloadBuilderAttributes, PayloadBuilderError};
+use reth_payload_primitives::{
+    BuiltPayloadExecutedBlock, PayloadBuilderAttributes, PayloadBuilderError,
+};
 use reth_payload_util::{BestPayloadTransactions, NoopPayloadTransactions, PayloadTransactions};
 use reth_primitives_traits::{RecoveredBlock, SealedHeader, SignedTransaction, TxTy};
 use reth_revm::{cancelled::CancelOnDrop, database::StateProviderDatabase, db::State};

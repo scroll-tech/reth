@@ -251,7 +251,11 @@ impl<N, Rpc> Trace for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError, Evm = <N as RpcNodeCore>::Evm>,
+    Rpc: RpcConvert<
+        Primitives = N::Primitives,
+        Error = ScrollEthApiError,
+        Evm = <N as RpcNodeCore>::Evm,
+    >,
 {
 }
 

@@ -31,7 +31,6 @@ alloy-evm = { workspace = true, features = ["rpc"] }
 op-alloy-consensus = { workspace = true, optional = true }
 op-alloy-rpc-types = { workspace = true, optional = true }
 op-alloy-network = { workspace = true, optional = true }
-op-revm = { workspace = true, optional = true }
 
 # scroll
 scroll-alloy-consensus = { workspace = true, optional = true }

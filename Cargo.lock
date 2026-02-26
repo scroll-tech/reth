@@ -6510,6 +6510,7 @@ dependencies = [
 [[package]]
 name = "op-revm"
 version = "15.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "auto_impl",
  "revm",
@@ -10099,7 +10100,6 @@ dependencies = [
  "op-alloy-consensus",
  "op-alloy-network",
  "op-alloy-rpc-types",
- "op-revm",
  "reth-ethereum-primitives",
  "reth-evm",
  "reth-primitives-traits",
@@ -11122,6 +11122,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "34.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "revm-bytecode",
  "revm-context",
@@ -11139,6 +11140,7 @@ dependencies = [
 [[package]]
 name = "revm-bytecode"
 version = "8.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "bitvec",
  "phf",
@@ -11149,6 +11151,7 @@ dependencies = [
 [[package]]
 name = "revm-context"
 version = "13.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "bitvec",
  "cfg-if",
@@ -11164,6 +11167,7 @@ dependencies = [
 [[package]]
 name = "revm-context-interface"
 version = "14.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -11178,6 +11182,7 @@ dependencies = [
 [[package]]
 name = "revm-database"
 version = "10.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "alloy-eips",
  "revm-bytecode",
@@ -11190,6 +11195,7 @@ dependencies = [
 [[package]]
 name = "revm-database-interface"
 version = "9.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "auto_impl",
  "either",
@@ -11202,6 +11208,7 @@ dependencies = [
 [[package]]
 name = "revm-handler"
 version = "15.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "auto_impl",
  "derive-where",
@@ -11219,6 +11226,7 @@ dependencies = [
 [[package]]
 name = "revm-inspector"
 version = "15.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "auto_impl",
  "either",
@@ -11255,6 +11263,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "32.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "revm-bytecode",
  "revm-context-interface",
@@ -11266,6 +11275,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "32.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -11288,6 +11298,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "22.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "alloy-primitives",
  "num_enum",
@@ -11298,6 +11309,7 @@ dependencies = [
 [[package]]
 name = "revm-scroll"
 version = "0.1.0"
+source = "git+https://github.com/scroll-tech/scroll-revm?branch=feat%2Fv103#f28e7a788b27db547e5b5c6ed9c8e16fcb83efbd"
 dependencies = [
  "auto_impl",
  "enumn",
@@ -11311,6 +11323,7 @@ dependencies = [
 [[package]]
 name = "revm-state"
 version = "9.0.0"
+source = "git+https://github.com/scroll-tech/revm?branch=feat%2Fv103#d3d99f3525fe954961cc45b2a6fa0836b50475b5"
 dependencies = [
  "alloy-eip7928",
  "bitflags 2.10.0",

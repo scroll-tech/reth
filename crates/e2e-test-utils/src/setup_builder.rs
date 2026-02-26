@@ -3,13 +3,15 @@
 //! This module provides a flexible builder API for setting up test nodes with custom
 //! configurations through closures that modify `NodeConfig` and `TreeConfig`.
 
-use crate::{node::NodeTestContext, wallet::Wallet, Adapter, NodeBuilderHelper, NodeHelperType, TmpDB};
+use crate::{
+    node::NodeTestContext, wallet::Wallet, Adapter, NodeBuilderHelper, NodeHelperType, TmpDB,
+    TmpNodeAddOnsHandle, TmpNodeEthApi,
+};
 use futures_util::future::TryJoinAll;
 use reth_chainspec::EthChainSpec;
 use reth_node_builder::{
-    rpc::{RethRpcAddOns, RpcHandleProvider},
-    EngineNodeLauncher, FullNodeTypesAdapter, Node, NodeAddOns, NodeBuilder, NodeConfig, NodeHandle,
-    NodeTypes, NodeTypesWithDBAdapter, PayloadTypes,
+    rpc::RpcHandleProvider, EngineNodeLauncher, NodeBuilder, NodeConfig, NodeHandle, NodeTypes,
+    NodeTypesWithDBAdapter, PayloadTypes,
 };
 use reth_node_core::args::{DiscoveryArgs, NetworkArgs, RpcServerArgs};
 use reth_primitives_traits::AlloyBlockHeader;
@@ -34,27 +36,12 @@ type NodeConfigModifier<C> = Box<dyn Fn(NodeConfig<C>) -> NodeConfig<C> + Send +
 pub struct E2ETestSetupBuilder<N, F>
 where
     N: NodeBuilderHelper,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
     F: Fn(u64) -> <<N as NodeTypes>::Payload as PayloadTypes>::PayloadBuilderAttributes
         + Send
         + Sync
         + Copy
         + 'static,
-    <<N as Node<
-        FullNodeTypesAdapter<N, TmpDB, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            FullNodeTypesAdapter<
-                N,
-                TmpDB,
-                BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>,
-            >,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
 {
     num_nodes: usize,
     chain_spec: Arc<N::ChainSpec>,
@@ -67,27 +54,12 @@ where
 impl<N, F> E2ETestSetupBuilder<N, F>
 where
     N: NodeBuilderHelper,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
     F: Fn(u64) -> <<N as NodeTypes>::Payload as PayloadTypes>::PayloadBuilderAttributes
         + Send
         + Sync
         + Copy
         + 'static,
-    <<N as Node<
-        FullNodeTypesAdapter<N, TmpDB, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            FullNodeTypesAdapter<
-                N,
-                TmpDB,
-                BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>,
-            >,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
 {
     /// Creates a new builder with the required parameters.
     pub fn new(num_nodes: usize, chain_spec: Arc<N::ChainSpec>, attributes_generator: F) -> Self {
@@ -144,21 +116,7 @@ where
     ) -> eyre::Result<(
         Vec<NodeHelperType<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>>,
         Wallet,
-    )>
-    where
-        <<N as Node<
-            FullNodeTypesAdapter<N, TmpDB, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::AddOns as NodeAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::Handle: RpcHandleProvider<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-            <<N as Node<
-                FullNodeTypesAdapter<N, TmpDB, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-            >>::AddOns as RethRpcAddOns<
-                Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-            >>::EthApi,
-        >,
-    {
+    )> {
         let runtime = Runtime::with_existing_handle(tokio::runtime::Handle::current())?;
 
         let network_config = NetworkArgs {
@@ -249,27 +207,12 @@ where
 impl<N, F> std::fmt::Debug for E2ETestSetupBuilder<N, F>
 where
     N: NodeBuilderHelper,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
     F: Fn(u64) -> <<N as NodeTypes>::Payload as PayloadTypes>::PayloadBuilderAttributes
         + Send
         + Sync
         + Copy
         + 'static,
-    <<N as Node<
-        FullNodeTypesAdapter<N, TmpDB, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            FullNodeTypesAdapter<
-                N,
-                TmpDB,
-                BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>,
-            >,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("E2ETestSetupBuilder")

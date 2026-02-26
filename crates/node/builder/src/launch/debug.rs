@@ -1,5 +1,8 @@
 use super::LaunchNode;
-use crate::{rpc::{RethRpcAddOns, RpcHandleProvider}, EngineNodeLauncher, Node, NodeHandle};
+use crate::{
+    rpc::{RethRpcAddOns, RpcHandleProvider},
+    EngineNodeLauncher, Node, NodeHandle,
+};
 use alloy_consensus::transaction::Either;
 use alloy_provider::network::AnyNetwork;
 use jsonrpsee::core::{DeserializeOwned, Serialize};
@@ -276,7 +279,8 @@ where
 
             let blockchain_db = handle.node.provider.clone();
             let chain_spec = config.chain.clone();
-            let beacon_engine_handle = handle.node.add_ons_handle.rpc_handle().beacon_engine_handle.clone();
+            let beacon_engine_handle =
+                handle.node.add_ons_handle.rpc_handle().beacon_engine_handle.clone();
             let pool = handle.node.pool.clone();
             let payload_builder_handle = handle.node.payload_builder_handle.clone();
 

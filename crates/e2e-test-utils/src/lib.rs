@@ -52,18 +52,7 @@ pub async fn setup<N>(
 ) -> eyre::Result<(Vec<NodeHelperType<N>>, Wallet)>
 where
     N: NodeBuilderHelper,
-    <<N as Node<
-        TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
 {
     E2ETestSetupBuilder::new(num_nodes, chain_spec, attributes_generator)
         .with_node_config_modifier(move |config| config.set_dev(is_dev))
@@ -84,18 +73,7 @@ pub async fn setup_engine<N>(
 )>
 where
     N: NodeBuilderHelper,
-    <<N as Node<
-        TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
 {
     setup_engine_with_connection::<N>(
         num_nodes,
@@ -122,18 +100,7 @@ pub async fn setup_engine_with_connection<N>(
 )>
 where
     N: NodeBuilderHelper,
-    <<N as Node<
-        TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        <<N as Node<
-            TmpNodeAdapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<N, BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>>,
-        >>::EthApi,
-    >,
+    TmpNodeAddOnsHandle<N>: RpcHandleProvider<Adapter<N>, TmpNodeEthApi<N>>,
 {
     E2ETestSetupBuilder::new(num_nodes, chain_spec, attributes_generator)
         .with_tree_config_modifier(move |base| {
@@ -160,6 +127,14 @@ pub type Adapter<N, Provider = BlockchainProvider<NodeTypesWithDBAdapter<N, TmpD
         TmpNodeAdapter<N, Provider>,
     >>::Components,
 >;
+
+/// Type alias for a `NodeHandle` for a `TmpNodeAdapter`.
+pub type TmpNodeAddOnsHandle<N> =
+    <<N as Node<TmpNodeAdapter<N>>>::AddOns as NodeAddOns<Adapter<N>>>::Handle;
+
+/// Type alias for the `EthApi` for a `TmpNodeAdapter`.
+pub type TmpNodeEthApi<N> =
+    <<N as Node<TmpNodeAdapter<N>>>::AddOns as RethRpcAddOns<Adapter<N>>>::EthApi;
 
 /// Type alias for a type of `NodeHelper`
 pub type NodeHelperType<N, Provider = BlockchainProvider<NodeTypesWithDBAdapter<N, TmpDB>>> =
@@ -189,18 +164,7 @@ where
             >,
             ChainSpec: From<ChainSpec> + Clone,
         >,
-    <<Self as Node<
-        TmpNodeAdapter<Self, BlockchainProvider<NodeTypesWithDBAdapter<Self, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<Self, BlockchainProvider<NodeTypesWithDBAdapter<Self, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<Self, BlockchainProvider<NodeTypesWithDBAdapter<Self, TmpDB>>>,
-        <<Self as Node<
-            TmpNodeAdapter<Self, BlockchainProvider<NodeTypesWithDBAdapter<Self, TmpDB>>>,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<Self, BlockchainProvider<NodeTypesWithDBAdapter<Self, TmpDB>>>,
-        >>::EthApi,
-    >,
+    TmpNodeAddOnsHandle<Self>: RpcHandleProvider<Adapter<Self>, TmpNodeEthApi<Self>>,
 {
 }
 
@@ -227,17 +191,6 @@ where
             >,
             ChainSpec: From<ChainSpec> + Clone,
         >,
-    <<T as Node<
-        TmpNodeAdapter<T, BlockchainProvider<NodeTypesWithDBAdapter<T, TmpDB>>>,
-    >>::AddOns as NodeAddOns<
-        Adapter<T, BlockchainProvider<NodeTypesWithDBAdapter<T, TmpDB>>>,
-    >>::Handle: RpcHandleProvider<
-        Adapter<T, BlockchainProvider<NodeTypesWithDBAdapter<T, TmpDB>>>,
-        <<T as Node<
-            TmpNodeAdapter<T, BlockchainProvider<NodeTypesWithDBAdapter<T, TmpDB>>>,
-        >>::AddOns as RethRpcAddOns<
-            Adapter<T, BlockchainProvider<NodeTypesWithDBAdapter<T, TmpDB>>>,
-        >>::EthApi,
-    >,
+    TmpNodeAddOnsHandle<Self>: RpcHandleProvider<Adapter<Self>, TmpNodeEthApi<Self>>,
 {
 }

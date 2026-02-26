@@ -26,8 +26,10 @@ use reth_fs_util::FsPathError;
 use reth_primitives_traits::{
     transaction::signed::SignedTransaction, NodePrimitives, SealedHeader,
 };
-use reth_storage_api::{BaseFeeProvider, StateProviderBox};
-use reth_storage_api::{errors::provider::ProviderError, BlockReaderIdExt, StateProviderFactory};
+use reth_storage_api::{
+    errors::provider::ProviderError, BaseFeeProvider, BlockReaderIdExt, StateProviderBox,
+    StateProviderFactory,
+};
 use reth_tasks::TaskSpawner;
 use serde::{Deserialize, Serialize};
 use std::{

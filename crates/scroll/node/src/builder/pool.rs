@@ -157,7 +157,6 @@ mod tests {
     };
     use reth_provider::test_utils::{ExtendedAccount, MockEthProvider};
     use reth_scroll_chainspec::{ScrollChainSpec, SCROLL_DEV, SCROLL_MAINNET};
-    use std::sync::Arc;
     use reth_scroll_evm::ScrollEvmConfig;
     use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
     use reth_scroll_txpool::ScrollPooledTransaction;
@@ -169,6 +168,7 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
     use scroll_alloy_evm::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
+    use std::sync::Arc;
 
     fn pool(
     ) -> ScrollTransactionPool<MockEthProvider<ScrollPrimitives, Arc<ScrollChainSpec>>, NoopBlobStore>
@@ -188,9 +188,7 @@ mod tests {
         .no_eip4844()
         .with_max_tx_input_bytes(120 * 1024) // MAX_TX_PAYLOAD_BYTES_PER_BLOCK
         .build_with_tasks(executor, blob_store)
-        .map(|validator| {
-            ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(false)
-        });
+        .map(|validator| ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(false));
 
         ScrollTransactionPool::new(
             validator,
