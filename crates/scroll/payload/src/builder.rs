@@ -11,16 +11,16 @@ use reth_basic_payload_builder::{
     is_better_payload, BuildArguments, BuildOutcome, BuildOutcomeKind, MissingPayloadBehaviour,
     PayloadBuilder, PayloadConfig,
 };
-use reth_chain_state::{ExecutedBlock, ExecutedBlockWithTrieUpdates, ExecutedTrieUpdates};
+use either::Either;
 use reth_chainspec::{ChainSpecProvider, EthChainSpec};
 use reth_evm::{
     block::{BlockExecutionError, BlockValidationError},
     execute::{BlockBuilder, BlockBuilderOutcome, ProviderError},
     ConfigureEvm, Database, Evm,
 };
-use reth_execution_types::ExecutionOutcome;
+use reth_execution_types::BlockExecutionOutput;
 use reth_payload_builder::PayloadId;
-use reth_payload_primitives::{PayloadBuilderAttributes, PayloadBuilderError};
+use reth_payload_primitives::{BuiltPayloadExecutedBlock, PayloadBuilderAttributes, PayloadBuilderError};
 use reth_payload_util::{BestPayloadTransactions, NoopPayloadTransactions, PayloadTransactions};
 use reth_primitives_traits::{RecoveredBlock, SealedHeader, SignedTransaction, TxTy};
 use reth_revm::{cancelled::CancelOnDrop, database::StateProviderDatabase, db::State};
@@ -32,7 +32,7 @@ use reth_storage_api::{BaseFeeProvider, StateProvider, StateProviderFactory};
 use reth_transaction_pool::{BestTransactionsAttributes, PoolTransaction, TransactionPool};
 use revm::context::Block;
 use scroll_alloy_hardforks::ScrollHardforks;
-use std::{boxed::Box, sync::Arc, vec, vec::Vec};
+use std::{boxed::Box, sync::Arc, vec::Vec};
 
 /// A type that returns the [`PayloadTransactions`] that should be included in the pool.
 pub trait ScrollPayloadTransactions<Transaction>: Clone + Send + Sync + Unpin + 'static {
@@ -305,23 +305,16 @@ impl<Txs> ScrollBuilder<'_, Txs> {
         let sealed_block = Arc::new(block.sealed_block().clone());
         tracing::debug!(target: "payload_builder", id=%ctx.attributes().payload_id(), sealed_block_header = ?sealed_block.header(), "sealed built block");
 
-        let execution_outcome = ExecutionOutcome::new(
-            db.take_bundle(),
-            vec![execution_result.receipts],
-            block.number,
-            Vec::new(),
-        );
-
         // create the executed block data
-        let executed: ExecutedBlockWithTrieUpdates<ScrollPrimitives> =
-            ExecutedBlockWithTrieUpdates {
-                block: ExecutedBlock {
-                    recovered_block: Arc::new(block),
-                    execution_output: Arc::new(execution_outcome),
-                    hashed_state: Arc::new(hashed_state),
-                },
-                trie: ExecutedTrieUpdates::Present(Arc::new(trie_updates)),
-            };
+        let executed = BuiltPayloadExecutedBlock {
+            recovered_block: Arc::new(block),
+            execution_output: Arc::new(BlockExecutionOutput {
+                result: execution_result,
+                state: db.take_bundle(),
+            }),
+            hashed_state: Either::Left(Arc::new(hashed_state)),
+            trie_updates: Either::Left(Arc::new(trie_updates)),
+        };
 
         let no_tx_pool = ctx.attributes().no_tx_pool;
 

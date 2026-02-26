@@ -7,7 +7,7 @@ use alloy_consensus::{
     Sealable, Sealed, Signed, Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy, Typed2718,
 };
 use alloy_eips::{
-    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
+    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718, IsTyped2718},
     eip2930::AccessList,
     eip7702::SignedAuthorization,
 };
@@ -123,6 +123,12 @@ impl Typed2718 for ScrollTxEnvelope {
             Self::Eip7702(tx) => tx.tx().ty(),
             Self::L1Message(tx) => tx.ty(),
         }
+    }
+}
+
+impl IsTyped2718 for ScrollTxEnvelope {
+    fn is_type(type_id: u8) -> bool {
+        matches!(type_id, 1 | 2 | 4 | crate::L1_MESSAGE_TX_TYPE_ID)
     }
 }
 

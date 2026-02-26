@@ -55,7 +55,6 @@ std = [
     "reth-zstd-compressors?/std",
     "reth-codecs?/std",
     "once_cell/std",
-    "serde?/std",
 ]
 reth-codec = [
     "dep:reth-codecs",

@@ -70,7 +70,7 @@ use alloy_eips::{
     eip7594::BlobTransactionSidecarVariant,
     eip7702::SignedAuthorization,
 };
-use alloy_primitives::{Address, Bytes, TxHash, TxKind, B256, U256};
+use alloy_primitives::{map::AddressSet, Address, Bytes, TxHash, TxKind, B256, U256};
 use futures_util::{ready, Stream};
 use reth_eth_wire_types::HandleMempoolData;
 use reth_ethereum_primitives::{PooledTransactionVariant, TransactionSigned};
@@ -78,7 +78,7 @@ use reth_execution_types::ChangedAccount;
 use reth_primitives_traits::{Block, InMemorySize, Recovered, SealedBlock, SignedTransaction};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt,
     fmt::Debug,
     future::Future,
@@ -175,16 +175,20 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
         &self,
         origin: TransactionOrigin,
         transactions: Vec<Self::Transaction>,
-    ) -> impl Future<Output = Vec<PoolResult<AddedTransactionOutcome>>> + Send;
+    ) -> impl Future<Output = Vec<PoolResult<AddedTransactionOutcome>>> + Send {
+        self.add_transactions_with_origins(transactions.into_iter().map(move |tx| (origin, tx)))
+    }
 
-    /// Adds multiple _unvalidated_ transactions with individual origins.
+    /// Adds the given _unvalidated_ transactions into the pool.
     ///
-    /// Each transaction can have its own [`TransactionOrigin`].
+    /// Each transaction is paired with its own [`TransactionOrigin`].
+    ///
+    /// Returns a list of results.
     ///
     /// Consumer: RPC
     fn add_transactions_with_origins(
         &self,
-        transactions: Vec<(TransactionOrigin, Self::Transaction)>,
+        transactions: impl IntoIterator<Item = (TransactionOrigin, Self::Transaction)> + Send,
     ) -> impl Future<Output = Vec<PoolResult<AddedTransactionOutcome>>> + Send;
 
     /// Submit a consensus transaction directly to the pool
@@ -293,6 +297,16 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
         NewSubpoolTransactionStream::new(self.new_transactions_listener(), SubPool::Queued)
     }
 
+    /// Returns a new Stream that yields new transactions added to the blob sub-pool.
+    ///
+    /// This is a convenience wrapper around [`Self::new_transactions_listener`] that filters for
+    /// [`SubPool::Blob`](crate::SubPool).
+    fn new_blob_pool_transactions_listener(
+        &self,
+    ) -> NewSubpoolTransactionStream<Self::Transaction> {
+        NewSubpoolTransactionStream::new(self.new_transactions_listener(), SubPool::Blob)
+    }
+
     /// Returns the _hashes_ of all transactions in the pool that are allowed to be propagated.
     ///
     /// This excludes hashes that aren't allowed to be propagated.
@@ -346,6 +360,21 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
         limit: GetPooledTransactionLimit,
     ) -> Vec<<Self::Transaction as PoolTransaction>::Pooled>;
 
+    /// Extends the given vector with pooled transactions for the given hashes that are allowed to
+    /// be propagated.
+    ///
+    /// This adheres to the expected behavior of [`Self::get_pooled_transaction_elements`].
+    ///
+    /// Consumer: P2P
+    fn append_pooled_transaction_elements(
+        &self,
+        tx_hashes: &[TxHash],
+        limit: GetPooledTransactionLimit,
+        out: &mut Vec<<Self::Transaction as PoolTransaction>::Pooled>,
+    ) {
+        out.extend(self.get_pooled_transaction_elements(tx_hashes.to_vec(), limit));
+    }
+
     /// Returns the pooled transaction variant for the given transaction hash.
     ///
     /// This adheres to the expected behavior of
@@ -390,6 +419,16 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
     /// Consumer: RPC
     fn pending_transactions(&self) -> Vec<Arc<ValidPoolTransaction<Self::Transaction>>>;
 
+    /// Returns a pending transaction if it exists and is ready for immediate execution
+    /// (i.e., has the lowest nonce among the sender's pending transactions).
+    fn get_pending_transaction_by_sender_and_nonce(
+        &self,
+        sender: Address,
+        nonce: u64,
+    ) -> Option<Arc<ValidPoolTransaction<Self::Transaction>>> {
+        self.best_transactions().find(|tx| tx.sender() == sender && tx.nonce() == nonce)
+    }
+
     /// Returns first `max` transactions that can be included in the next block.
     /// See <https://github.com/paradigmxyz/reth/issues/12767#issuecomment-2493223579>
     ///
@@ -429,6 +468,20 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
     /// Consumer: Utility
     fn all_transaction_hashes(&self) -> Vec<TxHash>;
 
+    /// Removes a single transaction corresponding to the given hash.
+    ///
+    /// Note: This removes the transaction as if it got discarded (_not_ mined).
+    ///
+    /// Returns the removed transaction if it was found in the pool.
+    ///
+    /// Consumer: Utility
+    fn remove_transaction(
+        &self,
+        hash: TxHash,
+    ) -> Option<Arc<ValidPoolTransaction<Self::Transaction>>> {
+        self.remove_transactions(vec![hash]).pop()
+    }
+
     /// Removes all transactions corresponding to the given hashes.
     ///
     /// Note: This removes the transactions as if they got discarded (_not_ mined).
@@ -455,6 +508,44 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
     fn remove_transactions_by_sender(
         &self,
         sender: Address,
+    ) -> Vec<Arc<ValidPoolTransaction<Self::Transaction>>>;
+
+    /// Prunes a single transaction from the pool.
+    ///
+    /// This is similar to [`Self::remove_transaction`] but treats the transaction as _mined_
+    /// rather than discarded. The key difference is that pruning does **not** park descendant
+    /// transactions: their nonce requirements are considered satisfied, so they remain in whatever
+    /// sub-pool they currently occupy and can be included in the next block.
+    ///
+    /// In contrast, [`Self::remove_transaction`] treats the removal as a discard, which
+    /// introduces a nonce gap and moves all descendant transactions to the queued (parked)
+    /// sub-pool.
+    ///
+    /// Returns the pruned transaction if it existed in the pool.
+    ///
+    /// Consumer: Utility
+    fn prune_transaction(
+        &self,
+        hash: TxHash,
+    ) -> Option<Arc<ValidPoolTransaction<Self::Transaction>>> {
+        self.prune_transactions(vec![hash]).pop()
+    }
+
+    /// Prunes all transactions corresponding to the given hashes from the pool.
+    ///
+    /// This behaves like [`Self::prune_transaction`] but for multiple transactions at once.
+    /// Each transaction is removed as if it was mined: descendant transactions are **not** parked
+    /// and their nonce requirements are considered satisfied.
+    ///
+    /// This is useful for scenarios like Flashblocks where transactions are committed across
+    /// multiple partial blocks without a canonical state update: previously committed transactions
+    /// can be pruned so that the best-transactions iterator yields their descendants in the
+    /// correct priority order.
+    ///
+    /// Consumer: Utility
+    fn prune_transactions(
+        &self,
+        hashes: Vec<TxHash>,
     ) -> Vec<Arc<ValidPoolTransaction<Self::Transaction>>>;
 
     /// Retains only those hashes that are unknown to the pool.
@@ -583,7 +674,7 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
     }
 
     /// Returns a set of all senders of transactions in the pool
-    fn unique_senders(&self) -> HashSet<Address>;
+    fn unique_senders(&self) -> AddressSet;
 
     /// Returns the [`BlobTransactionSidecarVariant`] for the given transaction hash if it exists in
     /// the blob store.
@@ -624,11 +715,23 @@ pub trait TransactionPool: Clone + Debug + Send + Sync {
         &self,
         versioned_hashes: &[B256],
     ) -> Result<Option<Vec<BlobAndProofV2>>, BlobStoreError>;
+
+    /// Return the [`BlobAndProofV2`]s for a list of blob versioned hashes.
+    ///
+    /// The response is always the same length as the request. Missing or older-version blobs are
+    /// returned as `None` elements.
+    fn get_blobs_for_versioned_hashes_v3(
+        &self,
+        versioned_hashes: &[B256],
+    ) -> Result<Vec<Option<BlobAndProofV2>>, BlobStoreError>;
 }
 
 /// Extension for [`TransactionPool`] trait that allows to set the current block info.
 #[auto_impl::auto_impl(&, Arc)]
 pub trait TransactionPoolExt: TransactionPool {
+    /// The block type used for chain tip updates.
+    type Block: Block;
+
     /// Sets the current block info for the pool.
     fn set_block_info(&self, info: BlockInfo);
 
@@ -647,9 +750,7 @@ pub trait TransactionPoolExt: TransactionPool {
     /// sidecar must not be removed from the blob store. Only after a blob transaction is
     /// finalized, its sidecar is removed from the blob store. This ensures that in case of a reorg,
     /// the sidecar is still available.
-    fn on_canonical_state_change<B>(&self, update: CanonicalStateUpdate<'_, B>)
-    where
-        B: Block;
+    fn on_canonical_state_change(&self, update: CanonicalStateUpdate<'_, Self::Block>);
 
     /// Updates the accounts in the pool
     fn update_accounts(&self, accounts: Vec<ChangedAccount>);
@@ -685,12 +786,12 @@ impl<T: PoolTransaction> AllPoolTransactions<T> {
 
     /// Returns an iterator over all pending [`Recovered`] transactions.
     pub fn pending_recovered(&self) -> impl Iterator<Item = Recovered<T::Consensus>> + '_ {
-        self.pending.iter().map(|tx| tx.transaction.clone().into_consensus())
+        self.pending.iter().map(|tx| tx.transaction.clone_into_consensus())
     }
 
     /// Returns an iterator over all queued [`Recovered`] transactions.
     pub fn queued_recovered(&self) -> impl Iterator<Item = Recovered<T::Consensus>> + '_ {
-        self.queued.iter().map(|tx| tx.transaction.clone().into_consensus())
+        self.queued.iter().map(|tx| tx.transaction.clone_into_consensus())
     }
 
     /// Returns an iterator over all transactions, both pending and queued.
@@ -698,13 +799,25 @@ impl<T: PoolTransaction> AllPoolTransactions<T> {
         self.pending
             .iter()
             .chain(self.queued.iter())
-            .map(|tx| tx.transaction.clone().into_consensus())
+            .map(|tx| tx.transaction.clone_into_consensus())
     }
 }
 
 impl<T: PoolTransaction> Default for AllPoolTransactions<T> {
     fn default() -> Self {
         Self { pending: Default::default(), queued: Default::default() }
+    }
+}
+
+impl<T: PoolTransaction> IntoIterator for AllPoolTransactions<T> {
+    type Item = Arc<ValidPoolTransaction<T>>;
+    type IntoIter = std::iter::Chain<
+        std::vec::IntoIter<Arc<ValidPoolTransaction<T>>>,
+        std::vec::IntoIter<Arc<ValidPoolTransaction<T>>>,
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.pending.into_iter().chain(self.queued)
     }
 }
 
@@ -906,7 +1019,7 @@ pub trait BestTransactions: Iterator + Send {
     /// Implementers must ensure all subsequent transaction _don't_ depend on this transaction.
     /// In other words, this must remove the given transaction _and_ drain all transaction that
     /// depend on it.
-    fn mark_invalid(&mut self, transaction: &Self::Item, kind: InvalidPoolTransactionError);
+    fn mark_invalid(&mut self, transaction: &Self::Item, kind: &InvalidPoolTransactionError);
 
     /// An iterator may be able to receive additional pending transactions that weren't present it
     /// the pool when it was created.
@@ -968,7 +1081,7 @@ impl<T> BestTransactions for Box<T>
 where
     T: BestTransactions + ?Sized,
 {
-    fn mark_invalid(&mut self, transaction: &Self::Item, kind: InvalidPoolTransactionError) {
+    fn mark_invalid(&mut self, transaction: &Self::Item, kind: &InvalidPoolTransactionError) {
         (**self).mark_invalid(transaction, kind)
     }
 
@@ -987,7 +1100,7 @@ where
 
 /// A no-op implementation that yields no transactions.
 impl<T> BestTransactions for std::iter::Empty<T> {
-    fn mark_invalid(&mut self, _tx: &T, _kind: InvalidPoolTransactionError) {}
+    fn mark_invalid(&mut self, _tx: &T, _kind: &InvalidPoolTransactionError) {}
 
     fn no_updates(&mut self) {}
 
@@ -1167,6 +1280,14 @@ pub trait PoolTransaction:
         Ok(Recovered::new_unchecked(tx.try_into()?, signer))
     }
 
+    /// Clones the consensus transactions and tries to convert the `Consensus` type into the
+    /// `Pooled` type.
+    fn clone_into_pooled(&self) -> Result<Recovered<Self::Pooled>, Self::TryFromConsensusError> {
+        let consensus = self.clone_into_consensus();
+        let (tx, signer) = consensus.into_parts();
+        Ok(Recovered::new_unchecked(tx.try_into()?, signer))
+    }
+
     /// Converts the `Pooled` type into the `Consensus` type.
     fn pooled_into_consensus(tx: Self::Pooled) -> Self::Consensus {
         tx.into()
@@ -1210,6 +1331,11 @@ pub trait PoolTransaction:
         } else {
             Ok(())
         }
+    }
+
+    /// Allows to communicate to the pool that the transaction doesn't require a nonce check.
+    fn requires_nonce_check(&self) -> bool {
+        true
     }
 }
 
@@ -1566,7 +1692,7 @@ pub struct PoolSize {
     pub queued_size: usize,
     /// Number of all transactions of all sub-pools
     ///
-    /// Note: this is the sum of ```pending + basefee + queued```
+    /// Note: this is the sum of ```pending + basefee + queued + blob```
     pub total: usize,
 }
 

@@ -11,6 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SEED: rustethereumethereumrust
+  RUSTC_WRAPPER: "sccache"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -18,41 +19,33 @@ concurrency:
 
 jobs:
   test:
-    name: test / ${{ matrix.type }} (${{ matrix.partition }}/${{ matrix.total_partitions }})
+    name: test / ${{ matrix.type }} / ${{ matrix.storage }}
     runs-on:
       group: scroll-reth-runner-group
     env:
       RUST_BACKTRACE: 1
+      EDGE_FEATURES: ${{ matrix.storage == 'edge' && 'edge' || '' }}
     strategy:
       matrix:
+        type: [ethereum]
+        storage: [stable, edge]
         include:
           - type: ethereum
-            args: --features "asm-keccak ethereum" --locked
-            partition: 1
-            total_partitions: 2
-          - type: ethereum
-            args: --features "asm-keccak ethereum" --locked
-            partition: 2
-            total_partitions: 2
+            features: asm-keccak ethereum
+            exclude_args: ""
           - type: optimism
-            args: --features "asm-keccak" --locked --exclude reth --exclude reth-bench --exclude "example-*" --exclude "reth-ethereum-*" --exclude "*-ethereum"
-            partition: 1
-            total_partitions: 2
-          - type: optimism
-            args: --features "asm-keccak" --locked --exclude reth --exclude reth-bench --exclude "example-*" --exclude "reth-ethereum-*" --exclude "*-ethereum"
-            partition: 2
-            total_partitions: 2
+            features: asm-keccak
+            exclude_args: "--exclude reth --exclude reth-bench --exclude \"example-*\" --exclude \"reth-ethereum-*\" --exclude \"*-ethereum\""
           - type: scroll
-            args: -p "reth-scroll-*" -p "scroll-alloy-*" --locked
-            partition: 1
-            total_partitions: 1
+            storage: stable
+            features: ""
+            exclude_args: "--exclude reth --exclude reth-bench --exclude \"example-*\" --exclude \"reth-ethereum-*\" --exclude \"*-ethereum\" --exclude reth-optimism-*"
     timeout-minutes: 30
     steps:
-      - name: Free up disk space
-        run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
@@ -64,24 +57,23 @@ jobs:
       - name: Run tests
         run: |
           cargo nextest run \
-            ${{ matrix.args }} --workspace \
+            --no-fail-fast \
+            --features "${{ matrix.features }} $EDGE_FEATURES" --locked \
+            ${{ matrix.exclude_args }} --workspace \
             --exclude ef-tests --no-tests=warn \
-            --partition hash:${{ matrix.partition }}/${{ matrix.total_partitions }} \
             -E "!kind(test) and not binary(e2e_testsuite)"
 
   state:
     name: Ethereum state tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest-4
     env:
       RUST_LOG: info,sync=error
       RUST_BACKTRACE: 1
     timeout-minutes: 30
     steps:
-      - name: Free up disk space
-        run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Checkout ethereum/tests
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ethereum/tests
           ref: 81862e4848585a438d64f911a19b3825f0f4cd95
@@ -100,21 +92,23 @@ jobs:
       - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@nextest
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo nextest run --release -p ef-tests --features "asm-keccak ef-tests"
+      - run: cargo nextest run --no-fail-fast --cargo-profile hivetests -p ef-tests --features "asm-keccak ef-tests"
 
   doc:
     name: doc tests
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest
     env:
       RUST_BACKTRACE: 1
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: rui314/setup-mold@v1
       - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true

@@ -4,13 +4,13 @@ use crate::{
 };
 use alloc::sync::Arc;
 
-use alloy_consensus::{BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH};
-use alloy_primitives::{b64, Address, B256, B64, U256};
+use alloy_consensus::{
+    proofs::calculate_receipt_root, BlockHeader as _, TxReceipt, EMPTY_OMMER_ROOT_HASH,
+};
+use alloy_primitives::{b64, Address, Bloom, B256, B64, U256};
 use core::fmt::Debug;
 use reth_chainspec::{EthChainSpec, EthereumHardforks};
-use reth_consensus::{
-    validate_state_root, Consensus, ConsensusError, FullConsensus, HeaderValidator,
-};
+use reth_consensus::{Consensus, ConsensusError, FullConsensus, HeaderValidator, ReceiptRootBloom};
 use reth_consensus_common::validation::{
     validate_against_parent_hash_number, validate_body_against_header, validate_header_gas,
 };
@@ -50,6 +50,7 @@ impl<
         &self,
         block: &RecoveredBlock<N::Block>,
         result: &BlockExecutionResult<N::Receipt>,
+        receipt_root_bloom: Option<ReceiptRootBloom>,
     ) -> Result<(), ConsensusError> {
         // verify the block gas used
         let cumulative_gas_used =
@@ -62,21 +63,30 @@ impl<
         }
 
         // verify the receipts logs bloom and root
-        #[allow(clippy::collapsible_if)]
         if self.chain_spec.is_byzantium_active_at_block(block.header().number()) {
-            if let Err(error) = reth_ethereum_consensus::verify_receipts(
-                block.header().receipts_root(),
-                block.header().logs_bloom(),
-                &result.receipts,
-            ) {
-                tracing::debug!(
-                    %error,
-                    ?result.receipts,
-                    header_receipt_root = ?block.header().receipts_root(),
-                    header_bloom = ?block.header().logs_bloom(),
-                    "failed to verify receipts"
-                );
-                return Err(error);
+            let (receipts_root, logs_bloom) = if let Some((root, bloom)) = receipt_root_bloom {
+                (root, bloom)
+            } else {
+                let receipts_with_bloom = result
+                    .receipts
+                    .iter()
+                    .map(TxReceipt::with_bloom_ref)
+                    .collect::<alloc::vec::Vec<_>>();
+                let root = calculate_receipt_root(&receipts_with_bloom);
+                let bloom = receipts_with_bloom.iter().fold(Bloom::ZERO, |b, r| b | r.bloom_ref());
+                (root, bloom)
+            };
+
+            if receipts_root != block.header().receipts_root() {
+                return Err(ConsensusError::BodyReceiptRootDiff(
+                    GotExpected { got: receipts_root, expected: block.header().receipts_root() }
+                        .into(),
+                ));
+            }
+            if logs_bloom != block.header().logs_bloom() {
+                return Err(ConsensusError::BodyBloomLogDiff(
+                    GotExpected { got: logs_bloom, expected: block.header().logs_bloom() }.into(),
+                ));
             }
         }
 
@@ -95,8 +105,6 @@ where
     <B::Body as BlockBody>::Transaction: ScrollTransaction,
     ChainSpec: EthChainSpec + ScrollHardforks,
 {
-    type Error = ConsensusError;
-
     fn validate_body_against_header(
         &self,
         body: &B::Body,
@@ -170,14 +178,6 @@ impl<ChainSpec: EthChainSpec + ScrollHardforks, H: BlockHeader> HeaderValidator<
             return Err(ConsensusError::Other(
                 ScrollConsensusError::UnexpectedBlobParams.to_string(),
             ))
-        }
-
-        Ok(())
-    }
-
-    fn validate_state_root(&self, header: &H, root: B256) -> Result<(), ConsensusError> {
-        if self.chain_spec.is_euclid_active_at_timestamp(header.timestamp()) {
-            validate_state_root(header, root)?;
         }
 
         Ok(())

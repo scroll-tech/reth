@@ -5,9 +5,9 @@ use revm::context::result::ExecutionResult;
 
 /// Context for building a receipt.
 #[derive(Debug)]
-pub struct ReceiptBuilderCtx<'a, T, E: Evm> {
-    /// Transaction
-    pub tx: &'a T,
+pub struct ReceiptBuilderCtx<E: Evm> {
+    /// Transaction type byte.
+    pub tx_type: u8,
     /// Result of transaction execution.
     pub result: ExecutionResult<E::HaltReason>,
     /// Cumulative gas used.
@@ -24,9 +24,6 @@ pub trait ScrollReceiptBuilder: Debug {
     /// Receipt type.
     type Receipt;
 
-    /// Builds a receipt given a transaction and the result of the execution.
-    fn build_receipt<'a, E: Evm>(
-        &self,
-        ctx: ReceiptBuilderCtx<'a, Self::Transaction, E>,
-    ) -> Self::Receipt;
+    /// Builds a receipt given a transaction type and the result of the execution.
+    fn build_receipt<E: Evm>(&self, ctx: ReceiptBuilderCtx<E>) -> Self::Receipt;
 }

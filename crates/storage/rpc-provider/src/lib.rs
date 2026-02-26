@@ -27,13 +27,11 @@
 use alloy_consensus::{constants::KECCAK_EMPTY, BlockHeader};
 use alloy_eips::{BlockHashOrNumber, BlockNumberOrTag};
 use alloy_network::{primitives::HeaderResponse, BlockResponse};
-use alloy_primitives::{
-    map::HashMap, Address, BlockHash, BlockNumber, StorageKey, TxHash, TxNumber, B256, U256,
-};
+use alloy_primitives::{Address, BlockHash, BlockNumber, StorageKey, TxHash, TxNumber, B256, U256};
 use alloy_provider::{ext::DebugApi, network::Network, Provider};
 use alloy_rpc_types::{AccountInfo, BlockId};
 use alloy_rpc_types_engine::ForkchoiceState;
-use parking_lot::RwLock;
+use dashmap::DashMap;
 use reth_chainspec::{ChainInfo, ChainSpecProvider};
 use reth_db_api::{
     mock::{DatabaseMock, TxMock},
@@ -364,18 +362,6 @@ where
         Ok(Some(sealed_header.into_header()))
     }
 
-    fn header_td(&self, hash: BlockHash) -> ProviderResult<Option<U256>> {
-        let header = self.header(hash).map_err(ProviderError::other)?;
-
-        Ok(header.map(|b| b.difficulty()))
-    }
-
-    fn header_td_by_number(&self, number: BlockNumber) -> ProviderResult<Option<U256>> {
-        let header = self.header_by_number(number).map_err(ProviderError::other)?;
-
-        Ok(header.map(|b| b.difficulty()))
-    }
-
     fn headers_range(
         &self,
         _range: impl RangeBounds<BlockNumber>,
@@ -687,10 +673,6 @@ where
         Err(ProviderError::UnsupportedProvider)
     }
 
-    fn transaction_block(&self, _id: TxNumber) -> ProviderResult<Option<BlockNumber>> {
-        Err(ProviderError::UnsupportedProvider)
-    }
-
     fn transactions_by_block(
         &self,
         block: BlockHashOrNumber,
@@ -928,7 +910,7 @@ where
     /// Cached bytecode for accounts
     ///
     /// Since the state provider is short-lived, we don't worry about memory leaks.
-    code_store: RwLock<HashMap<B256, Bytecode>>,
+    code_store: DashMap<B256, Bytecode>,
     /// Whether to use Reth-specific RPC methods for better performance
     reth_rpc_support: bool,
 }
@@ -958,7 +940,7 @@ impl<P: Clone, Node: NodeTypes, N> RpcBlockchainStateProvider<P, Node, N> {
             network: std::marker::PhantomData,
             chain_spec: None,
             compute_state_root: false,
-            code_store: RwLock::new(HashMap::default()),
+            code_store: Default::default(),
             reth_rpc_support: true,
         }
     }
@@ -976,7 +958,7 @@ impl<P: Clone, Node: NodeTypes, N> RpcBlockchainStateProvider<P, Node, N> {
             network: std::marker::PhantomData,
             chain_spec: Some(chain_spec),
             compute_state_root: false,
-            code_store: RwLock::new(HashMap::default()),
+            code_store: Default::default(),
             reth_rpc_support: true,
         }
     }
@@ -998,7 +980,7 @@ impl<P: Clone, Node: NodeTypes, N> RpcBlockchainStateProvider<P, Node, N> {
             network: self.network,
             chain_spec: self.chain_spec.clone(),
             compute_state_root: self.compute_state_root,
-            code_store: RwLock::new(HashMap::default()),
+            code_store: Default::default(),
             reth_rpc_support: self.reth_rpc_support,
         }
     }
@@ -1054,9 +1036,7 @@ impl<P: Clone, Node: NodeTypes, N> RpcBlockchainStateProvider<P, Node, N> {
             let code_hash = account_info.code_hash();
             if code_hash != KECCAK_EMPTY {
                 // Insert code into the cache
-                self.code_store
-                    .write()
-                    .insert(code_hash, Bytecode::new_raw(account_info.code.clone()));
+                self.code_store.insert(code_hash, Bytecode::new_raw(account_info.code.clone()));
             }
 
             Ok(account_info)
@@ -1101,6 +1081,14 @@ where
         })
     }
 
+    fn storage_by_hashed_key(
+        &self,
+        _address: Address,
+        _hashed_storage_key: StorageKey,
+    ) -> Result<Option<U256>, ProviderError> {
+        Err(ProviderError::UnsupportedProvider)
+    }
+
     fn account_code(&self, addr: &Address) -> Result<Option<Bytecode>, ProviderError> {
         self.block_on_async(async {
             let code = self
@@ -1135,7 +1123,7 @@ where
 {
     fn bytecode_by_hash(&self, code_hash: &B256) -> Result<Option<Bytecode>, ProviderError> {
         if !self.reth_rpc_support {
-            return Ok(self.code_store.read().get(code_hash).cloned());
+            return Ok(self.code_store.get(code_hash).map(|entry| entry.value().clone()));
         }
 
         self.block_on_async(async {
@@ -1373,7 +1361,7 @@ where
         self
     }
 
-    fn commit(self) -> ProviderResult<bool> {
+    fn commit(self) -> ProviderResult<()> {
         unimplemented!("commit not supported for RPC provider")
     }
 
@@ -1583,10 +1571,6 @@ where
         Err(ProviderError::UnsupportedProvider)
     }
 
-    fn transaction_block(&self, _id: TxNumber) -> Result<Option<BlockNumber>, ProviderError> {
-        Err(ProviderError::UnsupportedProvider)
-    }
-
     fn transactions_by_block(
         &self,
         _block: alloy_rpc_types::BlockHashOrNumber,
@@ -1671,14 +1655,6 @@ where
     }
 
     fn header_by_number(&self, _num: BlockNumber) -> Result<Option<Self::Header>, ProviderError> {
-        Err(ProviderError::UnsupportedProvider)
-    }
-
-    fn header_td(&self, _hash: BlockHash) -> Result<Option<U256>, ProviderError> {
-        Err(ProviderError::UnsupportedProvider)
-    }
-
-    fn header_td_by_number(&self, _number: BlockNumber) -> Result<Option<U256>, ProviderError> {
         Err(ProviderError::UnsupportedProvider)
     }
 
@@ -1770,6 +1746,17 @@ where
         _block_number: BlockNumber,
         _address: Address,
     ) -> ProviderResult<Option<reth_db_api::models::AccountBeforeTx>> {
+        Err(ProviderError::UnsupportedProvider)
+    }
+
+    fn account_changesets_range(
+        &self,
+        _range: impl std::ops::RangeBounds<BlockNumber>,
+    ) -> ProviderResult<Vec<(BlockNumber, reth_db_api::models::AccountBeforeTx)>> {
+        Err(ProviderError::UnsupportedProvider)
+    }
+
+    fn account_changeset_count(&self) -> ProviderResult<usize> {
         Err(ProviderError::UnsupportedProvider)
     }
 }

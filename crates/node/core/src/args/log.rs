@@ -8,8 +8,11 @@ use reth_tracing::{
 };
 use std::{fmt, fmt::Display};
 use tracing::{level_filters::LevelFilter, Level};
+
 /// Constant to convert megabytes to bytes
 const MB_TO_BYTES: u64 = 1024 * 1024;
+
+const PROFILER_TRACING_FILTER: &str = "debug";
 
 /// The log configuration.
 #[derive(Debug, Args)]
@@ -60,6 +63,34 @@ pub struct LogArgs {
         default_value = "error"
     )]
     pub journald_filter: String,
+
+    /// Emit traces to samply. Only useful when profiling.
+    #[arg(long = "log.samply", global = true, hide = true)]
+    pub samply: bool,
+
+    /// The filter to use for traces emitted to samply.
+    #[arg(
+        long = "log.samply.filter",
+        value_name = "FILTER",
+        global = true,
+        default_value = PROFILER_TRACING_FILTER,
+        hide = true
+    )]
+    pub samply_filter: String,
+
+    /// Emit traces to tracy. Only useful when profiling.
+    #[arg(long = "log.tracy", global = true, hide = true)]
+    pub tracy: bool,
+
+    /// The filter to use for traces emitted to tracy.
+    #[arg(
+        long = "log.tracy.filter",
+        value_name = "FILTER",
+        global = true,
+        default_value = PROFILER_TRACING_FILTER,
+        hide = true
+    )]
+    pub tracy_filter: String,
 
     /// Sets whether or not the formatter emits ANSI terminal escape codes for colors and other
     /// text formatting.
@@ -129,6 +160,23 @@ impl LogArgs {
             tracer = tracer.with_file(file, info);
         }
 
+        if self.samply {
+            let config = self.layer_info(LogFormat::Terminal, self.samply_filter.clone(), false);
+            tracer = tracer.with_samply(config);
+        }
+
+        if self.tracy {
+            #[cfg(feature = "tracy")]
+            {
+                let config = self.layer_info(LogFormat::Terminal, self.tracy_filter.clone(), false);
+                tracer = tracer.with_tracy(config);
+            }
+            #[cfg(not(feature = "tracy"))]
+            {
+                tracing::warn!("`--log.tracy` requested but `tracy` feature was not compiled in");
+            }
+        }
+
         let guard = tracer.init_with_layers(layers)?;
         Ok(guard)
     }
@@ -139,7 +187,7 @@ impl LogArgs {
 pub enum ColorMode {
     /// Colors on
     Always,
-    /// Colors on
+    /// Auto-detect
     Auto,
     /// Colors off
     Never,

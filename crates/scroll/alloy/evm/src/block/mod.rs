@@ -22,17 +22,14 @@ use alloy_eips::Encodable2718;
 use alloy_evm::{
     block::{
         BlockExecutionError, BlockExecutionResult, BlockExecutor, BlockExecutorFactory,
-        BlockExecutorFor, BlockValidationError, ExecutableTx, OnStateHook,
+        BlockExecutorFor, BlockValidationError, ExecutableTx, OnStateHook, TxResult,
     },
-    Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded,
+    Database, Evm, EvmFactory, FromRecoveredTx, FromTxWithEncoded, RecoveredTx,
 };
 use alloy_primitives::{B256, U256};
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use revm::{
-    context::{
-        result::{InvalidTransaction, ResultAndState},
-        Block, TxEnv,
-    },
+    context::{result::InvalidTransaction, Block, TxEnv},
     database::State,
     handler::PrecompileProvider,
     interpreter::InterpreterResult,
@@ -44,6 +41,25 @@ use scroll_alloy_hardforks::{ScrollHardfork, ScrollHardforks};
 
 /// Compression info is a pair of (compression ratio, compressed size).
 pub type ScrollTxCompressionInfo = (U256, usize);
+
+/// The result of executing a Scroll transaction.
+#[derive(Debug)]
+pub struct ScrollTxResult<H> {
+    /// Result of the transaction execution.
+    pub result: revm::context::result::ResultAndState<H>,
+    /// L1 fee for the transaction (zero for L1 messages).
+    pub l1_fee: U256,
+    /// Transaction type byte.
+    pub tx_type: u8,
+}
+
+impl<H> TxResult for ScrollTxResult<H> {
+    type HaltReason = H;
+
+    fn result(&self) -> &revm::context::result::ResultAndState<H> {
+        &self.result
+    }
+}
 
 /// A cache for transaction compression infos, i.e. (compression ratio, compressed size) pairs.
 pub type ScrollTxCompressionInfos = Vec<ScrollTxCompressionInfo>;
@@ -153,6 +169,7 @@ where
     type Transaction = R::Transaction;
     type Receipt = R::Receipt;
     type Evm = E;
+    type Result = ScrollTxResult<<E as Evm>::HaltReason>;
 
     fn apply_pre_execution_changes(&mut self) -> Result<(), BlockExecutionError> {
         // set state clear flag if the block is after the Spurious Dragon hardfork.
@@ -218,48 +235,53 @@ where
     fn execute_transaction_without_commit(
         &mut self,
         tx: impl ExecutableTx<Self>,
-    ) -> Result<ResultAndState<<Self::Evm as Evm>::HaltReason>, BlockExecutionError> {
+    ) -> Result<Self::Result, BlockExecutionError> {
+        let (tx_env, recovered) = tx.into_parts();
+        let tx = recovered.tx();
         let chain_spec = &self.spec;
-        let is_l1_message = tx.tx().ty() == L1_MESSAGE_TRANSACTION_TYPE;
+        let is_l1_message = tx.ty() == L1_MESSAGE_TRANSACTION_TYPE;
+
         // The sum of the transaction’s gas limit and the gas utilized in this block prior,
         // must be no greater than the block’s gasLimit.
         let block_available_gas = self.evm.block().gas_limit() - self.gas_used;
-        if tx.tx().gas_limit() > block_available_gas {
+        if tx.gas_limit() > block_available_gas {
             return Err(BlockValidationError::TransactionGasLimitMoreThanAvailableBlockGas {
-                transaction_gas_limit: tx.tx().gas_limit(),
+                transaction_gas_limit: tx.gas_limit(),
                 block_available_gas,
             }
             .into())
         }
 
-        let hash = tx.tx().trie_hash();
+        let hash = tx.trie_hash();
+        let tx_type = tx.ty();
 
-        let block = self.evm.block();
+        // Cache block values before mutable evm access.
+        let block_number: u64 = self.evm.block().number().to();
+        let block_timestamp: u64 = self.evm.block().timestamp().to();
+
         // verify the transaction type is accepted by the current fork.
-        if tx.tx().is_eip2930() && !chain_spec.is_curie_active_at_block(block.number().to()) {
+        if tx.is_eip2930() && !chain_spec.is_curie_active_at_block(block_number) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip2930NotSupported),
             }
             .into())
         }
-        if tx.tx().is_eip1559() && !chain_spec.is_curie_active_at_block(block.number().to()) {
+        if tx.is_eip1559() && !chain_spec.is_curie_active_at_block(block_number) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip1559NotSupported),
             }
             .into())
         }
-        if tx.tx().is_eip4844() {
+        if tx.is_eip4844() {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip4844NotSupported),
             }
             .into())
         }
-        if tx.tx().is_eip7702() &&
-            !chain_spec.is_euclid_v2_active_at_timestamp(block.timestamp().to())
-        {
+        if tx.is_eip7702() && !chain_spec.is_euclid_v2_active_at_timestamp(block_timestamp) {
             return Err(BlockValidationError::InvalidTx {
                 hash,
                 error: Box::new(InvalidTransaction::Eip7702NotSupported),
@@ -272,34 +294,32 @@ where
         self.evm.with_nonce_check(!is_l1_message);
         self.evm.with_l1_data_fee_buffer_check(chain_spec.chain_config().l1_data_fee_buffer_check);
 
-        // execute and return the result.
-        self.evm.transact(&tx).map_err(move |err| BlockExecutionError::evm(err, hash))
-    }
-
-    fn commit_transaction(
-        &mut self,
-        output: ResultAndState<<Self::Evm as Evm>::HaltReason>,
-        tx: impl ExecutableTx<Self>,
-    ) -> Result<u64, BlockExecutionError> {
-        let ResultAndState { result, state } = output;
-        let is_l1_message = tx.tx().ty() == L1_MESSAGE_TRANSACTION_TYPE;
+        // execute the transaction.
+        let result =
+            self.evm.transact(tx_env).map_err(move |err| BlockExecutionError::evm(err, hash))?;
 
         let l1_fee = if is_l1_message {
             U256::ZERO
         } else {
-            // compute l1 fee for all non-l1 transaction
+            // compute l1 fee for all non-l1 transactions
             self.evm.l1_fee().expect("l1 fee loaded")
         };
+
+        Ok(ScrollTxResult { result, l1_fee, tx_type })
+    }
+
+    fn commit_transaction(&mut self, output: Self::Result) -> Result<u64, BlockExecutionError> {
+        let ScrollTxResult {
+            result: revm::context::result::ResultAndState { result, state },
+            l1_fee,
+            tx_type,
+        } = output;
 
         let gas_used = result.gas_used();
         self.gas_used += gas_used;
 
-        let ctx = ReceiptBuilderCtx::<'_, Self::Transaction, E> {
-            tx: tx.tx(),
-            result,
-            cumulative_gas_used: self.gas_used,
-            l1_fee,
-        };
+        let ctx =
+            ReceiptBuilderCtx::<E> { tx_type, result, cumulative_gas_used: self.gas_used, l1_fee };
         self.receipts.push(self.receipt_builder.build_receipt(ctx));
 
         self.evm.db_mut().commit(state);
@@ -327,6 +347,10 @@ where
 
     fn evm(&self) -> &Self::Evm {
         &self.evm
+    }
+
+    fn receipts(&self) -> &[Self::Receipt] {
+        &self.receipts
     }
 }
 

@@ -39,7 +39,7 @@ pub enum FsPathError {
     },
 
     /// Error variant for failed read link operation with additional path context.
-    #[error("failed to read from {path:?}: {source}")]
+    #[error("failed to read link {path:?}: {source}")]
     ReadLink {
         /// The source `io::Error`.
         source: io::Error,
@@ -230,6 +230,12 @@ pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
     fs::read(path).map_err(|err| FsPathError::read(err, path))
 }
 
+/// Wrapper for `std::fs::read_link`
+pub fn read_link(path: impl AsRef<Path>) -> Result<PathBuf> {
+    let path = path.as_ref();
+    fs::read_link(path).map_err(|err| FsPathError::read_link(err, path))
+}
+
 /// Wrapper for `std::fs::write`
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Result<()> {
     let path = path.as_ref();
@@ -313,9 +319,6 @@ where
     F: FnOnce(&mut File) -> std::result::Result<(), E>,
     E: Into<Box<dyn core::error::Error + Send + Sync>>,
 {
-    #[cfg(windows)]
-    use std::os::windows::fs::OpenOptionsExt;
-
     let mut tmp_path = file_path.to_path_buf();
     tmp_path.set_extension("tmp");
 
@@ -332,10 +335,7 @@ where
         Err(err) => {
             // Clean up the temporary file before returning the error
             let _ = fs::remove_file(&tmp_path);
-            return Err(FsPathError::Write {
-                source: Error::other(err.into()),
-                path: tmp_path.clone(),
-            });
+            return Err(FsPathError::Write { source: Error::other(err.into()), path: tmp_path });
         }
     }
 
@@ -347,17 +347,6 @@ where
 
     // fsync() directory
     if let Some(parent) = file_path.parent() {
-        #[cfg(windows)]
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .custom_flags(0x02000000) // FILE_FLAG_BACKUP_SEMANTICS
-            .open(parent)
-            .map_err(|err| FsPathError::open(err, parent))?
-            .sync_all()
-            .map_err(|err| FsPathError::fsync(err, parent))?;
-
-        #[cfg(not(windows))]
         OpenOptions::new()
             .read(true)
             .open(parent)

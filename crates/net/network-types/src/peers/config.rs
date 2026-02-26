@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use reth_net_banlist::BanList;
+use reth_net_banlist::{BanList, IpFilter};
 use reth_network_peers::{NodeRecord, TrustedPeer};
 use tracing::info;
 
@@ -166,6 +166,17 @@ pub struct PeersConfig {
     /// This acts as an IP based rate limit.
     #[cfg_attr(feature = "serde", serde(default, with = "humantime_serde"))]
     pub incoming_ip_throttle_duration: Duration,
+    /// IP address filter for restricting network connections to specific IP ranges.
+    ///
+    /// Similar to geth's --netrestrict flag. If configured, only connections to/from
+    /// IPs within the specified CIDR ranges will be allowed.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub ip_filter: IpFilter,
+    /// If true, discovered peers without a confirmed ENR [`ForkId`](alloy_eip2124::ForkId)
+    /// (EIP-868) will not be added to the peer set until their fork ID is verified.
+    ///
+    /// This filters out peers from other networks that pollute the discovery table.
+    pub enforce_enr_fork_id: bool,
 }
 
 impl Default for PeersConfig {
@@ -184,6 +195,8 @@ impl Default for PeersConfig {
             basic_nodes: Default::default(),
             max_backoff_count: 5,
             incoming_ip_throttle_duration: INBOUND_IP_THROTTLE_DURATION,
+            ip_filter: IpFilter::default(),
+            enforce_enr_fork_id: false,
         }
     }
 }
@@ -299,6 +312,19 @@ impl PeersConfig {
         info!(target: "net::peers", file = %file_path.as_ref().display(), "Loading saved peers");
         let nodes: HashSet<NodeRecord> = serde_json::from_reader(reader)?;
         Ok(self.with_basic_nodes(nodes))
+    }
+
+    /// Configure the IP filter for restricting network connections to specific IP ranges.
+    pub fn with_ip_filter(mut self, ip_filter: IpFilter) -> Self {
+        self.ip_filter = ip_filter;
+        self
+    }
+
+    /// If set, discovered peers without a confirmed ENR [`ForkId`](alloy_eip2124::ForkId) will not
+    /// be added to the peer set until their fork ID is verified via EIP-868.
+    pub const fn with_enforce_enr_fork_id(mut self, enforce: bool) -> Self {
+        self.enforce_enr_fork_id = enforce;
+        self
     }
 
     /// Returns settings for testing

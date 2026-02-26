@@ -3,7 +3,7 @@
 use alloc::vec;
 use revm::{
     bytecode::Bytecode,
-    database::{states::StorageSlot, State},
+    database::{bal::EvmDatabaseError, states::StorageSlot, State},
     primitives::{bytes, Bytes, U256},
     state::AccountInfo,
     Database,
@@ -35,7 +35,7 @@ const FEYNMAN_L1_GAS_PRICE_ORACLE_STORAGE: [(U256, U256); 3] = [
 ///    - Sets the `isFeynman` slot to 1 (true).
 pub(super) fn apply_feynman_hard_fork<DB: Database>(
     state: &mut State<DB>,
-) -> Result<(), DB::Error> {
+) -> Result<(), <State<DB> as Database>::Error> {
     // No-op if already applied.
     // Note: This requires a storage read for every Feynman block, and it means this
     // read needs to be included in the execution witness. Unfortunately, there is no
@@ -45,7 +45,9 @@ pub(super) fn apply_feynman_hard_fork<DB: Database>(
         return Ok(())
     }
 
-    let oracle = state.load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)?;
+    let oracle = state
+        .load_cache_account(L1_GAS_PRICE_ORACLE_ADDRESS)
+        .map_err(EvmDatabaseError::Database)?;
 
     // compute the code hash
     let bytecode = Bytecode::new_raw(FEYNMAN_L1_GAS_PRICE_ORACLE_BYTECODE);

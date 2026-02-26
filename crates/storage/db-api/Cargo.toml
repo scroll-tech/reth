@@ -30,8 +30,8 @@ alloy-consensus.workspace = true
 # scroll
 reth-scroll-primitives = { workspace = true, optional = true }
 
-# optimism
-reth-optimism-primitives = { workspace = true, optional = true, features = ["serde", "reth-codec"] }
+# op
+op-alloy-consensus = { workspace = true, optional = true }
 
 # codecs
 modular-bitfield.workspace = true
@@ -43,6 +43,7 @@ serde = { workspace = true, default-features = false }
 metrics.workspace = true
 
 # misc
+arrayvec.workspace = true
 derive_more.workspace = true
 bytes.workspace = true
 
@@ -53,7 +54,9 @@ proptest = { workspace = true, optional = true }
 [dev-dependencies]
 # reth libs with arbitrary
 reth-codecs = { workspace = true, features = ["test-utils"] }
+reth-db-models = { workspace = true, features = ["arbitrary"] }
 
+alloy-primitives = { workspace = true, features = ["rand"] }
 rand.workspace = true
 
 test-fuzz.workspace = true
@@ -85,14 +88,16 @@ arbitrary = [
     "reth-prune-types/arbitrary",
     "reth-stages-types/arbitrary",
     "alloy-consensus/arbitrary",
-    "reth-optimism-primitives?/arbitrary",
+    "op-alloy-consensus?/arbitrary",
     "reth-ethereum-primitives/arbitrary",
     "reth-scroll-primitives?/arbitrary",
 ]
 op = [
-    "dep:reth-optimism-primitives",
+    "dep:op-alloy-consensus",
     "reth-codecs/op",
     "reth-primitives-traits/op",
 ]
 bench = []
 scroll-alloy-traits = ["dep:reth-scroll-primitives", "reth-primitives-traits/scroll-alloy-traits"]
+rocksdb = []
+edge = ["rocksdb"]

@@ -89,13 +89,15 @@ where
             }
             Commands::DumpGenesis(command) => runner.run_blocking_until_ctrl_c(command.execute()),
             Commands::Db(command) => {
-                runner.run_blocking_until_ctrl_c(command.execute::<ScrollNode>())
+                runner.run_blocking_command_until_exit(|ctx| command.execute::<ScrollNode>(ctx))
             }
             Commands::Stage(command) => runner
                 .run_command_until_exit(|ctx| command.execute::<ScrollNode, _>(ctx, components)),
             Commands::P2P(command) => runner.run_until_ctrl_c(command.execute::<ScrollNode>()),
             Commands::Config(command) => runner.run_until_ctrl_c(command.execute()),
-            Commands::Prune(command) => runner.run_until_ctrl_c(command.execute::<ScrollNode>()),
+            Commands::Prune(command) => {
+                runner.run_command_until_exit(|ctx| command.execute::<ScrollNode>(ctx))
+            }
             #[cfg(feature = "dev")]
             Commands::TestVectors(command) => runner.run_until_ctrl_c(command.execute()),
         }

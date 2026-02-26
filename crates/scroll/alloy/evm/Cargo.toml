@@ -15,7 +15,7 @@ workspace = true
 # alloy
 alloy-consensus = { workspace = true, default-features = false }
 alloy-eips = { workspace = true, default-features = false }
-alloy-evm = { workspace = true, default-features = false }
+alloy-evm = { workspace = true, default-features = false, features = ["rpc"] }
 alloy-primitives = { workspace = true, default-features = false }
 
 # revm
@@ -28,6 +28,7 @@ reth-scroll-chainspec = { workspace = true, default-features = false }
 # scroll
 scroll-alloy-consensus = { workspace = true, default-features = false }
 scroll-alloy-hardforks = { workspace = true, default-features = false }
+scroll-alloy-rpc-types = { workspace = true, default-features = false }
 
 # misc
 auto_impl = { workspace = true, default-features = false }

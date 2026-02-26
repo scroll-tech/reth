@@ -41,7 +41,8 @@ fn includes_empty_node_preimage() {
     provider.insert_account_for_hashing([(address, Some(Account::default()))]).unwrap();
 
     let state_root = StateRoot::from_tx(provider.tx_ref()).root().unwrap();
-    let multiproof = Proof::from_tx(provider.tx_ref())
+    let proof = <Proof<_, _> as DatabaseProof>::from_tx(provider.tx_ref());
+    let multiproof = proof
         .multiproof(MultiProofTargets::from_iter([(
             hashed_address,
             HashSet::from_iter([hashed_slot]),
@@ -82,7 +83,8 @@ fn includes_nodes_for_destroyed_storage_nodes() {
         .unwrap();
 
     let state_root = StateRoot::from_tx(provider.tx_ref()).root().unwrap();
-    let multiproof = Proof::from_tx(provider.tx_ref())
+    let proof = <Proof<_, _> as DatabaseProof>::from_tx(provider.tx_ref());
+    let multiproof = proof
         .multiproof(MultiProofTargets::from_iter([(
             hashed_address,
             HashSet::from_iter([hashed_slot]),
@@ -115,8 +117,8 @@ fn correctly_decodes_branch_node_values() {
 
     let address = Address::random();
     let hashed_address = keccak256(address);
-    let hashed_slot1 = B256::with_last_byte(1);
-    let hashed_slot2 = B256::with_last_byte(2);
+    let hashed_slot1 = B256::repeat_byte(1);
+    let hashed_slot2 = B256::repeat_byte(2);
 
     // Insert account and slots into database
     provider.insert_account_for_hashing([(address, Some(Account::default()))]).unwrap();
@@ -130,7 +132,8 @@ fn correctly_decodes_branch_node_values() {
         .unwrap();
 
     let state_root = StateRoot::from_tx(provider.tx_ref()).root().unwrap();
-    let multiproof = Proof::from_tx(provider.tx_ref())
+    let proof = <Proof<_, _> as DatabaseProof>::from_tx(provider.tx_ref());
+    let multiproof = proof
         .multiproof(MultiProofTargets::from_iter([(
             hashed_address,
             HashSet::from_iter([hashed_slot1, hashed_slot2]),

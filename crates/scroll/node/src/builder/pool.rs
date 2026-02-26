@@ -1,5 +1,6 @@
 use reth_chainspec::EthChainSpec;
-use reth_node_api::{FullNodeTypes, NodeTypes};
+use reth_evm::ConfigureEvm;
+use reth_node_api::{FullNodeTypes, NodeTypes, PrimitivesTy};
 use reth_node_builder::{
     components::{PoolBuilder, PoolBuilderConfigOverrides},
     BuilderContext, TxTy,
@@ -45,7 +46,7 @@ impl<T> ScrollPoolBuilder<T> {
     }
 }
 
-impl<Node, T> PoolBuilder<Node> for ScrollPoolBuilder<T>
+impl<Node, T, Evm> PoolBuilder<Node, Evm> for ScrollPoolBuilder<T>
 where
     Node: FullNodeTypes<
         Types: NodeTypes<
@@ -53,37 +54,47 @@ where
         >,
     >,
     T: EthPoolTransaction<Consensus = TxTy<Node::Types>> + ScrollTransaction,
+    Evm: ConfigureEvm<Primitives = PrimitivesTy<Node::Types>> + Clone + 'static,
 {
-    type Pool = ScrollTransactionPool<Node::Provider, DiskFileBlobStore, T>;
+    type Pool = ScrollTransactionPool<Node::Provider, DiskFileBlobStore, T, Evm>;
 
-    async fn build_pool(self, ctx: &BuilderContext<Node>) -> eyre::Result<Self::Pool> {
+    async fn build_pool(
+        self,
+        ctx: &BuilderContext<Node>,
+        evm_config: Evm,
+    ) -> eyre::Result<Self::Pool> {
         let Self { pool_config_overrides, .. } = self;
         let data_dir = ctx.config().datadir();
         let blob_store = DiskFileBlobStore::open(data_dir.blobstore(), Default::default())?;
 
-        let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())
-            .no_eip4844()
-            .with_head_timestamp(ctx.head().timestamp)
-            .kzg_settings(ctx.kzg_settings()?)
-            .with_local_transactions_config(
-                pool_config_overrides.clone().apply(ctx.pool_config()).local_transactions_config,
-            )
-            .with_max_tx_input_bytes(ctx.chain_spec().chain_config().max_tx_payload_bytes_per_block)
-            .with_additional_tasks(
-                pool_config_overrides
-                    .additional_validation_tasks
-                    .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
-            )
-            .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator)
-                    // In --dev mode we can't require gas fees because we're unable to decode
-                    // the L1 block info
-                    .require_l1_data_gas_fee(!ctx.config().dev.dev)
-                    .require_l1_data_fee_buffer(
-                        ctx.chain_spec().chain_config().l1_data_fee_buffer_check,
-                    )
-            });
+        let validator =
+            TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone(), evm_config)
+                .no_eip4844()
+                .kzg_settings(ctx.kzg_settings()?)
+                .with_local_transactions_config(
+                    pool_config_overrides
+                        .clone()
+                        .apply(ctx.pool_config())
+                        .local_transactions_config,
+                )
+                .with_max_tx_input_bytes(
+                    ctx.chain_spec().chain_config().max_tx_payload_bytes_per_block,
+                )
+                .with_additional_tasks(
+                    pool_config_overrides
+                        .additional_validation_tasks
+                        .unwrap_or_else(|| ctx.config().txpool.additional_validation_tasks),
+                )
+                .build_with_tasks(ctx.task_executor().clone(), blob_store.clone())
+                .map(|validator| {
+                    ScrollTransactionValidator::new(validator)
+                        // In --dev mode we can't require gas fees because we're unable to decode
+                        // the L1 block info
+                        .require_l1_data_gas_fee(!ctx.config().dev.dev)
+                        .require_l1_data_fee_buffer(
+                            ctx.chain_spec().chain_config().l1_data_fee_buffer_check,
+                        )
+                });
 
         let transaction_pool = reth_transaction_pool::Pool::new(
             validator,
@@ -114,7 +125,7 @@ where
             );
 
             // spawn the main maintenance task
-            ctx.task_executor().spawn_critical(
+            ctx.task_executor().spawn_critical_task(
                 "txpool maintenance task",
                 reth_transaction_pool::maintain::maintain_transaction_pool_future(
                     client,
@@ -138,26 +149,19 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ScrollNode;
 
     use alloy_consensus::{transaction::Recovered, Header, Signed, TxLegacy};
     use alloy_primitives::{private::rand::random_iter, Bytes, Sealed, Signature, B256, U256};
-    use reth_chainspec::Head;
-    use reth_db::mock::DatabaseMock;
-    use reth_node_api::FullNodeTypesAdapter;
-    use reth_node_builder::common::WithConfigs;
-    use reth_node_core::node_config::NodeConfig;
     use reth_primitives_traits::{
         transaction::error::InvalidTransactionError, GotExpected, GotExpectedBoxed,
     };
-    use reth_provider::{
-        noop::NoopProvider,
-        test_utils::{ExtendedAccount, MockEthProvider},
-    };
+    use reth_provider::test_utils::{ExtendedAccount, MockEthProvider};
     use reth_scroll_chainspec::{ScrollChainSpec, SCROLL_DEV, SCROLL_MAINNET};
+    use std::sync::Arc;
+    use reth_scroll_evm::ScrollEvmConfig;
     use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives};
     use reth_scroll_txpool::ScrollPooledTransaction;
-    use reth_tasks::TaskManager;
+    use reth_tasks::TaskExecutor;
     use reth_transaction_pool::{
         blobstore::NoopBlobStore,
         error::{InvalidPoolTransactionError, PoolErrorKind},
@@ -166,37 +170,40 @@ mod tests {
     use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message};
     use scroll_alloy_evm::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
 
-    async fn pool() -> (
-        ScrollTransactionPool<NoopProvider<ScrollChainSpec, ScrollPrimitives>, DiskFileBlobStore>,
-        TaskManager,
-    ) {
-        let handle = tokio::runtime::Handle::current();
-        let manager = TaskManager::new(handle);
-        let config = WithConfigs {
-            config: NodeConfig::new(SCROLL_MAINNET.clone()),
-            toml_config: Default::default(),
-        };
+    fn pool(
+    ) -> ScrollTransactionPool<MockEthProvider<ScrollPrimitives, Arc<ScrollChainSpec>>, NoopBlobStore>
+    {
+        let executor = TaskExecutor::default();
+        let blob_store = NoopBlobStore::default();
+        let client =
+            MockEthProvider::<ScrollPrimitives, _>::new().with_chain_spec(SCROLL_MAINNET.clone());
+        let hash = B256::random();
+        client.add_header(hash, Header::default());
+        client.add_block(hash, ScrollBlock::default());
 
-        let pool_builder = ScrollPoolBuilder::<ScrollPooledTransaction>::default();
-        let ctx = BuilderContext::<
-            FullNodeTypesAdapter<
-                ScrollNode,
-                DatabaseMock,
-                NoopProvider<ScrollChainSpec, ScrollPrimitives>,
-            >,
-        >::new(
-            Head::default(),
-            NoopProvider::new(SCROLL_MAINNET.clone()),
-            manager.executor(),
-            config,
-        );
-        (pool_builder.build_pool(&ctx).await.unwrap(), manager)
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            client,
+            ScrollEvmConfig::scroll_mainnet(),
+        )
+        .no_eip4844()
+        .with_max_tx_input_bytes(120 * 1024) // MAX_TX_PAYLOAD_BYTES_PER_BLOCK
+        .build_with_tasks(executor, blob_store)
+        .map(|validator| {
+            ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(false)
+        });
+
+        ScrollTransactionPool::new(
+            validator,
+            CoinbaseTipOrdering::<ScrollPooledTransaction>::default(),
+            NoopBlobStore::default(),
+            PoolConfig::default(),
+        )
     }
 
     #[tokio::test]
     async fn test_validate_one_oversized_transaction() {
         // create the pool.
-        let (pool, manager) = pool().await;
+        let pool = pool();
         let tx = ScrollTxEnvelope::Legacy(Signed::new_unchecked(
             TxLegacy { gas_limit: 21_000, ..Default::default() },
             Signature::new(U256::ZERO, U256::ZERO, false),
@@ -214,20 +221,14 @@ mod tests {
         assert!(matches!(
             err.kind,
             PoolErrorKind::InvalidTransaction(
-                InvalidPoolTransactionError::OversizedData(x, y,)
+                InvalidPoolTransactionError::OversizedData{size: x, limit: y}
             ) if x == 121*1024 && y == 120*1024,
         ));
-
-        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
-        // drop all validation tasks.
-        drop(manager);
     }
 
     #[tokio::test]
     async fn test_validate_one_rollup_fee_exceeds_limit() {
-        // create the client.
-        let handle = tokio::runtime::Handle::current();
-        let manager = TaskManager::new(handle);
+        let executor = TaskExecutor::default();
         let blob_store = NoopBlobStore::default();
         let signer = Default::default();
         let client =
@@ -246,12 +247,13 @@ mod tests {
         );
 
         // create the validation task.
-        let validator = TransactionValidationTaskExecutor::eth_builder(client)
-            .no_eip4844()
-            .build_with_tasks(manager.executor(), blob_store)
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true)
-            });
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            client,
+            ScrollEvmConfig::scroll(SCROLL_DEV.clone()),
+        )
+        .no_eip4844()
+        .build_with_tasks(executor.clone(), blob_store)
+        .map(|validator| ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true));
 
         // create the pool.
         let pool = ScrollTransactionPool::new(
@@ -283,17 +285,12 @@ mod tests {
                 InvalidTransactionError::GasUintOverflow
             ))
         ));
-
-        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
-        // drop all validation tasks.
-        drop(manager);
     }
 
     #[tokio::test]
     async fn test_validate_one_rollup_fee_exceeds_balance() {
         // create the client.
-        let handle = tokio::runtime::Handle::current();
-        let manager = TaskManager::new(handle);
+        let executor = TaskExecutor::default();
         let blob_store = NoopBlobStore::default();
         let signer = Default::default();
         let client =
@@ -312,12 +309,13 @@ mod tests {
         );
 
         // create the validation task.
-        let validator = TransactionValidationTaskExecutor::eth_builder(client)
-            .no_eip4844()
-            .build_with_tasks(manager.executor(), blob_store)
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true)
-            });
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            client,
+            ScrollEvmConfig::scroll(SCROLL_DEV.clone()),
+        )
+        .no_eip4844()
+        .build_with_tasks(executor.clone(), blob_store)
+        .map(|validator| ScrollTransactionValidator::new(validator).require_l1_data_gas_fee(true));
 
         // create the pool.
         let pool = ScrollTransactionPool::new(
@@ -349,16 +347,12 @@ mod tests {
                 InvalidPoolTransactionError::Consensus(InvalidTransactionError::InsufficientFunds(GotExpectedBoxed(expected)))
             ) if *expected == GotExpected{ got: U256::from(400000), expected: U256::from(483673629772436u64) }
         ));
-
-        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
-        // drop all validation tasks.
-        drop(manager);
     }
 
     #[tokio::test]
     async fn test_validate_one_disallow_l1_messages() {
         // create the pool.
-        let (pool, manager) = pool().await;
+        let pool = pool();
         let tx = ScrollTxEnvelope::L1Message(Sealed::new_unchecked(
             TxL1Message::default(),
             B256::default(),
@@ -376,10 +370,6 @@ mod tests {
                 InvalidTransactionError::TxTypeNotSupported
             ))
         ));
-
-        // explicitly drop the manager here otherwise the `TransactionValidationTaskExecutor` will
-        // drop all validation tasks.
-        drop(manager);
     }
 
     #[tokio::test]
@@ -422,18 +412,20 @@ mod tests {
         ));
         let tx = ScrollPooledTransaction::new(Recovered::new_unchecked(tx, signer), 200);
 
-        let handle = tokio::runtime::Handle::current();
-        let manager = TaskManager::new(handle);
+        let executor = TaskExecutor::default();
 
         // Test 1: With L1 data fee buffer ENABLED - should reject (requires 2x L1 cost)
-        let validator = TransactionValidationTaskExecutor::eth_builder(client.clone())
-            .no_eip4844()
-            .build_with_tasks(manager.executor(), NoopBlobStore::default())
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator)
-                    .require_l1_data_gas_fee(true)
-                    .require_l1_data_fee_buffer(true)
-            });
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            client.clone(),
+            ScrollEvmConfig::scroll(SCROLL_DEV.clone()),
+        )
+        .no_eip4844()
+        .build_with_tasks(executor.clone(), NoopBlobStore::default())
+        .map(|validator| {
+            ScrollTransactionValidator::new(validator)
+                .require_l1_data_gas_fee(true)
+                .require_l1_data_fee_buffer(true)
+        });
 
         let pool = ScrollTransactionPool::new(
             validator,
@@ -451,14 +443,17 @@ mod tests {
         ));
 
         // Test 2: With L1 data fee buffer DISABLED - should accept (only requires 1x L1 cost)
-        let validator = TransactionValidationTaskExecutor::eth_builder(client)
-            .no_eip4844()
-            .build_with_tasks(manager.executor(), NoopBlobStore::default())
-            .map(|validator| {
-                ScrollTransactionValidator::new(validator)
-                    .require_l1_data_gas_fee(true)
-                    .require_l1_data_fee_buffer(false)
-            });
+        let validator = TransactionValidationTaskExecutor::eth_builder(
+            client,
+            ScrollEvmConfig::scroll(SCROLL_DEV.clone()),
+        )
+        .no_eip4844()
+        .build_with_tasks(executor.clone(), NoopBlobStore::default())
+        .map(|validator| {
+            ScrollTransactionValidator::new(validator)
+                .require_l1_data_gas_fee(true)
+                .require_l1_data_fee_buffer(false)
+        });
 
         let pool = ScrollTransactionPool::new(
             validator,
@@ -472,7 +467,5 @@ mod tests {
             result.is_ok(),
             "Expected transaction to be accepted without buffer, got: {result:?}"
         );
-
-        drop(manager);
     }
 }

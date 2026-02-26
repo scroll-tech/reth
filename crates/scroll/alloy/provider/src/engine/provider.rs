@@ -130,6 +130,7 @@ mod tests {
         ClientCode, ClientVersionV1, ExecutionPayloadV1, ForkchoiceState, PayloadId,
     };
     use reth_engine_primitives::ConsensusEngineHandle;
+    use reth_network_api::noop::NoopNetwork;
     use reth_payload_builder::{PayloadBuilderHandle, PayloadBuilderService};
     use reth_payload_primitives::PayloadTypes;
     use reth_primitives::{Block, TransactionSigned};
@@ -188,6 +189,7 @@ mod tests {
             EngineCapabilities::default(),
             ScrollEngineValidator::new(SCROLL_MAINNET.clone()),
             false,
+            NoopNetwork::default(),
         );
         let module = AuthRpcModule::new(engine_api);
         module.start_server(config).await.unwrap()

@@ -1,6 +1,7 @@
 //! Helper type that represents one of two possible executor types
 
 use crate::{execute::Executor, Database, OnStateHook};
+use revm::database::State;
 
 // re-export Either
 pub use futures_util::future::Either;
@@ -58,7 +59,7 @@ where
         state: F,
     ) -> Result<BlockExecutionOutput<<Self::Primitives as NodePrimitives>::Receipt>, Self::Error>
     where
-        F: FnMut(&mut revm::database::State<DB>),
+        F: FnMut(&State<DB>),
     {
         match self {
             Self::Left(a) => a.execute_with_state_closure(block, state),

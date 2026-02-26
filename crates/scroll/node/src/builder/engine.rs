@@ -11,7 +11,7 @@ use reth_node_api::{
 };
 use reth_node_builder::rpc::PayloadValidatorBuilder;
 use reth_node_types::NodeTypes;
-use reth_primitives_traits::{Block, RecoveredBlock};
+use reth_primitives_traits::{Block, SealedBlock};
 use reth_scroll_consensus::{CLIQUE_IN_TURN_DIFFICULTY, CLIQUE_NO_TURN_DIFFICULTY};
 use reth_scroll_engine_primitives::try_into_block;
 use reth_scroll_primitives::ScrollBlock;
@@ -111,10 +111,10 @@ where
 {
     type Block = ScrollBlock;
 
-    fn ensure_well_formed_payload(
+    fn convert_payload_to_block(
         &self,
         payload: ExecutionData,
-    ) -> Result<RecoveredBlock<Self::Block>, NewPayloadError> {
+    ) -> Result<SealedBlock<Self::Block>, NewPayloadError> {
         let expected_hash = payload.payload.block_hash();
 
         // First parse the block
@@ -126,20 +126,14 @@ where
         block.header.difficulty = CLIQUE_NO_TURN_DIFFICULTY;
         let block_hash_no_turn = block.hash_slow();
         if block_hash_no_turn == expected_hash {
-            return block
-                .seal_unchecked(block_hash_no_turn)
-                .try_recover()
-                .map_err(|err| NewPayloadError::Other(err.into()));
+            return Ok(block.seal_unchecked(block_hash_no_turn));
         }
 
         // Seal the block with the in-turn difficulty and return if hashes match
         block.header.difficulty = CLIQUE_IN_TURN_DIFFICULTY;
         let block_hash_in_turn = block.hash_slow();
         if block_hash_in_turn == expected_hash {
-            return block
-                .seal_unchecked(block_hash_in_turn)
-                .try_recover()
-                .map_err(|err| NewPayloadError::Other(err.into()));
+            return Ok(block.seal_unchecked(block_hash_in_turn));
         }
 
         Err(PayloadError::BlockHash { execution: block_hash_no_turn, consensus: expected_hash }

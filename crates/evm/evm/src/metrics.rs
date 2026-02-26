@@ -6,7 +6,6 @@ use reth_primitives_traits::{Block, RecoveredBlock};
 use std::time::Instant;
 
 /// Executor metrics.
-// TODO(onbjerg): add sload/sstore
 #[derive(Metrics, Clone)]
 #[metrics(scope = "sync.execution")]
 pub struct ExecutorMetrics {
@@ -17,17 +16,18 @@ pub struct ExecutorMetrics {
     /// The Histogram for amount of gas used.
     pub gas_used_histogram: Histogram,
 
+    /// The Histogram for amount of time taken to execute the pre-execution changes.
+    pub pre_execution_histogram: Histogram,
+    /// The Histogram for amount of time taken to wait for one transaction to be available.
+    pub transaction_wait_histogram: Histogram,
+    /// The Histogram for amount of time taken to execute one transaction.
+    pub transaction_execution_histogram: Histogram,
+    /// The Histogram for amount of time taken to execute the post-execution changes.
+    pub post_execution_histogram: Histogram,
     /// The Histogram for amount of time taken to execute blocks.
     pub execution_histogram: Histogram,
     /// The total amount of time it took to execute the latest block.
     pub execution_duration: Gauge,
-
-    /// The Histogram for number of accounts loaded when executing the latest block.
-    pub accounts_loaded_histogram: Histogram,
-    /// The Histogram for number of storage slots loaded when executing the latest block.
-    pub storage_slots_loaded_histogram: Histogram,
-    /// The Histogram for number of bytecodes loaded when executing the latest block.
-    pub bytecodes_loaded_histogram: Histogram,
 
     /// The Histogram for number of accounts updated when executing the latest block.
     pub accounts_updated_histogram: Histogram,

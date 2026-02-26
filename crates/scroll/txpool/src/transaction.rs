@@ -228,6 +228,7 @@ mod tests {
     use alloy_primitives::{private::rand::random_iter, Bytes, Signature, B256, U256};
     use reth_provider::test_utils::{ExtendedAccount, MockEthProvider};
     use reth_scroll_chainspec::{SCROLL_DEV, SCROLL_MAINNET};
+    use reth_scroll_evm::ScrollEvmConfig;
     use reth_scroll_primitives::{ScrollBlock, ScrollPrimitives, ScrollTransactionSigned};
     use reth_transaction_pool::{
         blobstore::InMemoryBlobStore, validate::EthTransactionValidatorBuilder, TransactionOrigin,
@@ -235,10 +236,19 @@ mod tests {
     };
     use scroll_alloy_consensus::{ScrollTxEnvelope, ScrollTypedTransaction, TxL1Message};
     use scroll_alloy_evm::gas_price_oracle::L1_GAS_PRICE_ORACLE_ADDRESS;
+
+    fn scroll_test_evm_config() -> ScrollEvmConfig {
+        ScrollEvmConfig::scroll_mainnet()
+    }
+
     #[test]
     fn validate_scroll_transaction() {
-        let client = MockEthProvider::default().with_chain_spec(SCROLL_MAINNET.clone());
-        let validator = EthTransactionValidatorBuilder::new(client)
+        let client =
+            MockEthProvider::<ScrollPrimitives, _>::new().with_chain_spec(SCROLL_MAINNET.clone());
+        let hash = B256::random();
+        client.add_header(hash, Header::default());
+        client.add_block(hash, ScrollBlock::default());
+        let validator = EthTransactionValidatorBuilder::new(client, scroll_test_evm_config())
             .no_shanghai()
             .no_cancun()
             .build(InMemoryBlobStore::default());
@@ -319,15 +329,16 @@ mod tests {
         let balance = U256::from(500_000_000_000_000u64);
         let client = create_test_client_with_l1_oracle(signer, balance);
 
-        let validator = EthTransactionValidatorBuilder::new(client.clone())
-            .no_shanghai()
-            .no_cancun()
-            .build(InMemoryBlobStore::default());
+        let validator =
+            EthTransactionValidatorBuilder::new(client.clone(), scroll_test_evm_config())
+                .no_shanghai()
+                .no_cancun()
+                .build(InMemoryBlobStore::default());
         let buffer_validator = ScrollTransactionValidator::new(validator)
             .require_l1_data_gas_fee(true)
             .require_l1_data_fee_buffer(true);
 
-        let validator = EthTransactionValidatorBuilder::new(client)
+        let validator = EthTransactionValidatorBuilder::new(client, scroll_test_evm_config())
             .no_shanghai()
             .no_cancun()
             .build(InMemoryBlobStore::default());

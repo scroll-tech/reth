@@ -1,27 +1,24 @@
-use alloy_consensus::{constants::KECCAK_EMPTY, BlockHeader as _};
+use alloy_consensus::{constants::KECCAK_EMPTY, BlockHeader};
+use alloy_primitives::{BlockNumber, Sealable, B256};
 use reth_codecs::Compact;
+use reth_consensus::ConsensusError;
 use reth_db_api::{
     tables,
     transaction::{DbTx, DbTxMut},
 };
-use reth_primitives_traits::BlockHeader;
+use reth_primitives_traits::{GotExpected, SealedHeader};
 use reth_provider::{
-    DBProvider, HeaderProvider, ProviderError, StageCheckpointReader, StageCheckpointWriter,
-    StatsReader, TrieWriter,
+    ChangeSetReader, DBProvider, HeaderProvider, ProviderError, StageCheckpointReader,
+    StageCheckpointWriter, StatsReader, StorageChangeSetReader, StorageSettingsCache, TrieWriter,
 };
 use reth_stages_api::{
-    EntitiesCheckpoint, ExecInput, ExecOutput, MerkleCheckpoint, Stage, StageCheckpoint,
-    StageError, StageId, StorageRootMerkleCheckpoint, UnwindInput, UnwindOutput,
+    BlockErrorKind, EntitiesCheckpoint, ExecInput, ExecOutput, MerkleCheckpoint, Stage,
+    StageCheckpoint, StageError, StageId, StorageRootMerkleCheckpoint, UnwindInput, UnwindOutput,
 };
 use reth_trie::{IntermediateStateRootState, StateRoot, StateRootProgress, StoredSubNode};
 use reth_trie_db::DatabaseStateRoot;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 use tracing::*;
-
-use alloy_primitives::{BlockNumber, Sealable, B256};
-use reth_consensus::{Consensus, ConsensusError, HeaderValidator};
-use reth_primitives_traits::{NodePrimitives, SealedHeader};
-use reth_stages_api::BlockErrorKind;
 
 // TODO: automate the process outlined below so the user can just send in a debugging package
 /// The error message that we include in invalid state root errors to tell users what information
@@ -73,10 +70,7 @@ pub const MERKLE_STAGE_DEFAULT_INCREMENTAL_THRESHOLD: u64 = 7_000;
 /// - [`StorageHashingStage`][crate::stages::StorageHashingStage]
 /// - [`MerkleStage::Execution`]
 #[derive(Debug, Clone)]
-pub enum MerkleStage<P>
-where
-    P: NodePrimitives,
-{
+pub enum MerkleStage {
     /// The execution portion of the merkle stage.
     Execution {
         // TODO: make struct for holding incremental settings, for code reuse between `Execution`
@@ -88,14 +82,9 @@ where
         /// incremental mode will calculate the state root by calculating the new state root for
         /// some number of blocks, repeating until we reach the desired block number.
         incremental_threshold: u64,
-        /// Consensus.
-        consensus: Arc<dyn Consensus<P::Block, Error = ConsensusError>>,
     },
     /// The unwind portion of the merkle stage.
-    Unwind {
-        /// Consensus.
-        consensus: Arc<dyn Consensus<P::Block, Error = ConsensusError>>,
-    },
+    Unwind,
     /// Able to execute and unwind. Used for tests
     #[cfg(any(test, feature = "test-utils"))]
     Both {
@@ -109,44 +98,23 @@ where
     },
 }
 
-impl<P> MerkleStage<P>
-where
-    P: NodePrimitives,
-{
-    /// Stage default for the [`MerkleStage::Execution`] with the provided consensus.
-    pub const fn default_execution_with_consensus(
-        consensus: Arc<dyn Consensus<P::Block, Error = ConsensusError>>,
-    ) -> Self {
+impl MerkleStage {
+    /// Stage default for the [`MerkleStage::Execution`].
+    pub const fn default_execution() -> Self {
         Self::Execution {
             rebuild_threshold: MERKLE_STAGE_DEFAULT_REBUILD_THRESHOLD,
             incremental_threshold: MERKLE_STAGE_DEFAULT_INCREMENTAL_THRESHOLD,
-            consensus,
         }
+    }
+
+    /// Stage default for the [`MerkleStage::Unwind`].
+    pub const fn default_unwind() -> Self {
+        Self::Unwind
     }
 
     /// Create new instance of [`MerkleStage::Execution`].
-    pub const fn new_execution(
-        rebuild_threshold: u64,
-        incremental_threshold: u64,
-        consensus: Arc<dyn Consensus<P::Block, Error = ConsensusError>>,
-    ) -> Self {
-        Self::Execution { rebuild_threshold, incremental_threshold, consensus }
-    }
-
-    /// Create new instance of [`MerkleStage::Unwind`].
-    pub const fn new_unwind(
-        consensus: Arc<dyn Consensus<P::Block, Error = ConsensusError>>,
-    ) -> Self {
-        Self::Unwind { consensus }
-    }
-
-    /// Returns the consensus for the stage.
-    pub fn consensus(&self) -> Arc<dyn Consensus<P::Block, Error = ConsensusError>> {
-        match self {
-            Self::Execution { consensus, .. } | Self::Unwind { consensus } => consensus.clone(),
-            #[cfg(any(test, feature = "test-utils"))]
-            Self::Both { .. } => reth_consensus::noop::NoopConsensus::arc(),
-        }
+    pub const fn new_execution(rebuild_threshold: u64, incremental_threshold: u64) -> Self {
+        Self::Execution { rebuild_threshold, incremental_threshold }
     }
 
     /// Gets the hashing progress
@@ -184,21 +152,23 @@ where
     }
 }
 
-impl<Provider, P> Stage<Provider> for MerkleStage<P>
+impl<Provider> Stage<Provider> for MerkleStage
 where
     Provider: DBProvider<Tx: DbTxMut>
         + TrieWriter
         + StatsReader
         + HeaderProvider
+        + ChangeSetReader
+        + StorageChangeSetReader
+        + StorageSettingsCache
         + StageCheckpointReader
         + StageCheckpointWriter,
-    P: NodePrimitives<BlockHeader = <Provider as HeaderProvider>::Header>,
 {
     /// Return the id of the stage
     fn id(&self) -> StageId {
         match self {
             Self::Execution { .. } => StageId::MerkleExecute,
-            Self::Unwind { .. } => StageId::MerkleUnwind,
+            Self::Unwind => StageId::MerkleUnwind,
             #[cfg(any(test, feature = "test-utils"))]
             Self::Both { .. } => StageId::Other("MerkleBoth"),
         }
@@ -207,11 +177,11 @@ where
     /// Execute the stage.
     fn execute(&mut self, provider: &Provider, input: ExecInput) -> Result<ExecOutput, StageError> {
         let (threshold, incremental_threshold) = match self {
-            Self::Unwind { .. } => {
+            Self::Unwind => {
                 info!(target: "sync::stages::merkle::unwind", "Stage is always skipped");
-                return Ok(ExecOutput::done(StageCheckpoint::new(input.target())));
+                return Ok(ExecOutput::done(StageCheckpoint::new(input.target())))
             }
-            Self::Execution { rebuild_threshold, incremental_threshold, .. } => {
+            Self::Execution { rebuild_threshold, incremental_threshold } => {
                 (*rebuild_threshold, *incremental_threshold)
             }
             #[cfg(any(test, feature = "test-utils"))]
@@ -280,7 +250,7 @@ where
                 })?;
             match progress {
                 StateRootProgress::Progress(state, hashed_entries_walked, updates) => {
-                    provider.write_trie_updates(&updates)?;
+                    provider.write_trie_updates(updates)?;
 
                     let mut checkpoint = MerkleCheckpoint::new(
                         to_block,
@@ -323,7 +293,7 @@ where
                     })
                 }
                 StateRootProgress::Complete(root, hashed_entries_walked, updates) => {
-                    provider.write_trie_updates(&updates)?;
+                    provider.write_trie_updates(updates)?;
 
                     entities_checkpoint.processed += hashed_entries_walked as u64;
 
@@ -345,12 +315,12 @@ where
                     "Processing chunk"
                 );
                 let (root, updates) =
-                StateRoot::incremental_root_with_updates(provider.tx_ref(), chunk_range)
+                StateRoot::incremental_root_with_updates(provider, chunk_range)
                     .map_err(|e| {
                         error!(target: "sync::stages::merkle", %e, ?current_block_number, ?to_block, "Incremental state root failed! {INVALID_STATE_ROOT_ERROR_MESSAGE}");
                         StageError::Fatal(Box::new(e))
                     })?;
-                provider.write_trie_updates(&updates)?;
+                provider.write_trie_updates(updates)?;
                 final_root = Some(root);
             }
 
@@ -377,13 +347,7 @@ where
         // Reset the checkpoint
         self.save_execution_checkpoint(provider, None)?;
 
-        // Ensure state root matches
-        validate_state_root(
-            self.consensus(),
-            trie_root,
-            SealedHeader::seal_slow(target_block),
-            to_block,
-        )?;
+        validate_state_root(trie_root, SealedHeader::seal_slow(target_block), to_block)?;
 
         Ok(ExecOutput {
             checkpoint: StageCheckpoint::new(to_block)
@@ -428,7 +392,7 @@ where
         if range.is_empty() {
             info!(target: "sync::stages::merkle::unwind", "Nothing to unwind");
         } else {
-            let (block_root, updates) = StateRoot::incremental_root_with_updates(tx, range)
+            let (block_root, updates) = StateRoot::incremental_root_with_updates(provider, range)
                 .map_err(|e| StageError::Fatal(Box::new(e)))?;
 
             // Validate the calculated state root
@@ -436,16 +400,10 @@ where
                 .header_by_number(input.unwind_to)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(input.unwind_to.into()))?;
 
-            let consensus = self.consensus();
-            validate_state_root(
-                consensus,
-                block_root,
-                SealedHeader::seal_slow(target),
-                input.unwind_to,
-            )?;
+            validate_state_root(block_root, SealedHeader::seal_slow(target), input.unwind_to)?;
 
             // Validation passed, apply unwind changes to the database.
-            provider.write_trie_updates(&updates)?;
+            provider.write_trie_updates(updates)?;
 
             // Update entities checkpoint to reflect the unwind operation
             // Since we're unwinding, we need to recalculate the total entities at the target block
@@ -466,19 +424,21 @@ where
 /// Check that the computed state root matches the root in the expected header.
 #[inline]
 fn validate_state_root<H: BlockHeader + Sealable + Debug>(
-    consensus: Arc<dyn HeaderValidator<H>>,
     got: B256,
     expected: SealedHeader<H>,
     target_block: BlockNumber,
 ) -> Result<(), StageError> {
-    consensus.validate_state_root(&*expected, got).inspect_err(|_|{
+    if got == expected.state_root() {
+        Ok(())
+    } else {
         error!(target: "sync::stages::merkle", ?target_block, ?got, ?expected, "Failed to verify block state root! {INVALID_STATE_ROOT_ERROR_MESSAGE}");
-    }).map_err(|err|{
-        StageError::Block {
-            error: BlockErrorKind::Validation(err),
+        Err(StageError::Block {
+            error: BlockErrorKind::Validation(ConsensusError::BodyStateRootDiff(
+                GotExpected { got, expected: expected.state_root() }.into(),
+            )),
             block: Box::new(expected.block_with_parent()),
-        }
-    })
+        })
+    }
 }
 
 #[cfg(test)]
@@ -488,11 +448,10 @@ mod tests {
         stage_test_suite_ext, ExecuteStageTestRunner, StageTestRunner, StorageKind,
         TestRunnerError, TestStageDB, UnwindStageTestRunner,
     };
-    use alloy_primitives::{keccak256, B256, U256};
+    use alloy_primitives::{keccak256, U256};
     use assert_matches::assert_matches;
     use reth_db_api::cursor::{DbCursorRO, DbCursorRW, DbDupCursorRO};
-    use reth_ethereum_primitives::EthPrimitives;
-    use reth_primitives_traits::{SealedBlock, SealedHeader, StorageEntry};
+    use reth_primitives_traits::{SealedBlock, StorageEntry};
     use reth_provider::{providers::StaticFileWriter, StaticFileProviderFactory};
     use reth_stages_api::StageUnitCheckpoint;
     use reth_static_file_types::StaticFileSegment;
@@ -631,9 +590,9 @@ mod tests {
 
         let actual_root = runner
             .db
-            .query(|tx| {
+            .query_with_provider(|provider| {
                 Ok(StateRoot::incremental_root_with_updates(
-                    tx,
+                    &provider,
                     stage_progress + 1..=previous_stage,
                 ))
             })
@@ -663,7 +622,7 @@ mod tests {
     }
 
     impl StageTestRunner for MerkleTestRunner {
-        type S = MerkleStage<EthPrimitives>;
+        type S = MerkleStage;
 
         fn db(&self) -> &TestStageDB {
             &self.db
@@ -782,7 +741,7 @@ mod tests {
             let hash = last_header.hash_slow();
             writer.prune_headers(1).unwrap();
             writer.commit().unwrap();
-            writer.append_header(&last_header, U256::ZERO, &hash).unwrap();
+            writer.append_header(&last_header, &hash).unwrap();
             writer.commit().unwrap();
 
             Ok(blocks)

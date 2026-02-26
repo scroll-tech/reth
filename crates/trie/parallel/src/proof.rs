@@ -1,20 +1,22 @@
 use crate::{
     metrics::ParallelTrieMetrics,
-    proof_task::{AccountMultiproofInput, ProofWorkerHandle, StorageProofInput},
+    proof_task::{
+        AccountMultiproofInput, ProofResult, ProofResultContext, ProofWorkerHandle,
+        StorageProofInput, StorageProofResultMessage,
+    },
     root::ParallelStateRootError,
     StorageRootTargets,
 };
 use alloy_primitives::{map::B256Set, B256};
-use dashmap::DashMap;
+use crossbeam_channel::{unbounded as crossbeam_unbounded, Receiver as CrossbeamReceiver};
 use reth_execution_errors::StorageRootError;
 use reth_storage_errors::db::DatabaseError;
 use reth_trie::{
     prefix_set::{PrefixSet, PrefixSetMut, TriePrefixSets, TriePrefixSetsMut},
-    updates::TrieUpdatesSorted,
-    DecodedMultiProof, DecodedStorageMultiProof, HashedPostStateSorted, MultiProofTargets, Nibbles,
+    DecodedMultiProof, DecodedStorageMultiProof, HashedPostState, MultiProofTargets, Nibbles,
 };
 use reth_trie_common::added_removed_keys::MultiAddedRemovedKeys;
-use std::sync::{mpsc::Receiver, Arc};
+use std::{sync::Arc, time::Instant};
 use tracing::trace;
 
 /// Parallel proof calculator.
@@ -23,14 +25,7 @@ use tracing::trace;
 /// that has proof targets.
 #[derive(Debug)]
 pub struct ParallelProof {
-    /// The sorted collection of cached in-memory intermediate trie nodes that
-    /// can be reused for computation.
-    pub nodes_sorted: Arc<TrieUpdatesSorted>,
-    /// The sorted in-memory overlay hashed state.
-    pub state_sorted: Arc<HashedPostStateSorted>,
-    /// The collection of prefix sets for the computation. Since the prefix sets _always_
-    /// invalidate the in-memory nodes, not all keys from `state_sorted` might be present here,
-    /// if we have cached nodes for them.
+    /// The collection of prefix sets for the computation.
     pub prefix_sets: Arc<TriePrefixSetsMut>,
     /// Flag indicating whether to include branch node masks in the proof.
     collect_branch_node_masks: bool,
@@ -38,9 +33,8 @@ pub struct ParallelProof {
     multi_added_removed_keys: Option<Arc<MultiAddedRemovedKeys>>,
     /// Handle to the proof worker pools.
     proof_worker_handle: ProofWorkerHandle,
-    /// Cached storage proof roots for missed leaves; this maps
-    /// hashed (missed) addresses to their storage proof roots.
-    missed_leaves_storage_roots: Arc<DashMap<B256, B256>>,
+    /// Whether to use V2 storage proofs.
+    v2_proofs_enabled: bool,
     #[cfg(feature = "metrics")]
     metrics: ParallelTrieMetrics,
 }
@@ -48,23 +42,24 @@ pub struct ParallelProof {
 impl ParallelProof {
     /// Create new state proof generator.
     pub fn new(
-        nodes_sorted: Arc<TrieUpdatesSorted>,
-        state_sorted: Arc<HashedPostStateSorted>,
         prefix_sets: Arc<TriePrefixSetsMut>,
-        missed_leaves_storage_roots: Arc<DashMap<B256, B256>>,
         proof_worker_handle: ProofWorkerHandle,
     ) -> Self {
         Self {
-            nodes_sorted,
-            state_sorted,
             prefix_sets,
-            missed_leaves_storage_roots,
             collect_branch_node_masks: false,
             multi_added_removed_keys: None,
             proof_worker_handle,
+            v2_proofs_enabled: false,
             #[cfg(feature = "metrics")]
             metrics: ParallelTrieMetrics::new_with_labels(&[("type", "proof")]),
         }
+    }
+
+    /// Set whether to use V2 storage proofs.
+    pub const fn with_v2_proofs_enabled(mut self, v2_proofs_enabled: bool) -> Self {
+        self.v2_proofs_enabled = v2_proofs_enabled;
+        self
     }
 
     /// Set the flag indicating whether to include branch node masks in the proof.
@@ -83,26 +78,34 @@ impl ParallelProof {
         self
     }
     /// Queues a storage proof task and returns a receiver for the result.
-    fn queue_storage_proof(
+    fn send_storage_proof(
         &self,
         hashed_address: B256,
         prefix_set: PrefixSet,
         target_slots: B256Set,
-    ) -> Result<
-        Receiver<Result<DecodedStorageMultiProof, ParallelStateRootError>>,
-        ParallelStateRootError,
-    > {
-        let input = StorageProofInput::new(
-            hashed_address,
-            prefix_set,
-            target_slots,
-            self.collect_branch_node_masks,
-            self.multi_added_removed_keys.clone(),
-        );
+    ) -> Result<CrossbeamReceiver<StorageProofResultMessage>, ParallelStateRootError> {
+        let (result_tx, result_rx) = crossbeam_channel::unbounded();
+
+        let input = if self.v2_proofs_enabled {
+            StorageProofInput::new(
+                hashed_address,
+                target_slots.into_iter().map(Into::into).collect(),
+            )
+        } else {
+            StorageProofInput::legacy(
+                hashed_address,
+                prefix_set,
+                target_slots,
+                self.collect_branch_node_masks,
+                self.multi_added_removed_keys.clone(),
+            )
+        };
 
         self.proof_worker_handle
-            .queue_storage_proof(input)
-            .map_err(|e| ParallelStateRootError::Other(e.to_string()))
+            .dispatch_storage_proof(input, result_tx)
+            .map_err(|e| ParallelStateRootError::Other(e.to_string()))?;
+
+        Ok(result_rx)
     }
 
     /// Generate a storage multiproof according to the specified targets and hashed address.
@@ -112,8 +115,11 @@ impl ParallelProof {
         target_slots: B256Set,
     ) -> Result<DecodedStorageMultiProof, ParallelStateRootError> {
         let total_targets = target_slots.len();
-        let prefix_set = PrefixSetMut::from(target_slots.iter().map(Nibbles::unpack));
-        let prefix_set = prefix_set.freeze();
+        let prefix_set = if self.v2_proofs_enabled {
+            PrefixSet::default()
+        } else {
+            PrefixSetMut::from(target_slots.iter().map(Nibbles::unpack)).freeze()
+        };
 
         trace!(
             target: "trie::parallel_proof",
@@ -122,12 +128,17 @@ impl ParallelProof {
             "Starting storage proof generation"
         );
 
-        let receiver = self.queue_storage_proof(hashed_address, prefix_set, target_slots)?;
-        let proof_result = receiver.recv().map_err(|_| {
+        let receiver = self.send_storage_proof(hashed_address, prefix_set, target_slots)?;
+        let proof_msg = receiver.recv().map_err(|_| {
             ParallelStateRootError::StorageRoot(StorageRootError::Database(DatabaseError::Other(
                 format!("channel closed for {hashed_address}"),
             )))
         })?;
+
+        // Extract storage proof directly from the result
+        let proof_result = proof_msg.result?;
+        let storage_proof = Into::<Option<DecodedStorageMultiProof>>::into(proof_result)
+            .expect("Partial proofs are not yet supported");
 
         trace!(
             target: "trie::parallel_proof",
@@ -136,7 +147,7 @@ impl ParallelProof {
             "Storage proof generation completed"
         );
 
-        proof_result
+        Ok(storage_proof)
     }
 
     /// Extends prefix sets with the given multiproof targets and returns the frozen result.
@@ -182,26 +193,37 @@ impl ParallelProof {
         );
 
         // Queue account multiproof request to account worker pool
+        // Create channel for receiving ProofResultMessage
+        let (result_tx, result_rx) = crossbeam_unbounded();
+        let account_multiproof_start_time = Instant::now();
 
-        let input = AccountMultiproofInput {
+        let input = AccountMultiproofInput::Legacy {
             targets,
             prefix_sets,
             collect_branch_node_masks: self.collect_branch_node_masks,
             multi_added_removed_keys: self.multi_added_removed_keys.clone(),
-            missed_leaves_storage_roots: self.missed_leaves_storage_roots.clone(),
+            proof_result_sender: ProofResultContext::new(
+                result_tx,
+                0,
+                HashedPostState::default(),
+                account_multiproof_start_time,
+            ),
         };
 
-        let receiver = self
-            .proof_worker_handle
+        self.proof_worker_handle
             .dispatch_account_multiproof(input)
             .map_err(|e| ParallelStateRootError::Other(e.to_string()))?;
 
         // Wait for account multiproof result from worker
-        let (multiproof, stats) = receiver.recv().map_err(|_| {
+        let proof_result_msg = result_rx.recv().map_err(|_| {
             ParallelStateRootError::Other(
                 "Account multiproof channel dropped: worker died or pool shutdown".to_string(),
             )
-        })??;
+        })?;
+
+        let ProofResult::Legacy(multiproof, stats) = proof_result_msg.result? else {
+            panic!("AccountMultiproofInput::Legacy was submitted, expected legacy result")
+        };
 
         #[cfg(feature = "metrics")]
         self.metrics.record(stats);
@@ -214,7 +236,7 @@ impl ParallelProof {
             leaves_added = stats.leaves_added(),
             missed_leaves = stats.missed_leaves(),
             precomputed_storage_roots = stats.precomputed_storage_roots(),
-            "Calculated decoded proof"
+            "Calculated decoded proof",
         );
 
         Ok(multiproof)
@@ -232,17 +254,13 @@ mod tests {
     };
     use rand::Rng;
     use reth_primitives_traits::{Account, StorageEntry};
-    use reth_provider::{
-        providers::ConsistentDbView, test_utils::create_test_provider_factory, HashingWriter,
-    };
+    use reth_provider::{test_utils::create_test_provider_factory, HashingWriter};
     use reth_trie::proof::Proof;
     use reth_trie_db::{DatabaseHashedCursorFactory, DatabaseTrieCursorFactory};
-    use tokio::runtime::Runtime;
 
     #[test]
     fn random_parallel_proof() {
         let factory = create_test_provider_factory();
-        let consistent_view = ConsistentDbView::new(factory.clone(), None);
 
         let mut rng = rand::rng();
         let state = (0..100)
@@ -302,22 +320,16 @@ mod tests {
         let trie_cursor_factory = DatabaseTrieCursorFactory::new(provider_rw.tx_ref());
         let hashed_cursor_factory = DatabaseHashedCursorFactory::new(provider_rw.tx_ref());
 
-        let rt = Runtime::new().unwrap();
+        let changeset_cache = reth_trie_db::ChangesetCache::new();
+        let factory =
+            reth_provider::providers::OverlayStateProviderFactory::new(factory, changeset_cache);
+        let task_ctx = ProofTaskCtx::new(factory);
+        let runtime = reth_tasks::Runtime::test();
+        let proof_worker_handle = ProofWorkerHandle::new(&runtime, task_ctx, false);
 
-        let task_ctx =
-            ProofTaskCtx::new(Default::default(), Default::default(), Default::default());
-        let proof_worker_handle =
-            ProofWorkerHandle::new(rt.handle().clone(), consistent_view, task_ctx, 1, 1);
-
-        let parallel_result = ParallelProof::new(
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            proof_worker_handle.clone(),
-        )
-        .decoded_multiproof(targets.clone())
-        .unwrap();
+        let parallel_result = ParallelProof::new(Default::default(), proof_worker_handle.clone())
+            .decoded_multiproof(targets.clone())
+            .unwrap();
 
         let sequential_result_raw = Proof::new(trie_cursor_factory, hashed_cursor_factory)
             .multiproof(targets.clone())

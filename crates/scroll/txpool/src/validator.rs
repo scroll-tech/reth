@@ -3,7 +3,7 @@ use alloy_eips::Encodable2718;
 use parking_lot::RwLock;
 use reth_chainspec::ChainSpecProvider;
 use reth_primitives_traits::{
-    transaction::error::InvalidTransactionError, Block, GotExpected, SealedBlock,
+    transaction::error::InvalidTransactionError, Block, BlockTy, GotExpected, SealedBlock,
 };
 use reth_revm::database::StateProviderDatabase;
 use reth_scroll_consensus::MAX_ROLLUP_FEE;
@@ -37,9 +37,9 @@ pub struct ScrollL1BlockInfo {
 
 /// Validator for Scroll transactions.
 #[derive(Debug)]
-pub struct ScrollTransactionValidator<Client, Tx> {
+pub struct ScrollTransactionValidator<Client, Tx, Evm> {
     /// The type that performs the actual validation.
-    inner: EthTransactionValidator<Client, Tx>,
+    inner: EthTransactionValidator<Client, Tx, Evm>,
     /// Additional block info required for validation.
     block_info: Arc<ScrollL1BlockInfo>,
     /// If true, ensure that the transaction's sender has enough balance to cover the L1 gas fee
@@ -51,7 +51,7 @@ pub struct ScrollTransactionValidator<Client, Tx> {
     require_l1_data_fee_buffer: bool,
 }
 
-impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
+impl<Client, Tx, Evm> ScrollTransactionValidator<Client, Tx, Evm> {
     /// Returns the configured chain spec
     pub fn chain_spec(&self) -> Arc<Client::ChainSpec>
     where
@@ -100,13 +100,14 @@ impl<Client, Tx> ScrollTransactionValidator<Client, Tx> {
     }
 }
 
-impl<Client, Tx> ScrollTransactionValidator<Client, Tx>
+impl<Client, Tx, Evm> ScrollTransactionValidator<Client, Tx, Evm>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
     Tx: EthPoolTransaction + ScrollTransaction,
+    Evm: reth_evm::ConfigureEvm,
 {
     /// Create a new [`ScrollTransactionValidator`].
-    pub fn new(inner: EthTransactionValidator<Client, Tx>) -> Self {
+    pub fn new(inner: EthTransactionValidator<Client, Tx, Evm>) -> Self {
         let this = Self::with_block_info(inner, ScrollL1BlockInfo::default());
         if let Ok(Some(block)) =
             this.inner.client().block_by_number_or_tag(alloy_eips::BlockNumberOrTag::Latest)
@@ -121,7 +122,7 @@ where
 
     /// Create a new [`ScrollTransactionValidator`] with the given [`ScrollL1BlockInfo`].
     pub fn with_block_info(
-        inner: EthTransactionValidator<Client, Tx>,
+        inner: EthTransactionValidator<Client, Tx, Evm>,
         block_info: ScrollL1BlockInfo,
     ) -> Self {
         Self {
@@ -266,18 +267,20 @@ where
     /// See also [`Self::validate_one`]
     pub fn validate_all(
         &self,
-        transactions: Vec<(TransactionOrigin, Tx)>,
+        transactions: impl IntoIterator<Item = (TransactionOrigin, Tx)>,
     ) -> Vec<TransactionValidationOutcome<Tx>> {
         transactions.into_iter().map(|(origin, tx)| self.validate_one(origin, tx)).collect()
     }
 }
 
-impl<Client, Tx> TransactionValidator for ScrollTransactionValidator<Client, Tx>
+impl<Client, Tx, Evm> TransactionValidator for ScrollTransactionValidator<Client, Tx, Evm>
 where
     Client: ChainSpecProvider<ChainSpec: ScrollHardforks> + StateProviderFactory + BlockReaderIdExt,
     Tx: EthPoolTransaction + ScrollTransaction,
+    Evm: reth_evm::ConfigureEvm,
 {
     type Transaction = Tx;
+    type Block = BlockTy<Evm::Primitives>;
 
     async fn validate_transaction(
         &self,
@@ -289,15 +292,12 @@ where
 
     async fn validate_transactions(
         &self,
-        transactions: Vec<(TransactionOrigin, Self::Transaction)>,
+        transactions: impl IntoIterator<Item = (TransactionOrigin, Self::Transaction)>,
     ) -> Vec<TransactionValidationOutcome<Self::Transaction>> {
         self.validate_all(transactions)
     }
 
-    fn on_new_head_block<B>(&self, new_tip_block: &SealedBlock<B>)
-    where
-        B: Block,
-    {
+    fn on_new_head_block(&self, new_tip_block: &SealedBlock<Self::Block>) {
         self.inner.on_new_head_block(new_tip_block);
         self.update_l1_block_info(new_tip_block.header());
     }

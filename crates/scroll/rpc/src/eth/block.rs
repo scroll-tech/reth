@@ -2,13 +2,11 @@
 
 use crate::{RpcBlockHeaderMut, ScrollEthApi, ScrollEthApiError};
 
-use alloy_consensus::BlockHeader;
 use alloy_eips::BlockId;
-use reth_provider::HeaderProvider;
 use reth_rpc_convert::{RpcConvert, RpcTypes};
 use reth_rpc_eth_api::{
     helpers::{EthBlocks, LoadBlock},
-    EthApiTypes, FromEthApiError, FullEthApiTypes, RpcBlock, RpcNodeCore,
+    EthApiTypes, FullEthApiTypes, RpcBlock, RpcNodeCore,
 };
 use reth_rpc_eth_types::error::FromEvmError;
 
@@ -29,18 +27,13 @@ where
     {
         let Some(block) = self.recovered_block(block_id).await? else { return Ok(None) };
 
-        let td = self
-            .provider()
-            .header_td_by_number(block.number())
-            .map_err(Self::Error::from_eth_err)?;
-
         let mut block = block.clone_into_rpc_block(
             full.into(),
-            |tx, tx_info| self.tx_resp_builder().fill(tx, tx_info),
-            |header, size| self.tx_resp_builder().convert_header(header, size),
+            |tx, tx_info| self.converter().fill(tx, tx_info),
+            |header, size| self.converter().convert_header(header, size),
         )?;
 
-        *block.header.total_difficulty_mut() = td;
+        *block.header.total_difficulty_mut() = None;
 
         Ok(Some(block))
     }

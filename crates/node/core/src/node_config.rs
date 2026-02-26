@@ -3,14 +3,14 @@
 use crate::{
     args::{
         DatabaseArgs, DatadirArgs, DebugArgs, DevArgs, EngineArgs, NetworkArgs, PayloadBuilderArgs,
-        PruningArgs, RpcServerArgs, TxPoolArgs,
+        PruningArgs, RpcServerArgs, StaticFilesArgs, StorageArgs, TxPoolArgs,
     },
     dirs::{ChainPath, DataDirPath},
     utils::get_single_header,
 };
 use alloy_consensus::BlockHeader;
 use alloy_eips::BlockHashOrNumber;
-use alloy_primitives::{BlockNumber, B256};
+use alloy_primitives::{BlockNumber, B256, U256};
 use eyre::eyre;
 use reth_chainspec::{ChainSpec, EthChainSpec, MAINNET};
 use reth_config::config::PruneConfig;
@@ -21,6 +21,7 @@ use reth_primitives_traits::SealedHeader;
 use reth_stages_types::StageId;
 use reth_storage_api::{
     BlockHashReader, DatabaseProviderFactory, HeaderProvider, StageCheckpointReader,
+    StorageSettings,
 };
 use reth_storage_errors::provider::ProviderResult;
 use reth_transaction_pool::TransactionPool;
@@ -34,12 +35,11 @@ use tracing::*;
 
 use crate::args::{EraArgs, MetricArgs};
 pub use reth_engine_primitives::{
-    DEFAULT_MAX_PROOF_TASK_CONCURRENCY, DEFAULT_MEMORY_BLOCK_BUFFER_TARGET,
-    DEFAULT_PERSISTENCE_THRESHOLD, DEFAULT_RESERVED_CPU_CORES,
+    DEFAULT_MEMORY_BLOCK_BUFFER_TARGET, DEFAULT_PERSISTENCE_THRESHOLD, DEFAULT_RESERVED_CPU_CORES,
 };
 
 /// Default size of cross-block cache in megabytes.
-pub const DEFAULT_CROSS_BLOCK_CACHE_SIZE_MB: u64 = 4 * 1024;
+pub const DEFAULT_CROSS_BLOCK_CACHE_SIZE_MB: usize = 4 * 1024;
 
 /// This includes all necessary configuration to launch the node.
 /// The individual configuration options can be overwritten before launching the node.
@@ -148,6 +148,12 @@ pub struct NodeConfig<ChainSpec> {
 
     /// All ERA import related arguments with --era prefix
     pub era: EraArgs,
+
+    /// All static files related arguments
+    pub static_files: StaticFilesArgs,
+
+    /// All storage related arguments with --storage prefix
+    pub storage: StorageArgs,
 }
 
 impl NodeConfig<ChainSpec> {
@@ -178,6 +184,8 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             datadir: DatadirArgs::default(),
             engine: EngineArgs::default(),
             era: EraArgs::default(),
+            static_files: StaticFilesArgs::default(),
+            storage: StorageArgs::default(),
         }
     }
 
@@ -189,6 +197,22 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
         self.dev.dev = true;
         self.network.discovery.disable_discovery = true;
         self
+    }
+
+    /// Apply a function to the config.
+    pub fn apply<F>(self, f: F) -> Self
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        f(self)
+    }
+
+    /// Applies a fallible function to the config.
+    pub fn try_apply<F, R>(self, f: F) -> Result<Self, R>
+    where
+        F: FnOnce(Self) -> Result<Self, R>,
+    {
+        f(self)
     }
 
     /// Sets --dev mode for the node [`NodeConfig::dev`], if `dev` is true.
@@ -218,8 +242,50 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
         self
     }
 
+    /// Set the [`ChainSpec`] for the node and converts the type to that chainid.
+    pub fn map_chain<C>(self, chain: impl Into<Arc<C>>) -> NodeConfig<C> {
+        let Self {
+            datadir,
+            config,
+            metrics,
+            instance,
+            network,
+            rpc,
+            txpool,
+            builder,
+            debug,
+            db,
+            dev,
+            pruning,
+            engine,
+            era,
+            static_files,
+            storage,
+            ..
+        } = self;
+        NodeConfig {
+            datadir,
+            config,
+            chain: chain.into(),
+            metrics,
+            instance,
+            network,
+            rpc,
+            txpool,
+            builder,
+            debug,
+            db,
+            dev,
+            pruning,
+            engine,
+            era,
+            static_files,
+            storage,
+        }
+    }
+
     /// Set the metrics address for the node
-    pub const fn with_metrics(mut self, metrics: MetricArgs) -> Self {
+    pub fn with_metrics(mut self, metrics: MetricArgs) -> Self {
         self.metrics = metrics;
         self
     }
@@ -272,7 +338,7 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
     }
 
     /// Set the dev args for the node
-    pub const fn with_dev(mut self, dev: DevArgs) -> Self {
+    pub fn with_dev(mut self, dev: DevArgs) -> Self {
         self.dev = dev;
         self
     }
@@ -283,12 +349,31 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
         self
     }
 
+    /// Set the storage args for the node
+    pub const fn with_storage(mut self, storage: StorageArgs) -> Self {
+        self.storage = storage;
+        self
+    }
+
     /// Returns pruning configuration.
     pub fn prune_config(&self) -> Option<PruneConfig>
     where
         ChainSpec: EthereumHardforks,
     {
         self.pruning.prune_config(&self.chain)
+    }
+
+    /// Returns the effective storage settings derived from `--storage.v2`.
+    ///
+    /// The base storage mode is determined by `--storage.v2`:
+    /// - When `--storage.v2` is set: uses [`StorageSettings::v2()`] defaults
+    /// - Otherwise: uses [`StorageSettings::base()`] defaults
+    pub const fn storage_settings(&self) -> StorageSettings {
+        if self.storage.v2 {
+            StorageSettings::v2()
+        } else {
+            StorageSettings::base()
+        }
     }
 
     /// Returns the max block that the node should run to, looking it up from the network if
@@ -330,12 +415,6 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             .header_by_number(head)?
             .expect("the header for the latest block is missing, database is corrupt");
 
-        let total_difficulty = provider
-            .header_td_by_number(head)?
-            // total difficulty is effectively deprecated, but still required in some places, e.g.
-            // p2p
-            .unwrap_or_default();
-
         let hash = provider
             .block_hash(head)?
             .expect("the hash for the latest block is missing, database is corrupt");
@@ -344,7 +423,7 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             number: head,
             hash,
             difficulty: header.difficulty(),
-            total_difficulty,
+            total_difficulty: U256::ZERO,
             timestamp: header.timestamp(),
         })
     }
@@ -418,6 +497,12 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
         self
     }
 
+    /// Disables all discovery services for the node.
+    pub const fn with_disabled_discovery(mut self) -> Self {
+        self.network.discovery.disable_discovery = true;
+        self
+    }
+
     /// Effectively disables the RPC state cache by setting the cache sizes to `0`.
     ///
     /// By setting the cache sizes to 0, caching of newly executed or fetched blocks will be
@@ -484,6 +569,8 @@ impl<ChainSpec> NodeConfig<ChainSpec> {
             pruning: self.pruning,
             engine: self.engine,
             era: self.era,
+            static_files: self.static_files,
+            storage: self.storage,
         }
     }
 
@@ -519,11 +606,13 @@ impl<ChainSpec> Clone for NodeConfig<ChainSpec> {
             builder: self.builder.clone(),
             debug: self.debug.clone(),
             db: self.db,
-            dev: self.dev,
+            dev: self.dev.clone(),
             pruning: self.pruning.clone(),
             datadir: self.datadir.clone(),
             engine: self.engine.clone(),
             era: self.era.clone(),
+            static_files: self.static_files,
+            storage: self.storage,
         }
     }
 }

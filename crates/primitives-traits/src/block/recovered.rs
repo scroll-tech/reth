@@ -219,7 +219,7 @@ impl<B: Block> RecoveredBlock<B> {
 
     /// A safer variant of [`Self::new_sealed`] that checks if the number of senders is equal to
     /// the number of transactions in the block and recovers the senders from the transactions, if
-    /// not using [`SignedTransaction::recover_signer_unchecked`](crate::transaction::signed::SignedTransaction)
+    /// not using [`SignedTransaction::recover_signer`](crate::transaction::signed::SignedTransaction)
     /// to recover the senders.
     ///
     /// Returns an error if any of the transactions fail to recover the sender.
@@ -473,7 +473,7 @@ impl<B: Block + Default> Default for RecoveredBlock<B> {
 impl<B: Block> InMemorySize for RecoveredBlock<B> {
     #[inline]
     fn size(&self) -> usize {
-        self.block.size() + self.senders.len() * core::mem::size_of::<Address>()
+        self.block.size() + self.senders.capacity() * core::mem::size_of::<Address>()
     }
 }
 
@@ -587,6 +587,11 @@ impl<B: crate::test_utils::TestBlock> RecoveredBlock<B> {
         self.block.set_block_number(number);
     }
 
+    /// Updates the block timestamp.
+    pub fn set_timestamp(&mut self, timestamp: u64) {
+        self.block.set_timestamp(timestamp);
+    }
+
     /// Updates the block state root.
     pub fn set_state_root(&mut self, state_root: alloy_primitives::B256) {
         self.block.set_state_root(state_root);
@@ -669,7 +674,7 @@ mod rpc_compat {
     {
         /// Converts the block into an RPC [`Block`] with the given [`BlockTransactionsKind`].
         ///
-        /// The `tx_resp_builder` closure transforms each transaction into the desired response
+        /// The `converter` closure transforms each transaction into the desired response
         /// type.
         ///
         /// `header_builder` transforms the block header into RPC representation. It takes the
@@ -678,7 +683,7 @@ mod rpc_compat {
         pub fn into_rpc_block<T, RpcH, F, E>(
             self,
             kind: BlockTransactionsKind,
-            tx_resp_builder: F,
+            converter: F,
             header_builder: impl FnOnce(SealedHeader<B::Header>, usize) -> Result<RpcH, E>,
         ) -> Result<Block<T, RpcH>, E>
         where
@@ -689,9 +694,7 @@ mod rpc_compat {
         {
             match kind {
                 BlockTransactionsKind::Hashes => self.into_rpc_block_with_tx_hashes(header_builder),
-                BlockTransactionsKind::Full => {
-                    self.into_rpc_block_full(tx_resp_builder, header_builder)
-                }
+                BlockTransactionsKind::Full => self.into_rpc_block_full(converter, header_builder),
             }
         }
 
@@ -700,7 +703,7 @@ mod rpc_compat {
         /// For transaction hashes, only necessary parts are cloned for efficiency.
         /// For full transactions, the entire block is cloned.
         ///
-        /// The `tx_resp_builder` closure transforms each transaction into the desired response
+        /// The `converter` closure transforms each transaction into the desired response
         /// type.
         ///
         /// `header_builder` transforms the block header into RPC representation. It takes the
@@ -709,7 +712,7 @@ mod rpc_compat {
         pub fn clone_into_rpc_block<T, RpcH, F, E>(
             &self,
             kind: BlockTransactionsKind,
-            tx_resp_builder: F,
+            converter: F,
             header_builder: impl FnOnce(SealedHeader<B::Header>, usize) -> Result<RpcH, E>,
         ) -> Result<Block<T, RpcH>, E>
         where
@@ -721,7 +724,7 @@ mod rpc_compat {
             match kind {
                 BlockTransactionsKind::Hashes => self.to_rpc_block_with_tx_hashes(header_builder),
                 BlockTransactionsKind::Full => {
-                    self.clone().into_rpc_block_full(tx_resp_builder, header_builder)
+                    self.clone().into_rpc_block_full(converter, header_builder)
                 }
             }
         }
@@ -770,10 +773,10 @@ mod rpc_compat {
         /// Converts the block into an RPC [`Block`] with full transaction objects.
         ///
         /// Returns [`BlockTransactions::Full`] with complete transaction data.
-        /// The `tx_resp_builder` closure transforms each transaction with its metadata.
+        /// The `converter` closure transforms each transaction with its metadata.
         pub fn into_rpc_block_full<T, RpcHeader, F, E>(
             self,
-            tx_resp_builder: F,
+            converter: F,
             header_builder: impl FnOnce(SealedHeader<B::Header>, usize) -> Result<RpcHeader, E>,
         ) -> Result<Block<T, RpcHeader>, E>
         where
@@ -796,15 +799,17 @@ mod rpc_compat {
                 .zip(senders)
                 .enumerate()
                 .map(|(idx, (tx, sender))| {
+                    #[allow(clippy::needless_update)]
                     let tx_info = TransactionInfo {
                         hash: Some(*tx.tx_hash()),
                         block_hash,
                         block_number: Some(block_number),
                         base_fee,
                         index: Some(idx as u64),
+                        ..Default::default()
                     };
 
-                    tx_resp_builder(Recovered::new_unchecked(tx, sender), tx_info)
+                    converter(Recovered::new_unchecked(tx, sender), tx_info)
                 })
                 .collect::<Result<Vec<_>, E>>()?;
 

@@ -10,7 +10,6 @@ use reth_node_api::NodeTypesWithDBAdapter;
 use reth_payload_builder::EthPayloadBuilderAttributes;
 use reth_provider::providers::BlockchainProvider;
 use reth_scroll_chainspec::{ScrollChainConfig, ScrollChainSpecBuilder};
-use reth_tasks::TaskManager;
 use scroll_alloy_rpc_types_engine::BlockDataHint;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -22,10 +21,7 @@ pub(crate) type ScrollNode = NodeHelperType<
 >;
 
 /// Creates the initial setup with `num_nodes` of the node config, started and connected.
-pub async fn setup(
-    num_nodes: usize,
-    is_dev: bool,
-) -> eyre::Result<(Vec<ScrollNode>, TaskManager, Wallet)> {
+pub async fn setup(num_nodes: usize, is_dev: bool) -> eyre::Result<(Vec<ScrollNode>, Wallet)> {
     let genesis: Genesis =
         serde_json::from_str(include_str!("../tests/assets/genesis.json")).unwrap();
     reth_e2e_test_utils::setup_engine(
@@ -55,7 +51,7 @@ pub async fn advance_chain(
         let wallet = wallet.clone();
         Box::pin(async move {
             let mut wallet = wallet.lock().await;
-            let tx_fut = TransactionTestContext::transfer_tx_nonce_bytes(
+            let tx_fut = TransactionTestContext::transfer_tx_bytes_with_nonce(
                 wallet.chain_id,
                 wallet.inner.clone(),
                 wallet.inner_nonce,

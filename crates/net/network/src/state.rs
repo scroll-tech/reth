@@ -163,6 +163,7 @@ impl<N: NetworkPrimitives> NetworkState<N> {
             peer,
             status.blockhash,
             block_number,
+            Arc::clone(&capabilities),
             timeout,
             range_info,
         );
@@ -291,7 +292,7 @@ impl<N: NetworkPrimitives> NetworkState<N> {
 
     /// Adds a peer and its address with the given kind to the peerset.
     pub(crate) fn add_peer_kind(&mut self, peer_id: PeerId, kind: PeerKind, addr: PeerAddr) {
-        self.peers_manager.add_peer_kind(peer_id, kind, addr, None)
+        self.peers_manager.add_peer_kind(peer_id, Some(kind), addr, None)
     }
 
     /// Connects a peer and its address with the given kind
@@ -317,9 +318,19 @@ impl<N: NetworkPrimitives> NetworkState<N> {
                     fork_id,
                 });
             }
-            DiscoveryEvent::EnrForkId(peer_id, fork_id) => {
-                self.queued_messages
-                    .push_back(StateAction::DiscoveredEnrForkId { peer_id, fork_id });
+            DiscoveryEvent::EnrForkId(record, fork_id) => {
+                let peer_id = record.id;
+                let tcp_addr = record.tcp_addr();
+                if tcp_addr.port() == 0 {
+                    return
+                }
+                let udp_addr = record.udp_addr();
+                let addr = PeerAddr::new(tcp_addr, Some(udp_addr));
+                self.queued_messages.push_back(StateAction::DiscoveredEnrForkId {
+                    peer_id,
+                    addr,
+                    fork_id,
+                });
             }
         }
     }
@@ -537,6 +548,8 @@ pub(crate) enum StateAction<N: NetworkPrimitives> {
     /// Retrieved a [`ForkId`] from the peer via ENR request, See <https://eips.ethereum.org/EIPS/eip-868>
     DiscoveredEnrForkId {
         peer_id: PeerId,
+        /// The address of the peer.
+        addr: PeerAddr,
         /// The reported [`ForkId`] by this peer.
         fork_id: ForkId,
     },

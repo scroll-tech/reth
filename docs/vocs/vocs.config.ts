@@ -5,6 +5,7 @@ import { basePath } from './redirects.config'
 
 export default defineConfig({
   title: 'Reth',
+  description: 'Reth is a secure, performant, and modular Ethereum execution client built in Rust.',
   logoUrl: '/logo.png',
   iconUrl: '/logo.png',
   ogImageUrl: '/reth-prod.png',
@@ -21,7 +22,7 @@ export default defineConfig({
     },
     { text: 'GitHub', link: 'https://github.com/paradigmxyz/reth' },
     {
-      text: 'v1.8.2',
+      text: 'v1.11.1',
       items: [
         {
           text: 'Releases',
@@ -72,5 +73,35 @@ export default defineConfig({
   },
   editLink: {
     pattern: "https://github.com/paradigmxyz/reth/edit/main/docs/vocs/docs/pages/:path",
+  },
+  vite: {
+    plugins: [
+      {
+        name: 'transform-summary-links',
+        apply: 'serve', // only during dev for faster feedback
+        enforce: 'pre',
+        async load(id) {
+          if (id.endsWith('pages/cli/SUMMARY.mdx') || id.endsWith('pages/cli/summary.mdx')) {
+            const { readFileSync } = await import('node:fs')
+            let code = readFileSync(id, 'utf-8')
+            code = code.replace(/\]\(\.\/([^)]+)\.mdx\)/g, '](/cli/\$1)')
+            return code
+          }
+        }
+      },
+      {
+        name: 'transform-summary-links-build',
+        apply: 'build', // only apply during build
+        enforce: 'pre',
+        async load(id) {
+          if (id.endsWith('pages/cli/SUMMARY.mdx') || id.endsWith('pages/cli/summary.mdx')) {
+            const { readFileSync } = await import('node:fs')
+            let code = readFileSync(id, 'utf-8')
+            code = code.replace(/\]\(\.\/([^)]+)\.mdx\)/g, '](/cli/\$1)')
+            return code
+          }
+        }
+      }
+    ]
   }
 })

@@ -10,12 +10,12 @@ use crate::{
 };
 
 #[cfg(feature = "db-api")]
-use crate::{DBProvider, DatabaseProviderFactory};
+use crate::{DBProvider, DatabaseProviderFactory, StorageChangeSetReader, StorageSettingsCache};
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
 use alloy_consensus::transaction::TransactionMeta;
 use alloy_eips::{BlockHashOrNumber, BlockId, BlockNumberOrTag};
 use alloy_primitives::{
-    Address, BlockHash, BlockNumber, Bytes, StorageKey, StorageValue, TxHash, TxNumber, B256, U256,
+    Address, BlockHash, BlockNumber, Bytes, StorageKey, StorageValue, TxHash, TxNumber, B256,
 };
 use core::{
     fmt::Debug,
@@ -59,7 +59,7 @@ impl<ChainSpec, N> NoopProvider<ChainSpec, N> {
             #[cfg(feature = "db-api")]
             tx: TxMock::default(),
             #[cfg(feature = "db-api")]
-            prune_modes: PruneModes::none(),
+            prune_modes: PruneModes::default(),
             _phantom: Default::default(),
         }
     }
@@ -73,7 +73,7 @@ impl<ChainSpec> NoopProvider<ChainSpec> {
             #[cfg(feature = "db-api")]
             tx: TxMock::default(),
             #[cfg(feature = "db-api")]
-            prune_modes: PruneModes::none(),
+            prune_modes: PruneModes::default(),
             _phantom: Default::default(),
         }
     }
@@ -272,10 +272,6 @@ impl<C: Send + Sync, N: NodePrimitives> TransactionsProvider for NoopProvider<C,
         Ok(None)
     }
 
-    fn transaction_block(&self, _id: TxNumber) -> ProviderResult<Option<BlockNumber>> {
-        Ok(None)
-    }
-
     fn transactions_by_block(
         &self,
         _block_id: BlockHashOrNumber,
@@ -355,14 +351,6 @@ impl<C: Send + Sync, N: NodePrimitives> HeaderProvider for NoopProvider<C, N> {
         Ok(None)
     }
 
-    fn header_td(&self, _hash: BlockHash) -> ProviderResult<Option<U256>> {
-        Ok(None)
-    }
-
-    fn header_td_by_number(&self, _number: BlockNumber) -> ProviderResult<Option<U256>> {
-        Ok(None)
-    }
-
     fn headers_range(
         &self,
         _range: impl RangeBounds<BlockNumber>,
@@ -406,6 +394,47 @@ impl<C: Send + Sync, N: NodePrimitives> ChangeSetReader for NoopProvider<C, N> {
         _address: Address,
     ) -> ProviderResult<Option<AccountBeforeTx>> {
         Ok(None)
+    }
+
+    fn account_changesets_range(
+        &self,
+        _range: impl core::ops::RangeBounds<BlockNumber>,
+    ) -> ProviderResult<Vec<(BlockNumber, AccountBeforeTx)>> {
+        Ok(Vec::default())
+    }
+
+    fn account_changeset_count(&self) -> ProviderResult<usize> {
+        Ok(0)
+    }
+}
+
+#[cfg(feature = "db-api")]
+impl<C: Send + Sync, N: NodePrimitives> StorageChangeSetReader for NoopProvider<C, N> {
+    fn storage_changeset(
+        &self,
+        _block_number: BlockNumber,
+    ) -> ProviderResult<Vec<(reth_db_api::models::BlockNumberAddress, crate::ChangesetEntry)>> {
+        Ok(Vec::default())
+    }
+
+    fn get_storage_before_block(
+        &self,
+        _block_number: BlockNumber,
+        _address: Address,
+        _storage_key: B256,
+    ) -> ProviderResult<Option<crate::ChangesetEntry>> {
+        Ok(None)
+    }
+
+    fn storage_changesets_range(
+        &self,
+        _range: impl core::ops::RangeBounds<BlockNumber>,
+    ) -> ProviderResult<Vec<(reth_db_api::models::BlockNumberAddress, crate::ChangesetEntry)>> {
+        Ok(Vec::default())
+    }
+
+    fn storage_changeset_count(&self) -> ProviderResult<usize> {
+        Ok(0)
     }
 }
 
@@ -508,6 +537,14 @@ impl<C: Send + Sync, N: NodePrimitives> StateProvider for NoopProvider<C, N> {
         _storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
         Ok(None)
+    }
+
+    fn storage_by_hashed_key(
+        &self,
+        _account: Address,
+        _hashed_storage_key: StorageKey,
+    ) -> ProviderResult<Option<StorageValue>> {
+        Err(ProviderError::UnsupportedProvider)
     }
 }
 
@@ -639,7 +676,7 @@ impl<ChainSpec: Send + Sync, N: NodePrimitives> DBProvider for NoopProvider<Chai
         &self.prune_modes
     }
 
-    fn commit(self) -> ProviderResult<bool> {
+    fn commit(self) -> ProviderResult<()> {
         use reth_db_api::transaction::DbTx;
 
         Ok(self.tx.commit()?)
@@ -661,4 +698,13 @@ impl<ChainSpec: Send + Sync, N: NodePrimitives> DatabaseProviderFactory
     fn database_provider_rw(&self) -> ProviderResult<Self::ProviderRW> {
         Ok(self.clone())
     }
+}
+
+#[cfg(feature = "db-api")]
+impl<ChainSpec: Send + Sync, N: Send + Sync> StorageSettingsCache for NoopProvider<ChainSpec, N> {
+    fn cached_storage_settings(&self) -> reth_db_api::models::StorageSettings {
+        reth_db_api::models::StorageSettings::default()
+    }
+
+    fn set_storage_settings_cache(&self, _settings: reth_db_api::models::StorageSettings) {}
 }

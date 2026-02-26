@@ -44,6 +44,7 @@ jsonrpsee.workspace = true
 [dev-dependencies]
 reth-payload-builder = { workspace = true, features = ["test-utils"] }
 reth-engine-primitives.workspace = true
+reth-network-api.workspace = true
 reth-payload-primitives.workspace = true
 reth-primitives.workspace = true
 reth-primitives-traits.workspace = true

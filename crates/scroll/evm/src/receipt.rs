@@ -13,10 +13,7 @@ impl ScrollReceiptBuilder for ScrollRethReceiptBuilder {
     type Transaction = ScrollTransactionSigned;
     type Receipt = ScrollReceipt;
 
-    fn build_receipt<E: Evm>(
-        &self,
-        ctx: ReceiptBuilderCtx<'_, ScrollTransactionSigned, E>,
-    ) -> Self::Receipt {
+    fn build_receipt<E: Evm>(&self, ctx: ReceiptBuilderCtx<E>) -> Self::Receipt {
         let inner = Receipt {
             // Success flag was added in `EIP-658: Embedding transaction status code in
             // receipts`.
@@ -26,7 +23,9 @@ impl ScrollReceiptBuilder for ScrollRethReceiptBuilder {
         };
         let into_scroll_receipt = |inner: Receipt| ScrollTransactionReceipt::new(inner, ctx.l1_fee);
 
-        match ctx.tx.tx_type() {
+        let tx_type =
+            ScrollTxType::try_from(ctx.tx_type).expect("unexpected scroll transaction type");
+        match tx_type {
             ScrollTxType::Legacy => ScrollReceipt::Legacy(into_scroll_receipt(inner)),
             ScrollTxType::Eip2930 => ScrollReceipt::Eip2930(into_scroll_receipt(inner)),
             ScrollTxType::Eip1559 => ScrollReceipt::Eip1559(into_scroll_receipt(inner)),

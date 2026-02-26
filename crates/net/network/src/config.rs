@@ -7,7 +7,7 @@ use crate::{
     transform::header::HeaderTransform,
     NetworkHandle, NetworkManager,
 };
-use alloy_primitives::B256;
+use alloy_eips::BlockNumHash;
 use reth_chainspec::{ChainSpecProvider, EthChainSpec, Hardforks};
 use reth_discv4::{Discv4Config, Discv4ConfigBuilder, NatResolver, DEFAULT_DISCOVERY_ADDRESS};
 use reth_discv5::NetworkStackId;
@@ -95,10 +95,11 @@ pub struct NetworkConfig<C, N: NetworkPrimitives = EthNetworkPrimitives> {
     /// This can be overridden to support custom handshake logic via the
     /// [`NetworkConfigBuilder`].
     pub handshake: Arc<dyn EthRlpxHandshake>,
-    /// List of block hashes to check for required blocks.
+    /// List of block number-hash pairs to check for required blocks.
     /// If non-empty, peers that don't have these blocks will be filtered out.
-    pub required_block_hashes: Vec<B256>,
-    /// A transformation hook applied to the downloaded headers.
+    pub required_block_hashes: Vec<BlockNumHash>,
+    /// Optional transform applied to headers received from peers (e.g. to strip scroll-specific
+    /// fields).
     pub header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
 }
 
@@ -169,6 +170,8 @@ where
         + HeaderProvider
         + Clone
         + Unpin
+        + Send
+        + Sync
         + 'static,
 {
     /// Starts the networking stack given a [`NetworkConfig`] and returns a handle to the network.
@@ -228,11 +231,11 @@ pub struct NetworkConfigBuilder<N: NetworkPrimitives = EthNetworkPrimitives> {
     /// <https://github.com/ethereum/devp2p/blob/master/rlpx.md#initial-handshake>.
     handshake: Arc<dyn EthRlpxHandshake>,
     /// List of block hashes to check for required blocks.
-    required_block_hashes: Vec<B256>,
+    required_block_hashes: Vec<BlockNumHash>,
     /// Optional network id
     network_id: Option<u64>,
-    /// The header transform type.
-    header_transform: Option<Arc<dyn HeaderTransform<N::BlockHeader>>>,
+    /// Optional transform applied to headers received from peers.
+    header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
 }
 
 impl NetworkConfigBuilder<EthNetworkPrimitives> {
@@ -275,7 +278,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             handshake: Arc::new(EthHandshake::default()),
             required_block_hashes: Vec::new(),
             network_id: None,
-            header_transform: None,
+            header_transform: Arc::new(()),
         }
     }
 
@@ -439,7 +442,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     pub fn external_ip_resolver(mut self, resolver: NatResolver) -> Self {
         self.discovery_v4_builder
             .get_or_insert_with(Discv4Config::builder)
-            .external_ip_resolver(Some(resolver));
+            .external_ip_resolver(Some(resolver.clone()));
         self.nat = Some(resolver);
         self
     }
@@ -490,7 +493,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     }
 
     // Disable nat
-    pub const fn disable_nat(mut self) -> Self {
+    pub fn disable_nat(mut self) -> Self {
         self.nat = None;
         self
     }
@@ -561,7 +564,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     }
 
     /// Sets the required block hashes for peer filtering.
-    pub fn required_block_hashes(mut self, hashes: Vec<B256>) -> Self {
+    pub fn required_block_hashes(mut self, hashes: Vec<BlockNumHash>) -> Self {
         self.required_block_hashes = hashes;
         self
     }
@@ -585,7 +588,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     }
 
     /// Sets the NAT resolver for external IP.
-    pub const fn add_nat(mut self, nat: Option<NatResolver>) -> Self {
+    pub fn add_nat(mut self, nat: Option<NatResolver>) -> Self {
         self.nat = nat;
         self
     }
@@ -599,15 +602,6 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
     /// Set the optional network id.
     pub const fn network_id(mut self, network_id: Option<u64>) -> Self {
         self.network_id = network_id;
-        self
-    }
-
-    /// Sets the header transform type.
-    pub fn header_transform(
-        mut self,
-        header_transform: Arc<dyn HeaderTransform<N::BlockHeader>>,
-    ) -> Self {
-        self.header_transform = Some(header_transform);
         self
     }
 
@@ -717,7 +711,7 @@ impl<N: NetworkPrimitives> NetworkConfigBuilder<N> {
             nat,
             handshake,
             required_block_hashes,
-            header_transform: header_transform.unwrap_or_else(|| Arc::new(())),
+            header_transform,
         }
     }
 }

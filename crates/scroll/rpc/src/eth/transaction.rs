@@ -2,18 +2,18 @@
 
 use crate::{ScrollEthApi, ScrollEthApiError, SequencerClient};
 use alloy_consensus::transaction::TransactionInfo;
-use alloy_primitives::{Bytes, B256};
+use alloy_primitives::B256;
 use reth_evm::execute::ProviderError;
+use reth_primitives_traits::{Recovered, WithEncoded};
 use reth_provider::ReceiptProvider;
 use reth_rpc_convert::RpcConvert;
 use reth_rpc_eth_api::{
     helpers::{spec::SignersForRpc, EthTransactions, LoadTransaction},
     try_into_scroll_tx_info, FromEthApiError, RpcNodeCore, TxInfoMapper,
 };
-use reth_rpc_eth_types::utils::recover_raw_transaction;
 use reth_scroll_primitives::ScrollReceipt;
 use reth_transaction_pool::{
-    AddedTransactionOutcome, PoolTransaction, TransactionOrigin, TransactionPool,
+    AddedTransactionOutcome, PoolPooledTx, PoolTransaction, TransactionOrigin, TransactionPool,
 };
 use scroll_alloy_consensus::{ScrollTransactionInfo, ScrollTxEnvelope};
 use std::{
@@ -34,17 +34,18 @@ where
         self.inner.eth_api.send_raw_transaction_sync_timeout()
     }
 
-    /// Decodes and recovers the transaction and submits it to the pool.
-    ///
-    /// Returns the hash of the transaction.
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<B256, Self::Error> {
-        let recovered = recover_raw_transaction(&tx)?;
+    async fn send_transaction(
+        &self,
+        origin: TransactionOrigin,
+        tx: WithEncoded<Recovered<PoolPooledTx<Self::Pool>>>,
+    ) -> Result<B256, Self::Error> {
+        let (raw_tx, recovered) = tx.split();
         let pool_transaction = <Self::Pool as TransactionPool>::Transaction::from_pooled(recovered);
 
-        // submit the transaction to the pool with a `Local` origin
+        // submit the transaction to the pool
         let AddedTransactionOutcome { hash, .. } = self
             .pool()
-            .add_transaction(TransactionOrigin::Local, pool_transaction.clone())
+            .add_transaction(origin, pool_transaction.clone())
             .await
             .map_err(Self::Error::from_eth_err)?;
 
@@ -57,7 +58,7 @@ where
                 // Forward to remote sequencer RPC asynchronously (fire and forget)
                 let client = client.clone();
                 tokio::spawn(async move {
-                    match client.forward_raw_transaction(&tx).await {
+                    match client.forward_raw_transaction(&raw_tx).await {
                         Ok(sequencer_hash) => {
                             tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, %sequencer_hash, "successfully forwarded transaction to sequencer");
                         }
@@ -68,7 +69,7 @@ where
                 });
             } else {
                 // Forward to remote sequencer RPC synchronously
-                match client.forward_raw_transaction(&tx).await {
+                match client.forward_raw_transaction(&raw_tx).await {
                     Ok(sequencer_hash) => {
                         tracing::debug!(target: "scroll::rpc::eth", local_hash=%hash, %sequencer_hash, "successfully forwarded transaction to sequencer");
                     }

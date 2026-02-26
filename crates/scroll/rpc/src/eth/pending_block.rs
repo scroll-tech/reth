@@ -11,7 +11,7 @@ impl<N, Rpc> LoadPendingBlock for ScrollEthApi<N, Rpc>
 where
     N: RpcNodeCore,
     ScrollEthApiError: FromEvmError<N::Evm>,
-    Rpc: RpcConvert<Primitives = N::Primitives>,
+    Rpc: RpcConvert<Primitives = N::Primitives, Error = ScrollEthApiError>,
 {
     #[inline]
     fn pending_block(&self) -> &tokio::sync::Mutex<Option<PendingBlock<N::Primitives>>> {

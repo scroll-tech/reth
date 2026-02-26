@@ -62,7 +62,8 @@ where
             ctx.provider().clone(),
             pool,
             evm_config,
-            EthereumBuilderConfig::new(),
+            EthereumBuilderConfig::new()
+                .with_extra_data(ctx.payload_builder_config().extra_data_bytes()),
         );
 
         let conf = ctx.payload_builder_config();
@@ -83,7 +84,7 @@ where
             PayloadBuilderService::new(payload_generator, ctx.provider().canonical_state_stream());
 
         ctx.task_executor()
-            .spawn_critical("custom payload builder service", Box::pin(payload_service));
+            .spawn_critical_task("custom payload builder service", Box::pin(payload_service));
 
         Ok(payload_builder)
     }

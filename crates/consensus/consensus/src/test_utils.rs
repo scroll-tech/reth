@@ -1,10 +1,7 @@
-use crate::{Consensus, ConsensusError, FullConsensus, HeaderValidator};
-use alloy_primitives::B256;
+use crate::{Consensus, ConsensusError, FullConsensus, HeaderValidator, ReceiptRootBloom};
 use core::sync::atomic::{AtomicBool, Ordering};
 use reth_execution_types::BlockExecutionResult;
-use reth_primitives_traits::{
-    Block, BlockHeader, NodePrimitives, RecoveredBlock, SealedBlock, SealedHeader,
-};
+use reth_primitives_traits::{Block, NodePrimitives, RecoveredBlock, SealedBlock, SealedHeader};
 
 /// Consensus engine implementation for testing
 #[derive(Debug)]
@@ -54,6 +51,7 @@ impl<N: NodePrimitives> FullConsensus<N> for TestConsensus {
         &self,
         _block: &RecoveredBlock<N::Block>,
         _result: &BlockExecutionResult<N::Receipt>,
+        _receipt_root_bloom: Option<ReceiptRootBloom>,
     ) -> Result<(), ConsensusError> {
         if self.fail_validation() {
             Err(ConsensusError::BaseFeeMissing)
@@ -64,13 +62,11 @@ impl<N: NodePrimitives> FullConsensus<N> for TestConsensus {
 }
 
 impl<B: Block> Consensus<B> for TestConsensus {
-    type Error = ConsensusError;
-
     fn validate_body_against_header(
         &self,
         _body: &B::Body,
         _header: &SealedHeader<B::Header>,
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), ConsensusError> {
         if self.fail_body_against_header() {
             Err(ConsensusError::BaseFeeMissing)
         } else {
@@ -78,7 +74,7 @@ impl<B: Block> Consensus<B> for TestConsensus {
         }
     }
 
-    fn validate_block_pre_execution(&self, _block: &SealedBlock<B>) -> Result<(), Self::Error> {
+    fn validate_block_pre_execution(&self, _block: &SealedBlock<B>) -> Result<(), ConsensusError> {
         if self.fail_validation() {
             Err(ConsensusError::BaseFeeMissing)
         } else {
@@ -87,7 +83,7 @@ impl<B: Block> Consensus<B> for TestConsensus {
     }
 }
 
-impl<H: BlockHeader> HeaderValidator<H> for TestConsensus {
+impl<H> HeaderValidator<H> for TestConsensus {
     fn validate_header(&self, _header: &SealedHeader<H>) -> Result<(), ConsensusError> {
         if self.fail_validation() {
             Err(ConsensusError::BaseFeeMissing)
@@ -106,9 +102,5 @@ impl<H: BlockHeader> HeaderValidator<H> for TestConsensus {
         } else {
             Ok(())
         }
-    }
-
-    fn validate_state_root(&self, _header: &H, _root: B256) -> Result<(), ConsensusError> {
-        Ok(())
     }
 }

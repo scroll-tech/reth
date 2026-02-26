@@ -1,6 +1,11 @@
+use crate::TX_L1_FEE_PRECISION_U256;
 use alloy_consensus::crypto::secp256k1::recover_signer;
 use alloy_eips::{Encodable2718, Typed2718};
-use alloy_evm::{FromRecoveredTx, FromTxWithEncoded, IntoTxEnv};
+use alloy_evm::{
+    env::BlockEnvironment,
+    rpc::{EthTxEnvError, TryIntoTxEnv},
+    EvmEnv, FromRecoveredTx, FromTxWithEncoded, IntoTxEnv,
+};
 use alloy_primitives::{Address, Bytes, TxKind, B256, U256};
 use core::ops::{Deref, DerefMut};
 use revm::context::{
@@ -10,6 +15,7 @@ use revm::context::{
 };
 use revm_scroll::ScrollTransaction;
 use scroll_alloy_consensus::{ScrollTxEnvelope, TxL1Message, L1_MESSAGE_TRANSACTION_TYPE};
+use scroll_alloy_rpc_types::ScrollTransactionRequest;
 
 mod compression;
 pub use compression::{
@@ -297,5 +303,23 @@ impl FromRecoveredTx<ScrollTxEnvelope> for ScrollTransactionIntoTxEnv<TxEnv> {
         };
 
         Self::new(base, encoded, compression_ratio, compressed_size)
+    }
+}
+
+impl<Block: BlockEnvironment> TryIntoTxEnv<ScrollTransactionIntoTxEnv<TxEnv>, Block>
+    for ScrollTransactionRequest
+{
+    type Err = EthTxEnvError;
+
+    fn try_into_tx_env<Spec>(
+        self,
+        evm_env: &EvmEnv<Spec, Block>,
+    ) -> Result<ScrollTransactionIntoTxEnv<TxEnv>, Self::Err> {
+        Ok(ScrollTransactionIntoTxEnv::new(
+            self.as_ref().clone().try_into_tx_env(evm_env)?,
+            Some(Bytes::new()),
+            Some(TX_L1_FEE_PRECISION_U256),
+            Some(0),
+        ))
     }
 }

@@ -1,13 +1,14 @@
 //! RPC errors specific to Scroll.
 
 use alloy_json_rpc::ErrorPayload;
+use alloy_primitives::Bytes;
 use alloy_rpc_types_eth::BlockError;
 use alloy_transport::{RpcError, TransportErrorKind};
 use jsonrpsee_types::error::INTERNAL_ERROR_CODE;
 use reth_evm::execute::ProviderError;
-use reth_rpc_convert::transaction::EthTxEnvError;
+use reth_rpc_convert::EthTxEnvError;
 use reth_rpc_eth_api::{AsEthApiError, TransactionConversionError};
-use reth_rpc_eth_types::{error::api::FromEvmHalt, EthApiError};
+use reth_rpc_eth_types::{error::api::{FromEvmHalt, FromRevert}, EthApiError};
 use revm::context::result::{EVMError, HaltReason};
 use std::convert::Infallible;
 
@@ -58,6 +59,12 @@ where
 {
     fn from(error: EVMError<T>) -> Self {
         Self::Eth(error.into())
+    }
+}
+
+impl FromRevert for ScrollEthApiError {
+    fn from_revert(output: Bytes) -> Self {
+        Self::Eth(EthApiError::from_revert(output))
     }
 }
 

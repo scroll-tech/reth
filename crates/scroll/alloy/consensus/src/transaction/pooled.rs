@@ -8,7 +8,7 @@ use alloy_consensus::{
     SignableTransaction, Signed, Transaction, TxEip7702, TxEnvelope, Typed2718,
 };
 use alloy_eips::{
-    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
+    eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718, IsTyped2718},
     eip2930::AccessList,
     eip7702::SignedAuthorization,
 };
@@ -427,6 +427,12 @@ impl Typed2718 for ScrollPooledTransaction {
             Self::Eip1559(tx) => tx.tx().ty(),
             Self::Eip7702(tx) => tx.tx().ty(),
         }
+    }
+}
+
+impl IsTyped2718 for ScrollPooledTransaction {
+    fn is_type(type_id: u8) -> bool {
+        matches!(type_id, 1 | 2 | 4)
     }
 }
 

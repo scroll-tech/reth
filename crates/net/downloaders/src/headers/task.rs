@@ -78,7 +78,7 @@ impl<H: Sealable + Send + Sync + Unpin + 'static> TaskDownloader<H> {
             updates: UnboundedReceiverStream::new(updates_rx),
             downloader,
         };
-        spawner.spawn(downloader.boxed());
+        spawner.spawn_task(downloader.boxed());
 
         Self { from_downloader: ReceiverStream::new(headers_rx), to_downloader }
     }
@@ -223,11 +223,11 @@ mod tests {
             .await;
 
         let headers = downloader.next().await.unwrap();
-        assert_eq!(headers, Ok(vec![p0]));
+        assert_eq!(headers.unwrap(), vec![p0]);
 
         let headers = downloader.next().await.unwrap();
-        assert_eq!(headers, Ok(vec![p1]));
+        assert_eq!(headers.unwrap(), vec![p1]);
         let headers = downloader.next().await.unwrap();
-        assert_eq!(headers, Ok(vec![p2]));
+        assert_eq!(headers.unwrap(), vec![p2]);
     }
 }

@@ -158,12 +158,12 @@ where
                 .ok_or_else(|| PayloadBuilderError::MissingParentHeader(attributes.parent()))?
         };
 
-        let config = PayloadConfig::new(Arc::new(parent_header.clone()), attributes);
+        let cached_reads = self.maybe_pre_cached(parent_header.hash());
+
+        let config = PayloadConfig::new(Arc::new(parent_header), attributes);
 
         let until = self.job_deadline(config.attributes.timestamp());
         let deadline = Box::pin(tokio::time::sleep_until(until));
-
-        let cached_reads = self.maybe_pre_cached(parent_header.hash());
 
         let mut job = BasicPayloadJob {
             config,
@@ -297,7 +297,7 @@ impl Default for BasicPayloadJobGeneratorConfig {
 /// resolved or the deadline is reached, or until the built payload is marked as frozen:
 /// [`BuildOutcome::Freeze`]. Once a frozen payload is returned, no additional payloads will be
 /// built and this future will wait to be resolved: [`PayloadJob::resolve`] or terminated if the
-/// deadline is reached..
+/// deadline is reached.
 #[derive(Debug)]
 pub struct BasicPayloadJob<Tasks, Builder>
 where
@@ -349,7 +349,7 @@ where
         self.metrics.inc_initiated_payload_builds();
         let cached_reads = self.cached_reads.take().unwrap_or_default();
         let builder = self.builder.clone();
-        self.executor.spawn_blocking(Box::pin(async move {
+        self.executor.spawn_blocking_task(Box::pin(async move {
             // acquire the permit for executing the task
             let _permit = guard.acquire().await;
             let args =
@@ -495,7 +495,7 @@ where
                     let (tx, rx) = oneshot::channel();
                     let config = self.config.clone();
                     let builder = self.builder.clone();
-                    self.executor.spawn_blocking(Box::pin(async move {
+                    self.executor.spawn_blocking_task(Box::pin(async move {
                         let res = builder.build_empty_payload(config);
                         let _ = tx.send(res);
                     }));
@@ -506,7 +506,7 @@ where
                     debug!(target: "payload_builder", id=%self.config.payload_id(), "racing fallback payload");
                     // race the in progress job with this job
                     let (tx, rx) = oneshot::channel();
-                    self.executor.spawn_blocking(Box::pin(async move {
+                    self.executor.spawn_blocking_task(Box::pin(async move {
                         let _ = tx.send(job());
                     }));
                     empty_payload = Some(rx);
@@ -706,8 +706,16 @@ pub enum BuildOutcome<Payload> {
 }
 
 impl<Payload> BuildOutcome<Payload> {
-    /// Consumes the type and returns the payload if the outcome is `Better`.
+    /// Consumes the type and returns the payload if the outcome is `Better` or `Freeze`.
     pub fn into_payload(self) -> Option<Payload> {
+        match self {
+            Self::Better { payload, .. } | Self::Freeze(payload) => Some(payload),
+            _ => None,
+        }
+    }
+
+    /// Consumes the type and returns the payload if the outcome is `Better` or `Freeze`.
+    pub const fn payload(&self) -> Option<&Payload> {
         match self {
             Self::Better { payload, .. } | Self::Freeze(payload) => Some(payload),
             _ => None,
@@ -717,6 +725,11 @@ impl<Payload> BuildOutcome<Payload> {
     /// Returns true if the outcome is `Better`.
     pub const fn is_better(&self) -> bool {
         matches!(self, Self::Better { .. })
+    }
+
+    /// Returns true if the outcome is `Freeze`.
+    pub const fn is_frozen(&self) -> bool {
+        matches!(self, Self::Freeze { .. })
     }
 
     /// Returns true if the outcome is `Aborted`.

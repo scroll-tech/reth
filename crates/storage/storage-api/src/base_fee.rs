@@ -5,6 +5,7 @@ use alloy_primitives::{Address, U256};
 use reth_chainspec::EthChainSpec;
 use reth_storage_errors::ProviderError;
 use revm_database::{Database, State};
+use revm_database_interface::bal::EvmDatabaseError;
 
 /// An instance of the trait can return the base fee for the next block.
 pub trait BaseFeeProvider<P: StorageProvider> {
@@ -40,10 +41,10 @@ pub trait StorageProvider {
 }
 
 impl<DB: Database> StorageProvider for State<DB> {
-    type Error = DB::Error;
+    type Error = <Self as Database>::Error;
 
     fn storage(&mut self, address: Address, key: U256) -> Result<U256, Self::Error> {
-        let _ = self.load_cache_account(address)?;
+        let _ = self.load_cache_account(address).map_err(EvmDatabaseError::Database)?;
         Database::storage(self, address, key)
     }
 }

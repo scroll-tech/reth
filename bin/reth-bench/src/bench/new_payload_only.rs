@@ -13,7 +13,7 @@ use crate::{
 use alloy_provider::Provider;
 use clap::Parser;
 use csv::Writer;
-use eyre::Context;
+use eyre::{Context, OptionExt};
 use reth_cli_runner::CliContext;
 use reth_node_core::args::BenchmarkArgs;
 use std::time::{Duration, Instant};
@@ -25,6 +25,16 @@ pub struct Command {
     /// The RPC url to use for getting data.
     #[arg(long, value_name = "RPC_URL", verbatim_doc_comment)]
     rpc_url: String,
+
+    /// The size of the block buffer (channel capacity) for prefetching blocks from the RPC
+    /// endpoint.
+    #[arg(
+        long = "rpc-block-buffer-size",
+        value_name = "RPC_BLOCK_BUFFER_SIZE",
+        default_value = "20",
+        verbatim_doc_comment
+    )]
+    rpc_block_buffer_size: usize,
 
     #[command(flatten)]
     benchmark: BenchmarkArgs,
@@ -39,9 +49,16 @@ impl Command {
             auth_provider,
             mut next_block,
             is_optimism,
+            ..
         } = BenchContext::new(&self.benchmark, self.rpc_url).await?;
 
-        let (sender, mut receiver) = tokio::sync::mpsc::channel(1000);
+        let total_blocks = benchmark_mode.total_blocks();
+        let buffer_size = self.rpc_block_buffer_size;
+
+        // Use a oneshot channel to propagate errors from the spawned task
+        let (error_sender, mut error_receiver) = tokio::sync::oneshot::channel();
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(buffer_size);
+
         tokio::task::spawn(async move {
             while benchmark_mode.contains(next_block) {
                 let block_res = block_provider
@@ -49,51 +66,66 @@ impl Command {
                     .full()
                     .await
                     .wrap_err_with(|| format!("Failed to fetch block by number {next_block}"));
-                let block = block_res.unwrap().unwrap();
-                let header = block.header.clone();
-
-                let (version, params) = block_to_new_payload(block, is_optimism).unwrap();
+                let block = match block_res.and_then(|opt| opt.ok_or_eyre("Block not found")) {
+                    Ok(block) => block,
+                    Err(e) => {
+                        tracing::error!(target: "reth-bench", "Failed to fetch block {next_block}: {e}");
+                        let _ = error_sender.send(e);
+                        break;
+                    }
+                };
 
                 next_block += 1;
-                sender.send((header, version, params)).await.unwrap();
+                if let Err(e) = sender.send(block).await {
+                    tracing::error!(target: "reth-bench", "Failed to send block data: {e}");
+                    break;
+                }
             }
         });
 
-        // put results in a summary vec so they can be printed at the end
         let mut results = Vec::new();
+        let mut blocks_processed = 0u64;
         let total_benchmark_duration = Instant::now();
         let mut total_wait_time = Duration::ZERO;
 
-        while let Some((header, version, params)) = {
+        while let Some(block) = {
             let wait_start = Instant::now();
             let result = receiver.recv().await;
             total_wait_time += wait_start.elapsed();
             result
         } {
-            // just put gas used here
-            let gas_used = header.gas_used;
+            let block_number = block.header.number;
+            let transaction_count = block.transactions.len() as u64;
+            let gas_used = block.header.gas_used;
 
-            let block_number = header.number;
+            debug!(target: "reth-bench", number=?block.header.number, "Sending payload to engine");
 
-            debug!(
-                target: "reth-bench",
-                number=?header.number,
-                "Sending payload to engine",
-            );
+            let (version, params) = block_to_new_payload(block, is_optimism)?;
 
             let start = Instant::now();
             call_new_payload(&auth_provider, version, params).await?;
 
             let new_payload_result = NewPayloadResult { gas_used, latency: start.elapsed() };
-            info!(%new_payload_result);
+            blocks_processed += 1;
+            let progress = match total_blocks {
+                Some(total) => format!("{blocks_processed}/{total}"),
+                None => format!("{blocks_processed}"),
+            };
+            info!(target: "reth-bench", progress, %new_payload_result);
 
             // current duration since the start of the benchmark minus the time
             // waiting for blocks
             let current_duration = total_benchmark_duration.elapsed() - total_wait_time;
 
             // record the current result
-            let row = TotalGasRow { block_number, gas_used, time: current_duration };
+            let row =
+                TotalGasRow { block_number, transaction_count, gas_used, time: current_duration };
             results.push((row, new_payload_result));
+        }
+
+        // Check if the spawned task encountered an error
+        if let Ok(error) = error_receiver.try_recv() {
+            return Err(error);
         }
 
         let (gas_output_results, new_payload_results): (_, Vec<NewPayloadResult>) =
@@ -103,7 +135,7 @@ impl Command {
         if let Some(path) = self.benchmark.output {
             // first write the new payload results to a file
             let output_path = path.join(NEW_PAYLOAD_OUTPUT_SUFFIX);
-            info!("Writing newPayload call latency output to file: {:?}", output_path);
+            info!(target: "reth-bench", "Writing newPayload call latency output to file: {:?}", output_path);
             let mut writer = Writer::from_path(output_path)?;
             for result in new_payload_results {
                 writer.serialize(result)?;
@@ -112,19 +144,20 @@ impl Command {
 
             // now write the gas output to a file
             let output_path = path.join(GAS_OUTPUT_SUFFIX);
-            info!("Writing total gas output to file: {:?}", output_path);
+            info!(target: "reth-bench", "Writing total gas output to file: {:?}", output_path);
             let mut writer = Writer::from_path(output_path)?;
             for row in &gas_output_results {
                 writer.serialize(row)?;
             }
             writer.flush()?;
 
-            info!("Finished writing benchmark output files to {:?}.", path);
+            info!(target: "reth-bench", "Finished writing benchmark output files to {:?}.", path);
         }
 
         // accumulate the results and calculate the overall Ggas/s
         let gas_output = TotalGasOutput::new(gas_output_results)?;
         info!(
+            target: "reth-bench",
             total_duration=?gas_output.total_duration,
             total_gas_used=?gas_output.total_gas_used,
             blocks_processed=?gas_output.blocks_processed,
