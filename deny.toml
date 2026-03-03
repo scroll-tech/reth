@@ -10,8 +10,6 @@ ignore = [
     "RUSTSEC-2024-0436",
     # https://rustsec.org/advisories/RUSTSEC-2025-0141 bincode is unmaintained, need to transition all deps to wincode first
     "RUSTSEC-2025-0141",
-    #  https://rustsec.org/advisories/RUSTSEC-2026-0002 lru unused directly: <https://github.com/alloy-rs/alloy/pull/3460>
-    "RUSTSEC-2026-0002",
 ]
 
 # This section is considered when running `cargo deny check bans`.
@@ -24,7 +22,7 @@ multiple-versions = "warn"
 wildcards = "allow"
 highlight = "all"
 # List of crates to deny
-deny = [{ name = "openssl" }]
+deny = [{ name = "openssl", wrappers = ["native-tls"] }]
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = []
 # Similarly to `skip` allows you to skip certain crates during duplicate
@@ -56,6 +54,8 @@ allow = [
     "Zlib",
     # https://github.com/rustls/webpki/blob/main/LICENSE ISC Style
     "LicenseRef-rustls-webpki",
+    # Scroll-internal crates without public license
+    "LicenseRef-scroll-internal",
     "CDLA-Permissive-2.0",
     "MPL-2.0",
 ]
@@ -73,6 +73,12 @@ exceptions = [
 name = "rustls-webpki"
 expression = "LicenseRef-rustls-webpki"
 license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
+
+[[licenses.clarify]]
+name = "encoder-standard"
+# scroll-tech/da-codec internal crate — no public license, used with scroll's permission
+expression = "LicenseRef-scroll-internal"
+license-files = []
 
 # This section is considered when running `cargo deny check sources`.
 # More documentation about the 'sources' section can be found here:
@@ -93,4 +99,8 @@ allow-git = [
     "https://github.com/alloy-rs/evm",
     "https://github.com/alloy-rs/hardforks",
     "https://github.com/paradigmxyz/jsonrpsee",
+    # Scroll-specific git dependencies
+    "https://github.com/scroll-tech/da-codec",
+    "https://github.com/scroll-tech/revm",
+    "https://github.com/scroll-tech/scroll-revm",
 ]
