@@ -55,6 +55,7 @@ eyre.workspace = true
 std = [
     "scroll-alloy-consensus/std",
     "scroll-alloy-evm/std",
+    "scroll-alloy-evm/zstd_compression",
     "alloy-consensus/std",
     "alloy-evm/std",
     "alloy-eips/std",

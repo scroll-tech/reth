@@ -1539,14 +1539,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "encoder-standard"
-version = "0.1.0"
-source = "git+https://github.com/scroll-tech/da-codec#54929786434f00efd00431517a332f1ec8ca58d4"
-dependencies = [
- "zstd",
-]
-
-[[package]]
 name = "enum-ordinalize"
 version = "4.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3964,7 +3956,6 @@ dependencies = [
  "alloy-evm",
  "alloy-primitives",
  "auto_impl",
- "encoder-standard",
  "reth-scroll-chainspec",
  "revm",
  "revm-scroll",
