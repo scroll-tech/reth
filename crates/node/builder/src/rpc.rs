@@ -415,12 +415,18 @@ impl<Node: FullNodeComponents, EthApi: EthApiTypes> RpcHandle<Node, EthApi> {
 pub trait RpcHandleProvider<Node: FullNodeComponents, EthApi: EthApiTypes> {
     /// Returns the rpc server handles.
     fn rpc_handle(&self) -> &RpcHandle<Node, EthApi>;
+    /// Returns a mutable reference to the rpc server handles.
+    fn rpc_handle_mut(&mut self) -> &mut RpcHandle<Node, EthApi>;
 }
 
 impl<Node: FullNodeComponents, EthApi: EthApiTypes> RpcHandleProvider<Node, EthApi>
     for RpcHandle<Node, EthApi>
 {
     fn rpc_handle(&self) -> &Self {
+        self
+    }
+
+    fn rpc_handle_mut(&mut self) -> &mut Self {
         self
     }
 }

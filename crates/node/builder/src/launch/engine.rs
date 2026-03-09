@@ -266,10 +266,12 @@ impl EngineNodeLauncher {
             )),
         );
 
-        let addons_handle = add_ons.launch_add_ons(add_ons_ctx).await?;
+        let mut addons_handle = add_ons.launch_add_ons(add_ons_ctx).await?;
 
-        // Create engine shutdown handle
-        let (_engine_shutdown, shutdown_rx) = EngineShutdown::new();
+        // Create engine shutdown handle and wire it into the add-ons handle so callers
+        // (e.g. tests) can trigger a graceful shutdown via `add_ons_handle.engine_shutdown`.
+        let (engine_shutdown, shutdown_rx) = EngineShutdown::new();
+        addons_handle.rpc_handle_mut().engine_shutdown = engine_shutdown;
 
         // Run consensus engine to completion
         let initial_target = ctx.initial_backfill_target()?;
