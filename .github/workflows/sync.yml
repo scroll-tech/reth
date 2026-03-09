@@ -5,7 +5,7 @@ name: sync test
 on:
   merge_group:
   push:
-    branches: [main, scroll]
+    branches: [scroll]
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +19,7 @@ jobs:
   sync:
     if: github.repository == 'paradigmxyz/reth'
     name: sync (${{ matrix.chain.bin }})
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     env:
       RUST_LOG: info,sync=error
       RUST_BACKTRACE: 1

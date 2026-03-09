@@ -4,9 +4,9 @@ name: book
 
 on:
   push:
-    branches: [main]
+    branches: [scroll]
   pull_request:
-    branches: [main]
+    branches: [scroll]
     types: [opened, reopened, synchronize, closed]
   merge_group:
 
@@ -15,7 +15,7 @@ env:
 
 jobs:
   build:
-    runs-on: depot-ubuntu-latest-8
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
       - name: Checkout

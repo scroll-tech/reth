@@ -6,7 +6,7 @@ on:
   pull_request:
   merge_group:
   push:
-    branches: [main, scroll]
+    branches: [scroll]
 
 env:
   CARGO_TERM_COLOR: always
@@ -31,13 +31,15 @@ jobs:
         storage: [stable, edge]
         include:
           - type: ethereum
+            args: ""
             features: asm-keccak ethereum
             exclude_args: ""
           - type: optimism
+            args: ""
             features: asm-keccak
             exclude_args: "--exclude reth --exclude reth-bench --exclude \"example-*\" --exclude \"reth-ethereum-*\" --exclude \"*-ethereum\""
           - type: scroll
-            storage: stable
+            args: ""
             features: ""
             exclude_args: "--exclude reth --exclude reth-bench --exclude \"example-*\" --exclude \"reth-ethereum-*\" --exclude \"*-ethereum\" --exclude reth-optimism-*"
     timeout-minutes: 30
@@ -56,7 +58,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests
         run: |
-          cargo nextest run \
+          cargo nextest run ${{ matrix.args }} \
             --no-fail-fast \
             --features "${{ matrix.features }} $EDGE_FEATURES" --locked \
             ${{ matrix.exclude_args }} --workspace \
@@ -65,7 +67,7 @@ jobs:
 
   state:
     name: Ethereum state tests
-    runs-on: depot-ubuntu-latest-4
+    runs-on: ubuntu-latest
     env:
       RUST_LOG: info,sync=error
       RUST_BACKTRACE: 1
@@ -100,7 +102,7 @@ jobs:
 
   doc:
     name: doc tests
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
     timeout-minutes: 30
