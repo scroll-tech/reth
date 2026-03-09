@@ -2622,6 +2622,7 @@ dependencies = [
 name = "openvm-compat"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.17",
  "openvm",
  "reth-chainspec",
  "reth-ethereum-forks",
