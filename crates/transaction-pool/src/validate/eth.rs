@@ -281,43 +281,41 @@ where
         origin: TransactionOrigin,
         transaction: Tx,
     ) -> Result<Tx, TransactionValidationOutcome<Tx>> {
-        // Checks for tx_type
+        // Checks for tx_type.
+        // Guard arms handle the disabled cases; if the guard fails (type is enabled) the match
+        // falls through to the combined "known type" arm, preventing them from being caught by
+        // the generic TxTypeNotSupported arm below.
         match transaction.ty() {
-            LEGACY_TX_TYPE_ID => {
-                // Accept legacy transactions
-            }
             EIP2930_TX_TYPE_ID if !self.eip2718 => {
-                // Accept only legacy transactions until EIP-2718/2930 activates
                 return Err(TransactionValidationOutcome::Invalid(
                     transaction,
                     InvalidTransactionError::Eip2930Disabled.into(),
                 ))
             }
-            EIP2930_TX_TYPE_ID => {}
             EIP1559_TX_TYPE_ID if !self.eip1559 => {
-                // Reject dynamic fee transactions until EIP-1559 activates.
                 return Err(TransactionValidationOutcome::Invalid(
                     transaction,
                     InvalidTransactionError::Eip1559Disabled.into(),
                 ))
             }
-            EIP1559_TX_TYPE_ID => {}
             EIP4844_TX_TYPE_ID if !self.eip4844 => {
-                // Reject blob transactions.
                 return Err(TransactionValidationOutcome::Invalid(
                     transaction,
                     InvalidTransactionError::Eip4844Disabled.into(),
                 ))
             }
-            EIP4844_TX_TYPE_ID => {}
             EIP7702_TX_TYPE_ID if !self.eip7702 => {
-                // Reject EIP-7702 transactions.
                 return Err(TransactionValidationOutcome::Invalid(
                     transaction,
                     InvalidTransactionError::Eip7702Disabled.into(),
                 ))
             }
-            EIP7702_TX_TYPE_ID => {}
+            // Known types that are enabled (or legacy which is always accepted).
+            LEGACY_TX_TYPE_ID
+            | EIP2930_TX_TYPE_ID
+            | EIP1559_TX_TYPE_ID
+            | EIP4844_TX_TYPE_ID
+            | EIP7702_TX_TYPE_ID => {}
 
             ty if !self.other_tx_types.bit(ty as usize) => {
                 return Err(TransactionValidationOutcome::Invalid(
