@@ -311,11 +311,8 @@ where
                 ))
             }
             // Known types that are enabled (or legacy which is always accepted).
-            LEGACY_TX_TYPE_ID
-            | EIP2930_TX_TYPE_ID
-            | EIP1559_TX_TYPE_ID
-            | EIP4844_TX_TYPE_ID
-            | EIP7702_TX_TYPE_ID => {}
+            LEGACY_TX_TYPE_ID | EIP2930_TX_TYPE_ID | EIP1559_TX_TYPE_ID | EIP4844_TX_TYPE_ID |
+            EIP7702_TX_TYPE_ID => {}
 
             ty if !self.other_tx_types.bit(ty as usize) => {
                 return Err(TransactionValidationOutcome::Invalid(
