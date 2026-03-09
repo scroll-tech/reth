@@ -63,4 +63,9 @@ eyre.workspace = true
 thiserror.workspace = true
 
 [features]
-js-tracer = ["reth-rpc/js-tracer"]
+js-tracer = [
+    "reth-node-builder/js-tracer",
+    "reth-rpc/js-tracer",
+    "reth-rpc-eth-api/js-tracer",
+    "reth-rpc-eth-types/js-tracer",
+]

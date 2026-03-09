@@ -49,4 +49,5 @@ op = [
 scroll-alloy-traits = [
     "dep:scroll-alloy-rpc-types-engine",
     "reth-payload-primitives/scroll-alloy-traits",
+    "reth-primitives-traits/scroll-alloy-traits",
 ]

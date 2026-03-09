@@ -93,6 +93,7 @@ test-utils = [
     "dep:reth-node-core",
     "dep:reth-rpc-server-types",
     "dep:reth-tasks",
+    "reth-tasks/test-utils",
     "dep:serde_json",
     "reth-chainspec/test-utils",
     "reth-evm/test-utils",
@@ -116,4 +117,9 @@ scroll-alloy-traits = [
     "reth-scroll-node/scroll-alloy-traits",
     "reth-engine-local/scroll-alloy-traits",
 ]
-js-tracer = ["reth-scroll-rpc/js-tracer"]
+js-tracer = [
+    "reth-node-builder/js-tracer",
+    "reth-rpc-eth-types/js-tracer",
+    "reth-scroll-node/js-tracer",
+    "reth-scroll-rpc/js-tracer",
+]

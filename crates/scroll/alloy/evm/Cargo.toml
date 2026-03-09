@@ -55,6 +55,7 @@ std = [
     "alloy-eips/std",
     "scroll-alloy-consensus/std",
     "scroll-alloy-hardforks/std",
+    "scroll-alloy-rpc-types/std",
     "reth-evm/std",
     "reth-scroll-chainspec/std",
     "reth-scroll-evm/std",
