@@ -27,5 +27,11 @@ reth-scroll-primitives = { path = "../primitives", default-features = false }
 scroll-alloy-consensus = { path = "../alloy/consensus", default-features = false }
 scroll-alloy-rpc-types = { path = "../alloy/rpc-types", default-features = false }
 
+# Force getrandom 0.2 to compile with the `custom` feature so it does not emit
+# a compile error when targeting the zkVM (which has no OS-level randomness).
+# The custom handler is never registered because the program does not call into
+# getrandom at runtime.
+getrandom = { version = "0.2", features = ["custom"] }
+
 [patch.crates-io]
 revm = { git = "https://github.com/scroll-tech/revm", branch = "feat/v103" }
