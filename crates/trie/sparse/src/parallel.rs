@@ -2177,14 +2177,14 @@ impl ParallelSparseTrie {
                 // but all of its children will be in a lower trie. Check if a child node would be
                 // in the lower subtrie, and reveal accordingly.
                 if !SparseSubtrieType::path_len_is_upper(path.len() + 1) {
-                    let mut stack_ptr = branch.as_ref().first_child_index();
-                    for idx in branch.state_mask.iter() {
+                    for (stack_ptr, idx) in
+                        (branch.as_ref().first_child_index()..).zip(branch.state_mask.iter())
+                    {
                         let mut child_path = path;
                         child_path.push_unchecked(idx);
                         self.lower_subtrie_for_path_mut(&child_path)
                             .expect("child_path must have a lower subtrie")
                             .reveal_node_or_hash(child_path, &branch.stack[stack_ptr])?;
-                        stack_ptr += 1;
                     }
                 }
             }
@@ -2861,8 +2861,9 @@ impl SparseSubtrie {
 
                 // For a branch node, iterate over all children. This must happen second so leaf
                 // children can check connectivity with parent branch.
-                let mut stack_ptr = branch.as_ref().first_child_index();
-                for idx in branch.state_mask.iter() {
+                for (stack_ptr, idx) in
+                    (branch.as_ref().first_child_index()..).zip(branch.state_mask.iter())
+                {
                     let mut child_path = path;
                     child_path.push_unchecked(idx);
                     if Self::is_child_same_level(&path, &child_path) {
@@ -2870,7 +2871,6 @@ impl SparseSubtrie {
                         // the same level as the parent.
                         self.reveal_node_or_hash(child_path, &branch.stack[stack_ptr])?;
                     }
-                    stack_ptr += 1;
                 }
             }
             TrieNode::Extension(ext) => match self.nodes.entry(path) {
@@ -3988,7 +3988,7 @@ mod tests {
         let mut stack = Vec::new();
         let mut state_mask = TrieMask::default();
 
-        for (&idx, hash) in children_indices.iter().zip(child_hashes.into_iter()) {
+        for (&idx, hash) in children_indices.iter().zip(child_hashes) {
             state_mask.set_bit(idx);
             stack.push(hash);
         }

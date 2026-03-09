@@ -15,9 +15,9 @@ use alloy_primitives::{Address, Bytes, Signature, TxHash, TxKind, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 #[cfg(feature = "reth-codec")]
 use reth_codecs::{
-    Compact,
     __private::bytes::BufMut,
     alloy::transaction::{CompactEnvelope, Envelope, FromTxCompact, ToTxCompact},
+    Compact,
 };
 
 /// The Ethereum [EIP-2718] Transaction Envelope, modified for Scroll chains.

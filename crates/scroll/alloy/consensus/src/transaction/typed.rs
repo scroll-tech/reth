@@ -7,7 +7,7 @@ use alloy_eips::{eip2930::AccessList, Encodable2718};
 use alloy_primitives::{bytes::BufMut, Address, Bytes, ChainId, Signature, TxHash, TxKind, B256};
 #[cfg(feature = "reth-codec")]
 use {
-    reth_codecs::{Compact, __private::bytes},
+    reth_codecs::{__private::bytes, Compact},
     reth_codecs_derive::generate_tests,
 };
 

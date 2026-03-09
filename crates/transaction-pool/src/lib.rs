@@ -260,7 +260,8 @@
 //!     );
 //!
 //!   // spawn a task that listens for new blocks and updates the pool's transactions, mined transactions etc..
-//!   tokio::task::spawn(maintain_transaction_pool_future(client, pool, stream, runtime.clone(), Default::default()));
+//!   let base_fee_provider = client.chain_spec();
+//!   tokio::task::spawn(maintain_transaction_pool_future(client, base_fee_provider, pool, stream, runtime.clone(), Default::default()));
 //!
 //! # }
 //! ```

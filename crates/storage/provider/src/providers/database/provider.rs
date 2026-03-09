@@ -604,10 +604,10 @@ impl<TX: DbTx + DbTxMut + 'static, N: NodeTypesForProvider> DatabaseProvider<TX,
                 let mut all_tx_hashes = Vec::with_capacity(total_tx_count);
                 for (i, block) in blocks.iter().enumerate() {
                     let recovered_block = block.recovered_block();
-                    let mut tx_num = tx_nums[i];
-                    for transaction in recovered_block.body().transactions_iter() {
+                    for (tx_num, transaction) in
+                        (tx_nums[i]..).zip(recovered_block.body().transactions_iter())
+                    {
                         all_tx_hashes.push((*transaction.tx_hash(), tx_num));
-                        tx_num += 1;
                     }
                 }
 
@@ -2761,8 +2761,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateWriter
                         StorageEntry { key: *storage_key, value: *old_storage_value };
                     if hashed_storage_cursor
                         .seek_by_key_subkey(hashed_address, *storage_key)?
-                        .filter(|s| s.key == *storage_key)
-                        .is_some()
+                        .as_ref()
+                        .is_some_and(|s| s.key == *storage_key)
                     {
                         hashed_storage_cursor.delete_current()?
                     }
@@ -2803,8 +2803,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateWriter
                         StorageEntry { key: *storage_key, value: *old_storage_value };
                     if plain_storage_cursor
                         .seek_by_key_subkey(*address, *storage_key)?
-                        .filter(|s| s.key == *storage_key)
-                        .is_some()
+                        .as_ref()
+                        .is_some_and(|s| s.key == *storage_key)
                     {
                         plain_storage_cursor.delete_current()?
                     }
@@ -2930,8 +2930,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateWriter
                         StorageEntry { key: *storage_key, value: *old_storage_value };
                     if hashed_storage_cursor
                         .seek_by_key_subkey(hashed_address, *storage_key)?
-                        .filter(|s| s.key == *storage_key)
-                        .is_some()
+                        .as_ref()
+                        .is_some_and(|s| s.key == *storage_key)
                     {
                         hashed_storage_cursor.delete_current()?
                     }
@@ -2974,8 +2974,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypesForProvider> StateWriter
                         StorageEntry { key: *storage_key, value: *old_storage_value };
                     if plain_storage_cursor
                         .seek_by_key_subkey(*address, *storage_key)?
-                        .filter(|s| s.key == *storage_key)
-                        .is_some()
+                        .as_ref()
+                        .is_some_and(|s| s.key == *storage_key)
                     {
                         plain_storage_cursor.delete_current()?
                     }
@@ -3182,8 +3182,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> HashingWriter for DatabaseProvi
 
             if hashed_storage
                 .seek_by_key_subkey(hashed_address, key)?
-                .filter(|entry| entry.key == key)
-                .is_some()
+                .as_ref()
+                .is_some_and(|entry| entry.key == key)
             {
                 hashed_storage.delete_current()?;
             }
@@ -3230,8 +3230,8 @@ impl<TX: DbTxMut + DbTx + 'static, N: NodeTypes> HashingWriter for DatabaseProvi
             storage.into_iter().try_for_each(|(key, value)| -> ProviderResult<()> {
                 if hashed_storage_cursor
                     .seek_by_key_subkey(hashed_address, key)?
-                    .filter(|entry| entry.key == key)
-                    .is_some()
+                    .as_ref()
+                    .is_some_and(|entry| entry.key == key)
                 {
                     hashed_storage_cursor.delete_current()?;
                 }
