@@ -50,7 +50,7 @@ alloy-rpc-types-eth.workspace = true
 reth-scroll-chainspec.workspace = true
 reth-scroll-consensus.workspace = true
 reth-scroll-engine-primitives.workspace = true
-reth-scroll-evm.workspace = true
+reth-scroll-evm = { workspace = true, features = ["std"] }
 reth-scroll-payload.workspace = true
 reth-scroll-primitives = { workspace = true, features = ["serde", "serde-bincode-compat", "reth-codec"] }
 reth-scroll-rpc.workspace = true
