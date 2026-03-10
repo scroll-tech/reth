@@ -79,7 +79,7 @@ mod zstd_compression {
     /// Computes the compressed size for the provided bytes. This panics if the compression
     /// feature is not enabled. This is to support `no_std` environments where zstd is not
     /// available.
-    pub fn compute_compressed_size<T: AsRef<[u8]>>(bytes: &T) -> usize {
+    pub fn compute_compressed_size<T: AsRef<[u8]>>(_bytes: &T) -> usize {
         panic!("Compression feature is not enabled. Please enable the 'compression' feature to use this function.");
     }
 

@@ -2,19 +2,16 @@ use crate::{build::ScrollBlockAssembler, ScrollEvmConfig, ScrollNextBlockEnvAttr
 use alloc::sync::Arc;
 
 use alloy_consensus::{BlockHeader, Header};
-use alloy_eips::{eip2718::WithEncoded, Decodable2718};
 use alloy_evm::{FromRecoveredTx, FromTxWithEncoded};
-use alloy_primitives::{Bytes, B256};
-use alloy_rpc_types_engine::ExecutionData;
+use alloy_primitives::B256;
 use core::convert::Infallible;
 use reth_chainspec::EthChainSpec;
-use reth_evm::{ConfigureEngineEvm, ConfigureEvm, EvmEnv, EvmEnvFor, ExecutableTxIterator};
+use reth_evm::{ConfigureEvm, EvmEnv};
 use reth_primitives_traits::{
-    BlockTy, NodePrimitives, SealedBlock, SealedHeader, SignedTransaction, TxTy,
+    BlockTy, NodePrimitives, SealedBlock, SealedHeader, SignedTransaction,
 };
 use reth_scroll_chainspec::{ChainConfig, ScrollChainConfig};
 use reth_scroll_primitives::ScrollReceipt;
-use reth_storage_api::errors::any::AnyError;
 use revm::{
     context::{BlockEnv, CfgEnv, TxEnv},
     primitives::U256,
@@ -25,6 +22,19 @@ use scroll_alloy_evm::{
     ScrollReceiptBuilder, ScrollTransactionIntoTxEnv,
 };
 use scroll_alloy_hardforks::ScrollHardforks;
+
+#[cfg(feature = "std")]
+use alloy_eips::{eip2718::WithEncoded, Decodable2718};
+#[cfg(feature = "std")]
+use alloy_primitives::Bytes;
+#[cfg(feature = "std")]
+use alloy_rpc_types_engine::ExecutionData;
+#[cfg(feature = "std")]
+use reth_evm::{ConfigureEngineEvm, EvmEnvFor, ExecutableTxIterator};
+#[cfg(feature = "std")]
+use reth_primitives_traits::TxTy;
+#[cfg(feature = "std")]
+use reth_storage_api::errors::any::AnyError;
 
 impl<ChainSpec, N, R, P> ConfigureEvm for ScrollEvmConfig<ChainSpec, N, R, P>
 where
@@ -139,6 +149,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<ChainSpec, N, R, P> ConfigureEngineEvm<ExecutionData> for ScrollEvmConfig<ChainSpec, N, R, P>
 where
     ChainSpec: EthChainSpec + ChainConfig<Config = ScrollChainConfig> + ScrollHardforks,
